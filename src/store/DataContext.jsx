@@ -101,6 +101,10 @@ export function DataProvider({ children }) {
     setState((s) => ({ ...s, demo: { ...s.demo, open } }))
   }, [])
 
+  const markVisitedReports = useCallback(() => {
+    setState((s) => (s.demo.visitedReports ? s : { ...s, demo: { ...s.demo, visitedReports: true } }))
+  }, [])
+
   // High-level domain actions powering the demo workflow
   const addClient = useCallback((data) => {
     const id = idFor('cl')
@@ -281,7 +285,7 @@ export function DataProvider({ children }) {
     recordExpense, recordPayment, addInvoice,
     addVenue, addResource, addVendor, addStaffMember, addSpeaker, addExhibitor, addSponsor, addCampaign, addCoupon,
     setEventTeam, setEventBudget, allocateResource, viewQr,
-    markDone, setIntent, clearIntent, setDemoOpen,
+    markDone, setIntent, clearIntent, setDemoOpen, markVisitedReports,
     login, logout,
     unreadNotifications,
   }

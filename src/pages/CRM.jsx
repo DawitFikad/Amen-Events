@@ -94,8 +94,8 @@ export default function CRM() {
         icon={Users}
         actions={
           <>
-            <button className="btn-outline"><Filter size={15} /> Filterd/button>
-            <button className="btn-primary" onClick={() => setOpen(true)}><Plus size={15} /> New Clientd/button>
+            <button className="btn-outline"><Filter size={15} /> Filter</button>
+            <button className="btn-primary" onClick={() => setOpen(true)}><Plus size={15} /> New Client</button>
           </>
         }
       />
@@ -114,15 +114,15 @@ export default function CRM() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-brand-100 p-4">
             <SearchBox value={q} onChange={setQ} placeholder="Search clients…" className="w-full sm:w-80" />
             <div className="flex gap-2 text-xs text-ink/45">
-              <span className="chip bg-brand-50 text-brand-800">{state.clients.length} companiesd/span>
-              <span className="chip bg-gold-50 text-gold-700">{state.clients.filter((c) => c.status === 'active').length} actived/span>
+              <span className="chip bg-brand-50 text-brand-800">{state.clients.length} companies</span>
+              <span className="chip bg-gold-50 text-gold-700">{state.clients.filter((c) => c.status === 'active').length} active</span>
             </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px]">
               <thead className="bg-brand-50/50">
                 <tr>
-                  <Th>Companyd/Th><Th>Contact Persond/Th><Th>Industryd/Th><Th>Cityd/Th><Th>Pipelined/Th><Th>Valued/Th><Th>Statusd/Th>
+                  <Th>Company</Th><Th>Contact Person</Th><Th>Industry</Th><Th>City</Th><Th>Pipeline</Th><Th>Value</Th><Th>Status</Th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-brand-50">
@@ -176,7 +176,7 @@ export default function CRM() {
                   </button>
                 ))}
                 {col.items.length === 0 && (
-                  <div className="rounded-lg border border-dashed border-brand-200 p-4 text-center text-xs text-ink/35">Drop or add a clientd/div>
+                  <div className="rounded-lg border border-dashed border-brand-200 p-4 text-center text-xs text-ink/35">Drop or add a client</div>
                 )}
               </div>
             </div>
@@ -188,12 +188,12 @@ export default function CRM() {
       {tab === 'inquiries' && (
         <div className="card overflow-hidden">
           <div className="flex items-center gap-2 border-b border-brand-100 p-4">
-            <span className="chip bg-gold-100 text-gold-700">{convList.length} new/actived/span>
+            <span className="chip bg-gold-100 text-gold-700">{convList.length} new/active</span>
             <span className="text-xs text-ink/45">Convert inquiries into quotations with one click.</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[700px]">
-              <thead className="bg-brand-50/50"><tr><Th>Companyd/Th><Th>Event Typed/Th><Th>Contactd/Th><Th>Est. Valued/Th><Th>Receivedd/Th><Th>Statusd/Th><Th></Th></tr></thead>
+              <thead className="bg-brand-50/50"><tr><Th>Company</Th><Th>Event Type</Th><Th>Contact</Th><Th>Est. Value</Th><Th>Received</Th><Th>Status</Th><Th></Th></tr></thead>
               <tbody className="divide-y divide-brand-50">
                 {convList.map((i) => (
                   <tr key={i.id} className="hover:bg-brand-50/40">
@@ -219,11 +219,11 @@ export default function CRM() {
         <div className="card overflow-hidden">
           <div className="flex items-center justify-between border-b border-brand-100 p-4">
             <span className="text-xs text-ink/45">Win rate {quotes.length ? Math.round((quotes.filter((x) => x.status === 'accepted').length / quotes.length) * 100) : 0}%</span>
-            <button className="btn-primary !py-1.5 text-xs" onClick={() => setQuoteOpen(true)}><Plus size={14} /> New Quotationd/button>
+            <button className="btn-primary !py-1.5 text-xs" onClick={() => setQuoteOpen(true)}><Plus size={14} /> New Quotation</button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[700px]">
-              <thead className="bg-brand-50/50"><tr><Th>Referenced/Th><Th>Clientd/Th><Th>Typed/Th><Th>Amountd/Th><Th>Dated/Th><Th>Statusd/Th></tr></thead>
+              <thead className="bg-brand-50/50"><tr><Th>Reference</Th><Th>Client</Th><Th>Type</Th><Th>Amount</Th><Th>Date</Th><Th>Status</Th></tr></thead>
               <tbody className="divide-y divide-brand-50">
                 {quotes.map((qt) => (
                   <tr key={qt.id} className="hover:bg-brand-50/40">
@@ -265,7 +265,7 @@ export default function CRM() {
       <Modal open={open} onClose={() => setOpen(false)} title="Create New Client" width="max-w-xl">
         <div className="grid grid-cols-2 gap-3">
           <Field label="Company Name *"><input className="input" value={form.company || ''} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="e.g. Walia Telecom" /></Field>
-          <Field label="Industry"><select className="input" value={form.industry || ''} onChange={(e) => setForm({ ...form, industry: e.target.value })}><option value="">Select…</option><option>Financial Servicesd/option><option>Telecommunicationsd/option><option>Healthcared/option><option>Bankingd/option><option>Educationd/option><option>Hospitalityd/option><option>Constructiond/option></select></Field>
+          <Field label="Industry"><select className="input" value={form.industry || ''} onChange={(e) => setForm({ ...form, industry: e.target.value })}><option value="">Select…</option><option>Financial Services</option><option>Telecommunications</option><option>Healthcare</option><option>Banking</option><option>Education</option><option>Hospitality</option><option>Construction</option></select></Field>
           <Field label="Contact Person"><input className="input" value={form.contactPerson || ''} onChange={(e) => setForm({ ...form, contactPerson: e.target.value })} /></Field>
           <Field label="Role"><input className="input" value={form.role || ''} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder="Events Director" /></Field>
           <Field label="Phone"><input className="input" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></Field>
@@ -274,8 +274,8 @@ export default function CRM() {
           <Field label="Pipeline Stage"><select className="input" value={form.stage || 'lead'} onChange={(e) => setForm({ ...form, stage: e.target.value })}>{pipelineStages.map((s) => <option key={s} value={s}>{pipelineLabels[s]}</option>)}</select></Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
-          <button className="btn-outline" onClick={() => setOpen(false)}>Canceld/button>
-          <button className="btn-primary" onClick={submit}>Create Clientd/button>
+          <button className="btn-outline" onClick={() => setOpen(false)}>Cancel</button>
+          <button className="btn-primary" onClick={submit}>Create Client</button>
         </div>
       </Modal>
 
@@ -302,13 +302,13 @@ export default function CRM() {
             </div>
             <div className="flex-1 overflow-y-auto p-6">
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl border border-brand-100 p-3"><p className="text-[11px] font-semibold text-ink/40">Contact Persond/p><p className="mt-1 text-sm font-semibold">{detail.contactPerson}</p></div>
-                <div className="rounded-xl border border-brand-100 p-3"><p className="text-[11px] font-semibold text-ink/40">Roled/p><p className="mt-1 text-sm font-semibold">{detail.role}</p></div>
-                <div className="rounded-xl border border-brand-100 p-3"><p className="text-[11px] font-semibold text-ink/40">Phoned/p><p className="mt-1 text-sm font-semibold">{detail.phone}</p></div>
-                <div className="rounded-xl border border-brand-100 p-3"><p className="text-[11px] font-semibold text-ink/40">Emaild/p><p className="mt-1 truncate text-sm font-semibold">{detail.email}</p></div>
+                <div className="rounded-xl border border-brand-100 p-3"><p className="text-[11px] font-semibold text-ink/40">Contact Person</p><p className="mt-1 text-sm font-semibold">{detail.contactPerson}</p></div>
+                <div className="rounded-xl border border-brand-100 p-3"><p className="text-[11px] font-semibold text-ink/40">Role</p><p className="mt-1 text-sm font-semibold">{detail.role}</p></div>
+                <div className="rounded-xl border border-brand-100 p-3"><p className="text-[11px] font-semibold text-ink/40">Phone</p><p className="mt-1 text-sm font-semibold">{detail.phone}</p></div>
+                <div className="rounded-xl border border-brand-100 p-3"><p className="text-[11px] font-semibold text-ink/40">Email</p><p className="mt-1 truncate text-sm font-semibold">{detail.email}</p></div>
               </div>
 
-              <p className="mt-6 mb-2 text-xs font-bold uppercase tracking-wider text-ink/40">Associated Eventsd/p>
+              <p className="mt-6 mb-2 text-xs font-bold uppercase tracking-wider text-ink/40">Associated Events</p>
               <div className="space-y-2">
                 {detailEvents.map((e) => (
                   <div key={e.id} className="flex items-center justify-between rounded-lg border border-brand-100 p-3">
@@ -322,7 +322,7 @@ export default function CRM() {
                 {detailEvents.length === 0 && <p className="text-sm text-ink/40">No events linked yet.</p>}
               </div>
 
-              <p className="mt-6 mb-2 text-xs font-bold uppercase tracking-wider text-ink/40">Client Documentsd/p>
+              <p className="mt-6 mb-2 text-xs font-bold uppercase tracking-wider text-ink/40">Client Documents</p>
               <div className="space-y-2">
                 {[['Signed Contract · Contract_2026.pdf', 'PDF'], ['Requirements Brief · brief.pdf', 'PDF'], ['Brand Guidelines · brand.zip', 'ZIP']].map(([f, t]) => (
                   <div key={f} className="flex items-center justify-between rounded-lg border border-brand-100 p-3">
@@ -333,7 +333,7 @@ export default function CRM() {
               </div>
             </div>
             <div className="border-t border-brand-100 p-4">
-              <button className="btn-primary w-full" onClick={() => { show('Opened communication history'); }}>Open Communication Historyd/button>
+              <button className="btn-primary w-full" onClick={() => { show('Opened communication history'); }}>Open Communication History</button>
             </div>
           </div>
         </div>
@@ -350,11 +350,11 @@ export default function CRM() {
           </Field>
           <Field label="Event Type"><input className="input" value={quoteForm.type || ''} onChange={(e) => setQuoteForm({ ...quoteForm, type: e.target.value })} placeholder="Product Launch" /></Field>
           <Field label="Amount (ETB)"><input type="number" className="input" value={quoteForm.amount || ''} onChange={(e) => setQuoteForm({ ...quoteForm, amount: e.target.value })} /></Field>
-          <Field label="Status"><select className="input" value={quoteForm.status || 'draft'} onChange={(e) => setQuoteForm({ ...quoteForm, status: e.target.value })}><option value="draft">Draftd/option><option value="sent">Sentd/option><option value="accepted">Acceptedd/option></select></Field>
+          <Field label="Status"><select className="input" value={quoteForm.status || 'draft'} onChange={(e) => setQuoteForm({ ...quoteForm, status: e.target.value })}><option value="draft">Draft</option><option value="sent">Sent</option><option value="accepted">Accepted</option></select></Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
-          <button className="btn-outline" onClick={() => setQuoteOpen(false)}>Canceld/button>
-          <button className="btn-primary" onClick={submitQuote}>Create Quotationd/button>
+          <button className="btn-outline" onClick={() => setQuoteOpen(false)}>Cancel</button>
+          <button className="btn-primary" onClick={submitQuote}>Create Quotation</button>
         </div>
       </Modal>
 

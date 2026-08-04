@@ -131,8 +131,8 @@ export default function Events() {
         icon={CalendarDays}
         actions={
           <>
-            <button className="btn-outline"><GitBranch size={15} /> Timelined/button>
-            <button className="btn-primary" onClick={() => setOpen(true)}><Plus size={15} /> Create Eventd/button>
+            <button className="btn-outline"><GitBranch size={15} /> Timeline</button>
+            <button className="btn-primary" onClick={() => setOpen(true)}><Plus size={15} /> Create Event</button>
           </>
         }
       />
@@ -167,7 +167,7 @@ export default function Events() {
 
                   <div className="mt-4">
                     <div className="mb-1.5 flex items-center justify-between text-[11px]">
-                      <span className="font-semibold text-ink/45">Progressd/span>
+                      <span className="font-semibold text-ink/45">Progress</span>
                       <span className="font-bold text-brand-800">{pct}%</span>
                     </div>
                     <Progress value={pct} />
@@ -229,11 +229,11 @@ export default function Events() {
           <Field label="Time"><input type="time" className="input" value={form.time || '09:00'} onChange={(e) => setForm({ ...form, time: e.target.value })} /></Field>
           <Field label="Budget (ETB)"><input type="number" className="input" value={form.budget || ''} onChange={(e) => setForm({ ...form, budget: e.target.value })} placeholder="850000" /></Field>
           <Field label="Project Manager"><select className="input" value={form.pmId || 'st2'} onChange={(e) => setForm({ ...form, pmId: e.target.value })}>{state.staff.filter((m) => m.type === 'Employee').map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select></Field>
-          <Field label="Status"><select className="input" value={form.status || 'upcoming'} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="upcoming">Upcomingd/option><option value="ongoing">Ongoingd/option><option value="completed">Completedd/option></select></Field>
+          <Field label="Status"><select className="input" value={form.status || 'upcoming'} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="upcoming">Upcoming</option><option value="ongoing">Ongoing</option><option value="completed">Completed</option></select></Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
-          <button className="btn-outline" onClick={() => setOpen(false)}>Canceld/button>
-          <button className="btn-primary" onClick={submit}>Create Eventd/button>
+          <button className="btn-outline" onClick={() => setOpen(false)}>Cancel</button>
+          <button className="btn-primary" onClick={submit}>Create Event</button>
         </div>
       </Modal>
 
@@ -257,7 +257,7 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
 
   return (
     <div>
-      <button onClick={onBack} className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 hover:text-brand-900"><ArrowLeft size={16} /> All eventsd/button>
+      <button onClick={onBack} className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 hover:text-brand-900"><ArrowLeft size={16} /> All events</button>
 
       {/* Header */}
       <div className="card overflow-hidden">
@@ -273,7 +273,7 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
             </div>
             <div className="flex gap-2">
               <button className="btn-gold" onClick={onStatus}>{event.status === 'ongoing' ? 'Mark Completed' : event.status === 'completed' ? 'Reopen' : 'Start Event'}</button>
-              <button className="btn-outline !border-white/20 !bg-white/10 !text-white hover:!bg-white/20" onClick={() => show('Editing event')}>Editd/button>
+              <button className="btn-outline !border-white/20 !bg-white/10 !text-white hover:!bg-white/20" onClick={() => show('Editing event')}>Edit</button>
             </div>
           </div>
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -299,13 +299,13 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
                 {/* Budget snapshot */}
                 <div className="rounded-xl border border-brand-100 p-5">
                   <div className="mb-3 flex items-center justify-between">
-                    <p className="font-bold text-brand-950">Budget Snapshotd/p>
-                    <span className="text-xs text-ink/45">{spendPct}% committedd/span>
+                    <p className="font-bold text-brand-950">Budget Snapshot</p>
+                    <span className="text-xs text-ink/45">{spendPct}% committed</span>
                   </div>
                   <div className="grid grid-cols-3 gap-3">
-                    <div className="rounded-lg bg-brand-50 p-3"><p className="text-[11px] font-semibold text-ink/40">Budgetd/p><p className="text-base font-black text-brand-950">{fmt(event.budget)}</p></div>
-                    <div className="rounded-lg bg-gold-50 p-3"><p className="text-[11px] font-semibold text-ink/40">Spentd/p><p className="text-base font-black text-gold-700">{fmt(event.spent)}</p></div>
-                    <div className="rounded-lg bg-brand-50 p-3"><p className="text-[11px] font-semibold text-ink/40">Remainingd/p><p className="text-base font-black text-brand-800">{fmt(event.budget - event.spent)}</p></div>
+                    <div className="rounded-lg bg-brand-50 p-3"><p className="text-[11px] font-semibold text-ink/40">Budget</p><p className="text-base font-black text-brand-950">{fmt(event.budget)}</p></div>
+                    <div className="rounded-lg bg-gold-50 p-3"><p className="text-[11px] font-semibold text-ink/40">Spent</p><p className="text-base font-black text-gold-700">{fmt(event.spent)}</p></div>
+                    <div className="rounded-lg bg-brand-50 p-3"><p className="text-[11px] font-semibold text-ink/40">Remaining</p><p className="text-base font-black text-brand-800">{fmt(event.budget - event.spent)}</p></div>
                   </div>
                   <Progress value={spendPct} color={spendPct > 80 ? 'bg-red-500' : spendPct > 60 ? 'bg-gold-500' : 'bg-brand-600'} className="mt-3" />
                 </div>
@@ -321,7 +321,7 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
                         <div key={id} className="flex items-center gap-3 rounded-lg border border-brand-50 p-2.5">
                           <Avatar name={m.name} initials={m.initials} color={m.color} />
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-semibold text-brand-950">{m.name} {id === event.pmId && <span className="chip bg-gold-100 text-gold-700 ml-1">PMd/span>}</p>
+                            <p className="text-sm font-semibold text-brand-950">{m.name} {id === event.pmId && <span className="chip bg-gold-100 text-gold-700 ml-1">PM</span>}</p>
                             <p className="text-xs text-ink/45">{m.role} · {m.dept}</p>
                           </div>
                           <Badge status={m.status} label={m.type} />
@@ -329,7 +329,7 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
                       )
                     })}
                   </div>
-                  <button className="btn-outline mt-3 w-full !py-2 text-xs" onClick={() => setTeamOpen(true)}><Users size={14} /> Assign Team Membersd/button>
+                  <button className="btn-outline mt-3 w-full !py-2 text-xs" onClick={() => setTeamOpen(true)}><Users size={14} /> Assign Team Members</button>
                 </div>
 
                 {/* Allocated resources */}
@@ -346,7 +346,7 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
                               <p className="text-[13px] font-semibold text-brand-950">{r.name}</p>
                               <p className="text-[11px] text-ink/45">{r.type}</p>
                             </div>
-                            <span className="chip bg-brand-50 text-brand-800">{a.qty}x allocatedd/span>
+                            <span className="chip bg-brand-50 text-brand-800">{a.qty}x allocated</span>
                           </div>
                         )
                       })}
@@ -354,12 +354,12 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
                   ) : (
                     <p className="rounded-lg bg-brand-50/50 p-3 text-xs text-ink/45">No resources allocated yet. Open the resource allocation modal to assign equipment.</p>
                   )}
-                  <button className="btn-outline mt-3 w-full !py-2 text-xs" onClick={() => setResOpen(true)}><Boxes size={14} /> Allocate Resourcesd/button>
+                  <button className="btn-outline mt-3 w-full !py-2 text-xs" onClick={() => setResOpen(true)}><Boxes size={14} /> Allocate Resources</button>
                 </div>
 
                 {/* Notes */}
                 <div className="rounded-xl border border-brand-100 p-5">
-                  <p className="mb-3 font-bold text-brand-950">Internal Notesd/p>
+                  <p className="mb-3 font-bold text-brand-950">Internal Notes</p>
                   <div className="space-y-2">
                     {['Client prefers gold accent decor on stage.', 'Reconfirm security count with Secure Shield 48hrs before.', 'VIP guests get valet at main entrance.'].map((n, i) => (
                       <div key={i} className="flex items-start gap-2 rounded-lg bg-brand-50/60 p-3 text-sm text-ink/70">
@@ -367,14 +367,14 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
                       </div>
                     ))}
                   </div>
-                  <button className="btn-outline mt-3 w-full !py-2 text-xs" onClick={() => show('Added a note')}>+ Add Noted/button>
+                  <button className="btn-outline mt-3 w-full !py-2 text-xs" onClick={() => show('Added a note')}>+ Add Note</button>
                 </div>
               </div>
 
               {/* Right column */}
               <div className="space-y-6">
                 <div className="rounded-xl border border-brand-100 p-5">
-                  <p className="mb-3 font-bold text-brand-950">Event Detailsd/p>
+                  <p className="mb-3 font-bold text-brand-950">Event Details</p>
                   <dl className="space-y-2.5 text-sm">
                     {[
                       ['Client', client?.company], ['Venue', venue?.name], ['City', venue?.city || '—'],
@@ -390,7 +390,7 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
                 </div>
 
                 <div className="rounded-xl border border-brand-100 p-5">
-                  <p className="mb-3 font-bold text-brand-950">Suppliersd/p>
+                  <p className="mb-3 font-bold text-brand-950">Suppliers</p>
                   <div className="space-y-2">
                     {state.vendors.slice(0, 4).map((v) => (
                       <div key={v.id} className="flex items-center justify-between rounded-lg border border-brand-50 p-2.5">
@@ -405,7 +405,7 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
                 </div>
 
                 <div className="rounded-xl bg-gold-50 p-4 ring-1 ring-gold-200">
-                  <p className="text-sm font-bold text-gold-800">Demo tipd/p>
+                  <p className="text-sm font-bold text-gold-800">Demo tip</p>
                   <p className="mt-1 text-xs text-gold-900/80">Use "Start Event" to simulate moving the event live, then run check-ins from the QR Check-in module.</p>
                 </div>
               </div>
@@ -415,7 +415,7 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
           {detailTab === 'checklist' && (
             <div className="max-w-2xl">
               <div className="mb-4 flex items-center justify-between">
-                <p className="text-sm text-ink/50">{doneCount} of {check.length} items completed/p>
+                <p className="text-sm text-ink/50">{doneCount} of {check.length} items complete</p>
                 <span className="text-sm font-black text-brand-800">{check.length ? Math.round((doneCount / check.length) * 100) : 0}%</span>
               </div>
               <Progress value={check.length ? (doneCount / check.length) * 100 : 0} className="mb-4" />
@@ -435,7 +435,7 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
                   </label>
                 ))}
               </div>
-              <button className="btn-outline mt-4" onClick={onTask}><Plus size={14} /> Add Checklist Taskd/button>
+              <button className="btn-outline mt-4" onClick={onTask}><Plus size={14} /> Add Checklist Task</button>
             </div>
           )}
 
@@ -451,7 +451,7 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
                   </div>
                 ))}
               </div>
-              <button className="btn-outline mt-6" onClick={() => show('Timeline entry added')}><Plus size={14} /> Add Entryd/button>
+              <button className="btn-outline mt-6" onClick={() => show('Timeline entry added')}><Plus size={14} /> Add Entry</button>
             </div>
           )}
 
@@ -469,11 +469,11 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
                       <p className="truncate text-sm font-semibold text-brand-950">{f}</p>
                       <p className="text-[11px] text-ink/40">{t} · {s}</p>
                     </div>
-                    <button className="btn-ghost !px-2 !py-1 text-xs" onClick={() => show('Document opened')}>Opend/button>
+                    <button className="btn-ghost !px-2 !py-1 text-xs" onClick={() => show('Document opened')}>Open</button>
                   </div>
                 ))}
               </div>
-              <button className="btn-outline mt-4" onClick={() => show('Upload started')}><Plus size={14} /> Upload Documentd/button>
+              <button className="btn-outline mt-4" onClick={() => show('Upload started')}><Plus size={14} /> Upload Document</button>
             </div>
           )}
         </div>
@@ -497,13 +497,13 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
             <input type="number" className="input" value={budgetVal} onChange={(e) => setBudgetVal(e.target.value)} placeholder="850000" />
           </Field>
           <div className="mt-5 flex justify-end gap-2">
-            <button className="btn-outline" onClick={() => setBudgetOpen(false)}>Canceld/button>
+            <button className="btn-outline" onClick={() => setBudgetOpen(false)}>Cancel</button>
             <button className="btn-primary" onClick={() => {
               if (!budgetVal) { show('Enter a budget amount', 'warn'); return }
               setEventBudget(event.id, budgetVal)
               setBudgetOpen(false)
               show(`Budget set to ${fmt(Number(budgetVal))}`)
-            }}>Save Budgetd/button>
+            }}>Save Budget</button>
           </div>
         </div>
       </Modal>
@@ -515,19 +515,19 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
           <p className="font-bold text-brand-950">Mark "{event.name}" as completed?</p>
           <p className="mt-1 text-sm text-ink/55">This closes the event lifecycle. The demo workflow will be marked as finished.</p>
           <div className="mt-4 grid grid-cols-3 gap-2 text-left">
-            <div className="rounded-lg bg-brand-50 p-2.5"><p className="text-[10px] font-semibold text-ink/40">Attendeesd/p><p className="text-sm font-black text-brand-950">{state.registrations.filter((r) => r.eventId === event.id).length}</p></div>
-            <div className="rounded-lg bg-brand-50 p-2.5"><p className="text-[10px] font-semibold text-ink/40">Checked-ind/p><p className="text-sm font-black text-brand-950">{state.registrations.filter((r) => r.eventId === event.id && r.checkedIn).length}</p></div>
-            <div className="rounded-lg bg-brand-50 p-2.5"><p className="text-[10px] font-semibold text-ink/40">Budgetd/p><p className="text-sm font-black text-brand-950">{fmt(event.budget)}</p></div>
+            <div className="rounded-lg bg-brand-50 p-2.5"><p className="text-[10px] font-semibold text-ink/40">Attendees</p><p className="text-sm font-black text-brand-950">{state.registrations.filter((r) => r.eventId === event.id).length}</p></div>
+            <div className="rounded-lg bg-brand-50 p-2.5"><p className="text-[10px] font-semibold text-ink/40">Checked-in</p><p className="text-sm font-black text-brand-950">{state.registrations.filter((r) => r.eventId === event.id && r.checkedIn).length}</p></div>
+            <div className="rounded-lg bg-brand-50 p-2.5"><p className="text-[10px] font-semibold text-ink/40">Budget</p><p className="text-sm font-black text-brand-950">{fmt(event.budget)}</p></div>
           </div>
           <div className="mt-5 flex justify-center gap-2">
-            <button className="btn-outline" onClick={() => setCompleteOpen(false)}>Canceld/button>
+            <button className="btn-outline" onClick={() => setCompleteOpen(false)}>Cancel</button>
             <button className="btn-primary" onClick={() => {
               patchBy('events', event.id, { status: 'completed' })
               markDone(11)
               logActivity(`Event "${event.name}" marked as completed`, 'event')
               setCompleteOpen(false)
               show('Event completed 🎉')
-            }}>Confirm Completiond/button>
+            }}>Confirm Completion</button>
           </div>
         </div>
       </Modal>
@@ -553,7 +553,7 @@ function TeamPicker({ event, state, onClose, onSave, show }) {
             <button key={m.id} onClick={() => toggle(m.id)} className={`flex items-center gap-3 rounded-xl border p-3 text-left transition ${on ? 'border-brand-400 bg-brand-50' : 'border-brand-100 bg-white hover:border-brand-300'}`}>
               <Avatar name={m.name} initials={m.initials} color={m.color} />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-brand-950">{m.name} {m.id === event.pmId && <span className="chip bg-gold-100 text-gold-700 ml-1">PMd/span>}</p>
+                <p className="text-sm font-semibold text-brand-950">{m.name} {m.id === event.pmId && <span className="chip bg-gold-100 text-gold-700 ml-1">PM</span>}</p>
                 <p className="text-xs text-ink/45">{m.role} · {m.dept}</p>
               </div>
               <span className={`flex h-5 w-5 items-center justify-center rounded-md border ${on ? 'border-brand-700 bg-brand-700 text-white' : 'border-brand-200 bg-white text-transparent'}`}>✓</span>
@@ -562,12 +562,12 @@ function TeamPicker({ event, state, onClose, onSave, show }) {
         })}
       </div>
       <div className="mt-5 flex justify-end gap-2">
-        <button className="btn-outline" onClick={onClose}>Canceld/button>
+        <button className="btn-outline" onClick={onClose}>Cancel</button>
         <button className="btn-primary" onClick={() => {
           onSave(event.id, [...selected])
           onClose()
           show(`Team set (${selected.size} members)`)
-        }}>Save Teamd/button>
+        }}>Save Team</button>
       </div>
     </div>
   )
@@ -589,7 +589,7 @@ function ResourcePicker({ event, state, onClose, onAllocate, show }) {
               <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-100 text-brand-700"><Boxes size={16} /></span>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-brand-950">{r.name}</p>
-                <p className="text-xs text-ink/45">{r.type} · {avail} availabled/p>
+                <p className="text-xs text-ink/45">{r.type} · {avail} available</p>
               </div>
               <span className={`flex h-5 w-5 items-center justify-center rounded-md border ${on ? 'border-brand-700 bg-brand-700 text-white' : 'border-brand-200 bg-white text-transparent'}`}>✓</span>
             </button>
@@ -602,13 +602,13 @@ function ResourcePicker({ event, state, onClose, onAllocate, show }) {
         </div>
       )}
       <div className="mt-5 flex justify-end gap-2">
-        <button className="btn-outline" onClick={onClose}>Canceld/button>
+        <button className="btn-outline" onClick={onClose}>Cancel</button>
         <button className="btn-primary" onClick={() => {
           if (!sel) { show('Pick a resource first', 'warn'); return }
           onAllocate(sel, event.id, qty)
           onClose()
           show('Resource allocated')
-        }}>Allocated/button>
+        }}>Allocate</button>
       </div>
     </div>
   )
@@ -652,7 +652,7 @@ function BudgetView({ event, state }) {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-brand-100">
           <div className="border-b border-brand-100 p-4">
-            <p className="font-bold text-brand-950">Expenses by Categoryd/p>
+            <p className="font-bold text-brand-950">Expenses by Category</p>
           </div>
           <div className="space-y-3 p-4">
             {cats.map(([c, amt]) => (
@@ -670,11 +670,11 @@ function BudgetView({ event, state }) {
 
         <div className="rounded-xl border border-brand-100">
           <div className="flex items-center justify-between border-b border-brand-100 p-4">
-            <p className="font-bold text-brand-950">Expense Logd/p>
-            <button className="btn-primary !py-1.5 text-xs" onClick={() => setExpOpen(true)}>+ Record Expensed/button>
+            <p className="font-bold text-brand-950">Expense Log</p>
+            <button className="btn-primary !py-1.5 text-xs" onClick={() => setExpOpen(true)}>+ Record Expense</button>
           </div>
           <table className="w-full">
-            <thead className="bg-brand-50/50"><tr><Th>Categoryd/Th><Th>Dated/Th><Th className="text-right">Amountd/Th></tr></thead>
+            <thead className="bg-brand-50/50"><tr><Th>Category</Th><Th>Date</Th><Th className="text-right">Amount</Th></tr></thead>
             <tbody className="divide-y divide-brand-50">
               {related.map((e) => (
                 <tr key={e.id}><Td className="text-ink/70">{e.category}</Td><Td className="text-ink/45">{e.date}</Td><Td className="text-right font-semibold text-brand-950">{fmt(e.amount)}</Td></tr>
@@ -686,14 +686,14 @@ function BudgetView({ event, state }) {
 
       <Modal open={expOpen} onClose={() => setExpOpen(false)} title={`Record Expense — ${event.name}`}>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Category"><select className="input" value={expForm.category || 'General'} onChange={(e) => setExpForm({ ...expForm, category: e.target.value })}><option>Venue Rentald/option><option>Cateringd/option><option>Technicald/option><option>Decorationd/option><option>Transportd/option><option>Marketingd/option><option>Generald/option></select></Field>
+          <Field label="Category"><select className="input" value={expForm.category || 'General'} onChange={(e) => setExpForm({ ...expForm, category: e.target.value })}><option>Venue Rental</option><option>Catering</option><option>Technical</option><option>Decoration</option><option>Transport</option><option>Marketing</option><option>General</option></select></Field>
           <Field label="Amount (ETB) *"><input type="number" className="input" value={expForm.amount || ''} onChange={(e) => setExpForm({ ...expForm, amount: e.target.value })} /></Field>
           <Field label="Date"><input type="date" className="input" value={expForm.date || ''} onChange={(e) => setExpForm({ ...expForm, date: e.target.value })} /></Field>
           <Field label="Vendor"><select className="input" value={expForm.vendorId || ''} onChange={(e) => setExpForm({ ...expForm, vendorId: e.target.value })}><option value="">—</option>{state.vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
-          <button className="btn-outline" onClick={() => setExpOpen(false)}>Canceld/button>
-          <button className="btn-primary" onClick={saveExpense}>Save Expensed/button>
+          <button className="btn-outline" onClick={() => setExpOpen(false)}>Cancel</button>
+          <button className="btn-primary" onClick={saveExpense}>Save Expense</button>
         </div>
       </Modal>
     </div>

@@ -65,6 +65,9 @@ export default function DemoWizard() {
   }, [location.pathname])
 
   const go = (step, i) => {
+    if (i > current) {
+      return
+    }
     if (step.intent) setIntent(step.intent)
     markDone(0)
     setDemoOpen(false)
@@ -142,24 +145,28 @@ export default function DemoWizard() {
                 {steps.map((s, i) => {
                   const isDone = uniqueDone.includes(i)
                   const isCurrent = i === current
+                  const isLocked = i > current
                   return (
                     <div
                       key={s.title}
+                      onClick={() => !isLocked && go(s, i)}
                       className={`flex items-start gap-3 rounded-xl border p-3 transition ${
                         isDone ? 'border-brand-100 bg-brand-50/50'
                           : isCurrent ? 'border-gold-300 bg-white shadow-card'
-                          : 'border-brand-50 bg-white'
+                          : isLocked ? 'border-brand-50 bg-brand-50/20 cursor-not-allowed opacity-60'
+                          : 'border-brand-50 bg-white cursor-pointer hover:border-brand-200 hover:bg-brand-50/40'
                       }`}
                     >
-                      <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-black ${isDone ? chip(true) : isCurrent ? 'bg-gold-400 text-brand-950' : 'bg-brand-50 text-ink/40'}`}>
+                      <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-black ${isDone ? chip(true) : isCurrent ? 'bg-gold-400 text-brand-950' : isLocked ? 'bg-ink/5 text-ink/30' : 'bg-brand-50 text-ink/40'}`}>
                         {isDone ? <CircleCheck size={14} /> : i + 1}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className={`text-[13px] font-bold ${isDone ? 'text-brand-800' : isCurrent ? 'text-brand-950' : 'text-ink/60'}`}>{s.title}</p>
+                        <p className={`text-[13px] font-bold ${isDone ? 'text-brand-800' : isCurrent ? 'text-brand-950' : isLocked ? 'text-ink/40' : 'text-ink/60'}`}>{s.title}</p>
                         {isCurrent && <p className="mt-0.5 text-[11px] leading-snug text-ink/50">{s.desc}</p>}
+                        {isLocked && <p className="mt-0.5 text-[11px] leading-snug text-ink/35">Complete previous steps first</p>}
                       </div>
                       {isCurrent && (
-                        <button onClick={() => go(s, i)} className="mt-0.5 rounded-lg bg-brand-800 p-1.5 text-white hover:bg-brand-900"><ChevronRight size={14} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); go(s, i) }} className="mt-0.5 rounded-lg bg-brand-800 p-1.5 text-white hover:bg-brand-900"><ChevronRight size={14} /></button>
                       )}
                     </div>
                   )

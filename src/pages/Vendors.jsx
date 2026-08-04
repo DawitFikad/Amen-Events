@@ -45,7 +45,7 @@ export default function Vendors() {
         title="Vendor Management"
         subtitle="Caterers, decorators, security, media and transport partners."
         icon={Handshake}
-        actions={<button className="btn-primary" onClick={() => setOpen(true)}><Plus size={15} /> Add Vendord/button>}
+        actions={<button className="btn-primary" onClick={() => setOpen(true)}><Plus size={15} /> Add Vendor</button>}
       />
 
       <div className="mb-5">
@@ -74,11 +74,11 @@ export default function Vendors() {
         {/* Payments */}
         <div className="card p-5">
           <div className="mb-3 flex items-center justify-between">
-            <p className="font-bold text-brand-950">Vendor Paymentsd/p>
-            <span className="chip bg-brand-100 text-brand-800">{vendorPayments.filter((p) => p.status === 'paid').reduce((a, p) => a + p.amount, 0).toLocaleString()}/etb paidd/span>
+            <p className="font-bold text-brand-950">Vendor Payments</p>
+            <span className="chip bg-brand-100 text-brand-800">{vendorPayments.filter((p) => p.status === 'paid').reduce((a, p) => a + p.amount, 0).toLocaleString()}/etb paid</span>
           </div>
           <table className="w-full">
-            <thead className="bg-brand-50/50"><tr><Th>Refd/Th><Th>Vendord/Th><Th className="text-right">Amountd/Th><Th>Statusd/Th></tr></thead>
+            <thead className="bg-brand-50/50"><tr><Th>Ref</Th><Th>Vendor</Th><Th className="text-right">Amount</Th><Th>Status</Th></tr></thead>
             <tbody className="divide-y divide-brand-50">
               {vendorPayments.map((p) => (
                 <tr key={p.id}>
@@ -94,7 +94,7 @@ export default function Vendors() {
 
         {/* Performance */}
         <div className="card p-5">
-          <p className="mb-3 font-bold text-brand-950">Vendor Performanced/p>
+          <p className="mb-3 font-bold text-brand-950">Vendor Performance</p>
           <div className="space-y-3">
             {state.vendors.slice(0, 6).map((v) => (
               <div key={v.id} className="flex items-center gap-3">
@@ -127,12 +127,12 @@ export default function Vendors() {
             </div>
             <div className="flex-1 overflow-y-auto p-6">
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl border border-brand-100 p-3"><p className="text-[11px] font-semibold text-ink/40">Contactd/p><p className="mt-1 text-sm font-semibold">{detail.contact}</p></div>
-                <div className="rounded-xl border border-brand-100 p-3"><p className="text-[11px] font-semibold text-ink/40">Phoned/p><p className="mt-1 text-sm font-semibold">{detail.phone}</p></div>
-                <div className="rounded-xl border border-brand-100 p-3"><p className="text-[11px] font-semibold text-ink/40">Contractsd/p><p className="mt-1 text-sm font-semibold">{detail.contracts}</p></div>
-                <div className="rounded-xl border border-brand-100 p-3"><p className="text-[11px] font-semibold text-ink/40">Statusd/p><p className="mt-1 text-sm font-semibold"><Badge status={detail.status} label={detail.status} /></p></div>
+                <div className="rounded-xl border border-brand-100 p-3"><p className="text-[11px] font-semibold text-ink/40">Contact</p><p className="mt-1 text-sm font-semibold">{detail.contact}</p></div>
+                <div className="rounded-xl border border-brand-100 p-3"><p className="text-[11px] font-semibold text-ink/40">Phone</p><p className="mt-1 text-sm font-semibold">{detail.phone}</p></div>
+                <div className="rounded-xl border border-brand-100 p-3"><p className="text-[11px] font-semibold text-ink/40">Contracts</p><p className="mt-1 text-sm font-semibold">{detail.contracts}</p></div>
+                <div className="rounded-xl border border-brand-100 p-3"><p className="text-[11px] font-semibold text-ink/40">Status</p><p className="mt-1 text-sm font-semibold"><Badge status={detail.status} label={detail.status} /></p></div>
               </div>
-              <p className="mt-6 mb-2 text-xs font-bold uppercase tracking-wider text-ink/40">Documentsd/p>
+              <p className="mt-6 mb-2 text-xs font-bold uppercase tracking-wider text-ink/40">Documents</p>
               <div className="space-y-2">
                 {['Service Agreement.pdf', 'Signed MSA.pdf', 'Performance Review Q3.pdf'].map((f) => (
                   <div key={f} className="flex items-center justify-between rounded-lg border border-brand-100 p-3">
@@ -141,7 +141,7 @@ export default function Vendors() {
                   </div>
                 ))}
               </div>
-              <button className="btn-primary mt-6 w-full" onClick={() => { setPay(true); setPayForm({ ...payForm, vendorId: detail.id }) }}>Record Paymentd/button>
+              <button className="btn-primary mt-6 w-full" onClick={() => { setPay(true); setPayForm({ ...payForm, vendorId: detail.id }) }}>Record Payment</button>
             </div>
           </div>
         </div>
@@ -157,8 +157,8 @@ export default function Vendors() {
           <Field label="Initial Rating"><input type="number" step="0.1" min="0" max="5" className="input" value={form.rating || 4.0} onChange={(e) => setForm({ ...form, rating: e.target.value })} /></Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
-          <button className="btn-outline" onClick={() => setOpen(false)}>Canceld/button>
-          <button className="btn-primary" onClick={submit}>Add Vendord/button>
+          <button className="btn-outline" onClick={() => setOpen(false)}>Cancel</button>
+          <button className="btn-primary" onClick={submit}>Add Vendor</button>
         </div>
       </Modal>
 
@@ -175,8 +175,8 @@ export default function Vendors() {
           <Field label="Payment Ref"><input className="input" value={payForm.ref || 'PAY-' + String(Math.floor(100 + Math.random() * 900))} onChange={(e) => setPayForm({ ...payForm, ref: e.target.value })} /></Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
-          <button className="btn-outline" onClick={() => setPay(false)}>Canceld/button>
-          <button className="btn-primary" onClick={submitPayment}>Confirm Paymentd/button>
+          <button className="btn-outline" onClick={() => setPay(false)}>Cancel</button>
+          <button className="btn-primary" onClick={submitPayment}>Confirm Payment</button>
         </div>
       </Modal>
 

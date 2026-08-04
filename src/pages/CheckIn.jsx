@@ -69,7 +69,7 @@ export default function CheckIn() {
         icon={QrCode}
         actions={
           <>
-            <button className="btn-outline" onClick={() => show('Offline sync enabled', 'info')}><WifiOff size={15} /> Offline Syncd/button>
+            <button className="btn-outline" onClick={() => show('Offline sync enabled', 'info')}><WifiOff size={15} /> Offline Sync</button>
             <button className={`btn-primary ${scanning ? '!bg-red-500 hover:!bg-red-600' : ''}`} onClick={toggleScan}>
               <ScanLine size={15} /> {scanning ? 'Stop Scanner' : 'Start Scanner'}
             </button>
@@ -80,24 +80,24 @@ export default function CheckIn() {
       {/* Live stats */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div className="card p-5">
-          <p className="text-[13px] font-semibold text-ink/55">Checked Ind/p>
+          <p className="text-[13px] font-semibold text-ink/55">Checked In</p>
           <p className="mt-1 text-2xl font-black text-brand-800">{checkedIn.length}</p>
-          <p className="text-xs text-ink/40">guests insided/p>
+          <p className="text-xs text-ink/40">guests inside</p>
         </div>
         <div className="card p-5">
-          <p className="text-[13px] font-semibold text-ink/55">Expectedd/p>
+          <p className="text-[13px] font-semibold text-ink/55">Expected</p>
           <p className="mt-1 text-2xl font-black text-brand-950">{regs.length}</p>
-          <p className="text-xs text-ink/40">registeredd/p>
+          <p className="text-xs text-ink/40">registered</p>
         </div>
         <div className="card p-5">
-          <p className="text-[13px] font-semibold text-ink/55">Attendanced/p>
+          <p className="text-[13px] font-semibold text-ink/55">Attendance</p>
           <p className="mt-1 text-2xl font-black text-gold-600">{pct}%</p>
-          <p className="text-xs text-ink/40">of capacityd/p>
+          <p className="text-xs text-ink/40">of capacity</p>
         </div>
         <div className="card p-5">
-          <p className="text-[13px] font-semibold text-ink/55">Duplicates Blockedd/p>
-          <p className="mt-1 text-2xl font-black text-red-500">2d/p>
-          <p className="text-xs text-ink/40">rejected re-entriesd/p>
+          <p className="text-[13px] font-semibold text-ink/55">Duplicates Blocked</p>
+          <p className="mt-1 text-2xl font-black text-red-500">2</p>
+          <p className="text-xs text-ink/40">rejected re-entries</p>
         </div>
       </div>
 
@@ -105,7 +105,7 @@ export default function CheckIn() {
         {/* Scanner panel */}
         <div className="card p-6 lg:col-span-3">
           <div className="mb-4 flex items-center justify-between">
-            <p className="font-bold text-brand-950">Scannerd/p>
+            <p className="font-bold text-brand-950">Scanner</p>
             {scanning && <span className="flex items-center gap-1.5 text-xs font-bold text-brand-700"><span className="relative flex h-2 w-2"><span className="absolute h-2 w-2 animate-ping rounded-full bg-brand-500 opacity-75" /><span className="h-2 w-2 rounded-full bg-brand-600" /></span> Scanning…</span>}
           </div>
 
@@ -132,7 +132,7 @@ export default function CheckIn() {
                   onKeyDown={(e) => e.key === 'Enter' && doCheck(entered)}
                 />
               </div>
-              <button onClick={() => doCheck(entered)} className="btn-gold !px-3"><RefreshCw size={15} /> Validated/button>
+              <button onClick={() => doCheck(entered)} className="btn-gold !px-3"><RefreshCw size={15} /> Validate</button>
             </div>
           </div>
 
@@ -147,14 +147,14 @@ export default function CheckIn() {
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-600 text-white"><CheckCircle2 size={20} /></span>
                 <div>
                   <p className="font-bold text-brand-950">{result.name}</p>
-                  <p className="text-xs text-brand-700">{result.type} ticket · Access grantedd/p>
+                  <p className="text-xs text-brand-700">{result.type} ticket · Access granted</p>
                 </div>
               </div>
             ) : result.dup ? (
               <div className="flex items-center gap-3 rounded-xl border border-gold-300 bg-gold-50 p-4">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gold-500 text-white"><AlertTriangle size={20} /></span>
                 <div>
-                  <p className="font-bold text-gold-800">{result.name} — duplicated/p>
+                  <p className="font-bold text-gold-800">{result.name} — duplicate</p>
                   <p className="text-xs text-gold-700">Ticket already used. Re-entry blocked.</p>
                 </div>
               </div>
@@ -162,7 +162,7 @@ export default function CheckIn() {
               <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500 text-white"><XCircle size={20} /></span>
                 <div>
-                  <p className="font-bold text-red-700">Invalid ticketd/p>
+                  <p className="font-bold text-red-700">Invalid ticket</p>
                   <p className="text-xs text-red-500">No matching registration found.</p>
                 </div>
               </div>
@@ -170,7 +170,7 @@ export default function CheckIn() {
           </div>
 
           <div className="mt-4 rounded-xl bg-brand-50/70 p-3 text-xs text-ink/55">
-            <p className="mb-1 flex items-center gap-1.5 font-bold text-brand-800"><Users size={13} /> Demo hintd/p>
+            <p className="mb-1 flex items-center gap-1.5 font-bold text-brand-800"><Users size={13} /> Demo hint</p>
             Use the "Start Scanner" button to simulate live QR scans — real tickets get checked in automatically.
           </div>
         </div>
@@ -178,8 +178,8 @@ export default function CheckIn() {
         {/* Entry log */}
         <div className="card lg:col-span-2">
           <div className="flex items-center justify-between border-b border-brand-100 p-4">
-            <p className="font-bold text-brand-950">Entry Logd/p>
-            <span className="chip bg-brand-100 text-brand-800">{regs.length} entriesd/span>
+            <p className="font-bold text-brand-950">Entry Log</p>
+            <span className="chip bg-brand-100 text-brand-800">{regs.length} entries</span>
           </div>
           <div className="max-h-[480px] overflow-y-auto">
             {[...regs].reverse().map((r) => (
@@ -202,3 +202,4 @@ export default function CheckIn() {
     </div>
   )
 }
+

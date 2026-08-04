@@ -78,8 +78,8 @@ export default function Ticketing() {
         icon={Ticket}
         actions={
           <>
-            <button className="btn-outline"><Download size={15} /> Export Listd/button>
-            <button className="btn-primary" onClick={() => setOpen(true)}><Plus size={15} /> Register Attendeed/button>
+            <button className="btn-outline"><Download size={15} /> Export List</button>
+            <button className="btn-primary" onClick={() => setOpen(true)}><Plus size={15} /> Register Attendee</button>
           </>
         }
       />
@@ -98,8 +98,8 @@ export default function Ticketing() {
         {/* Ticket types */}
         <div className="card p-5">
           <div className="mb-3 flex items-center justify-between">
-            <p className="font-bold text-brand-950">Ticket Typesd/p>
-            <button className="btn-outline !py-1 text-xs">Manage Typesd/button>
+            <p className="font-bold text-brand-950">Ticket Types</p>
+            <button className="btn-outline !py-1 text-xs">Manage Types</button>
           </div>
           <div className="space-y-3">
             {ticketTypes.map((t) => {
@@ -111,7 +111,7 @@ export default function Ticketing() {
                       <span className={`chip ${t.name.includes('VIP') ? 'bg-gold-100 text-gold-700' : 'bg-brand-100 text-brand-800'}`}>{t.name}</span>
                       <span className="text-sm font-bold text-brand-950">{fmt(t.price)}</span>
                     </div>
-                    <span className="text-xs text-ink/45">{t.sold}/{t.qty} soldd/span>
+                    <span className="text-xs text-ink/45">{t.sold}/{t.qty} sold</span>
                   </div>
                   <Progress value={pct} color={pct >= 90 ? 'bg-gold-500' : 'bg-brand-600'} />
                 </div>
@@ -122,7 +122,7 @@ export default function Ticketing() {
 
         {/* Capacity gauge */}
         <div className="card p-5">
-          <p className="mb-4 font-bold text-brand-950">Capacity Controld/p>
+          <p className="mb-4 font-bold text-brand-950">Capacity Control</p>
           <div className="flex items-center justify-center gap-6">
             <div className="relative h-36 w-36">
               <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90">
@@ -132,13 +132,13 @@ export default function Ticketing() {
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-xl font-black text-brand-950">{Math.round((totalSold / capacity) * 100)}%</span>
-                <span className="text-[10px] uppercase tracking-wide text-ink/40">Soldd/span>
+                <span className="text-[10px] uppercase tracking-wide text-ink/40">Sold</span>
               </div>
             </div>
             <div className="space-y-2 text-sm">
-              <p className="text-ink/55">Remaining: <span className="font-bold text-brand-950">{capacity - totalSold} seatsd/span></p>
+              <p className="text-ink/55">Remaining: <span className="font-bold text-brand-950">{capacity - totalSold} seats</span></p>
               <p className="text-ink/55">VIP remaining: <span className="font-bold text-gold-700">{ticketTypes[2].qty - ticketTypes[2].sold}</span></p>
-              <p className="text-ink/55">Waiting list: <span className="font-bold text-ink/80">18 peopled/span></p>
+              <p className="text-ink/55">Waiting list: <span className="font-bold text-ink/80">18 people</span></p>
             </div>
           </div>
         </div>
@@ -153,7 +153,7 @@ export default function Ticketing() {
         <div className="card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px]">
-              <thead className="bg-brand-50/50"><tr><Th>Attendeed/Th><Th>Typed/Th><Th className="text-right">Amountd/Th><Th>Paymentd/Th><Th>Check-ind/Th><Th>QR Coded/Th></tr></thead>
+              <thead className="bg-brand-50/50"><tr><Th>Attendee</Th><Th>Type</Th><Th className="text-right">Amount</Th><Th>Payment</Th><Th>Check-in</Th><Th>QR Code</Th></tr></thead>
               <tbody className="divide-y divide-brand-50">
                 {filtered.map((r) => (
                   <tr key={r.id} className="hover:bg-brand-50/40">
@@ -167,7 +167,7 @@ export default function Ticketing() {
                     <Td className="font-semibold">{fmt(r.amount)}</Td>
                     <Td><Badge status={r.paid ? 'paid' : 'outstanding'} label={r.paid ? 'Paid' : 'Unpaid'} /></Td>
                     <Td><Badge status={r.checkedIn ? 'active' : 'todo'} label={r.checkedIn ? 'Checked in' : 'Pending'} /></Td>
-                    <Td><button onClick={() => setQrView(r)} className="btn-outline !py-1 text-xs"><QrCode size={13} /> Viewd/button></Td>
+                    <Td><button onClick={() => setQrView(r)} className="btn-outline !py-1 text-xs"><QrCode size={13} /> View</button></Td>
                   </tr>
                 ))}
               </tbody>
@@ -180,7 +180,7 @@ export default function Ticketing() {
       {view === 'refunds' && (
         <div className="card overflow-hidden">
           <table className="w-full">
-            <thead className="bg-brand-50/50"><tr><Th>Attendeed/Th><Th>Typed/Th><Th className="text-right">Amountd/Th><Th>Reasond/Th><Th>Statusd/Th><Th></Th></tr></thead>
+            <thead className="bg-brand-50/50"><tr><Th>Attendee</Th><Th>Type</Th><Th className="text-right">Amount</Th><Th>Reason</Th><Th>Status</Th><Th></Th></tr></thead>
             <tbody className="divide-y divide-brand-50">
               {refundRequests.map((r) => (
                 <tr key={r.id}>
@@ -189,7 +189,7 @@ export default function Ticketing() {
                   <Td className="font-semibold">{fmt(r.amount)}</Td>
                   <Td className="text-ink/55">{r.reason}</Td>
                   <Td><Badge status={r.status} label={r.status} /></Td>
-                  <Td>{r.status === 'pending' && <div className="flex gap-1"><button className="btn-outline !py-1 text-xs" onClick={() => show('Refund approved')}><CheckCircle2 size={12} /> Approved/button><button className="btn-ghost !py-1 text-xs text-red-600" onClick={() => show('Refund declined', 'warn')}><XCircle size={12} /> Declined/button></div>}</Td>
+                  <Td>{r.status === 'pending' && <div className="flex gap-1"><button className="btn-outline !py-1 text-xs" onClick={() => show('Refund approved')}><CheckCircle2 size={12} /> Approve</button><button className="btn-ghost !py-1 text-xs text-red-600" onClick={() => show('Refund declined', 'warn')}><XCircle size={12} /> Decline</button></div>}</Td>
                 </tr>
               ))}
             </tbody>
@@ -204,9 +204,9 @@ export default function Ticketing() {
               <div key={n} className="flex items-center justify-between rounded-lg border border-brand-100 p-3">
                 <div className="flex items-center gap-3">
                   <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand-800">#{i + 1}</span>
-                  <div><p className="text-sm font-semibold text-brand-950">{n}</p><p className="text-[11px] text-ink/40">Waiting for Standardd/p></div>
+                  <div><p className="text-sm font-semibold text-brand-950">{n}</p><p className="text-[11px] text-ink/40">Waiting for Standard</p></div>
                 </div>
-                <button className="btn-outline !py-1 text-xs" onClick={() => show(`${n} moved to registrations`)}>Move to Registrationd/button>
+                <button className="btn-outline !py-1 text-xs" onClick={() => show(`${n} moved to registrations`)}>Move to Registration</button>
               </div>
             ))}
           </div>
@@ -219,11 +219,11 @@ export default function Ticketing() {
           <Field label="Full Name *" className="col-span-2"><input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
           <Field label="Email" className="col-span-2"><input className="input" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
           <Field label="Ticket Type"><select className="input" value={form.type || 'Standard'} onChange={(e) => setForm({ ...form, type: e.target.value })}>{ticketTypes.map((t) => <option key={t.id} value={t.name}>{t.name} — {fmt(t.price)}</option>)}</select></Field>
-          <Field label="Payment"><select className="input" value={form.paid || true} onChange={(e) => setForm({ ...form, paid: e.target.value === 'true' })}><option value="true">Paidd/option><option value="false">Unpaidd/option></select></Field>
+          <Field label="Payment"><select className="input" value={form.paid || true} onChange={(e) => setForm({ ...form, paid: e.target.value === 'true' })}><option value="true">Paid</option><option value="false">Unpaid</option></select></Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
-          <button className="btn-outline" onClick={() => setOpen(false)}>Canceld/button>
-          <button className="btn-primary" onClick={submit}>Register & Generate QRd/button>
+          <button className="btn-outline" onClick={() => setOpen(false)}>Cancel</button>
+          <button className="btn-primary" onClick={submit}>Register & Generate QR</button>
         </div>
       </Modal>
 
@@ -235,10 +235,10 @@ export default function Ticketing() {
             <div className="bg-brand-900 px-6 py-4 text-white">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs uppercase tracking-widest text-brand-300">Digital Ticketd/p>
+                  <p className="text-xs uppercase tracking-widest text-brand-300">Digital Ticket</p>
                   <p className="font-bold">{activeEvent?.name}</p>
                 </div>
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gold-400 text-brand-950 font-black">Ad/span>
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gold-400 text-brand-950 font-black">A</span>
               </div>
             </div>
             <div className="border-b border-dashed border-brand-200 px-6 py-5 text-center">
@@ -253,7 +253,7 @@ export default function Ticketing() {
                 />
               </div>
               <p className="font-mono text-sm font-bold tracking-widest text-brand-900">{qrView.qr || 'AE-REG-0012'}</p>
-              <p className="mt-1 text-xs text-ink/45">Scan this ticket at the entrance to check ind/p>
+              <p className="mt-1 text-xs text-ink/45">Scan this ticket at the entrance to check in</p>
             </div>
             <div className="px-6 py-4">
               <div className="flex items-center justify-between text-sm">
@@ -264,8 +264,8 @@ export default function Ticketing() {
                 <Badge status={qrView.type === 'VIP' ? 'pending' : 'done'} label={qrView.type} />
               </div>
               <div className="mt-3 flex gap-2">
-                <button className="btn-primary flex-1" onClick={downloadQr}><Download size={15} /> Downloadd/button>
-                <button className="btn-outline" onClick={() => setQrView(null)}>Closed/button>
+                <button className="btn-primary flex-1" onClick={downloadQr}><Download size={15} /> Download</button>
+                <button className="btn-outline" onClick={() => setQrView(null)}>Close</button>
               </div>
             </div>
           </div>

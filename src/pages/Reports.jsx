@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { BarChart3, FileSpreadsheet, FileText, Download, TrendingUp, TrendingDown, Users, Ticket, Wallet, Building2 } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, Toast, Th, Td, Segmented } from '../components/ui'
@@ -15,11 +15,18 @@ const staffPerformance = [
 const PIE = ['#228b22', '#c9a227', '#9cc69c', '#175917', '#d1aa4d']
 
 export default function Reports() {
-  const { state } = useData()
+  const { state, markVisitedReports, intent, clearIntent } = useData()
   const [range, setRange] = useState('Q3')
   const [toast, setToast] = useState(null)
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
+
+  useEffect(() => {
+    markVisitedReports()
+    if (intent === 'reports') {
+      clearIntent()
+    }
+  }, [intent])
 
   const revenue = state.invoices.reduce((a, i) => a + i.paid, 0)
   const expenses = state.expenses.reduce((a, e) => a + e.amount, 0)
