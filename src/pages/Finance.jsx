@@ -1,0 +1,259 @@
+import React, { useState, useEffect } from 'react'
+import { Wallet, Plus, FileText, TrendingUp, TrendingDown, PieChart, Download } from 'lucide-react'
+import { useData } from '../store/DataContext'
+import { PageHeader, Badge, Progress, Toast, EmptyState, Th, Td, Segmented, Modal, Field } from '../components/ui'
+import { fmt, fmtCompact } from '../store/data'
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line, AreaChart, Area } from 'recharts'
+
+const monthly = [
+  { m: 'Mar', rev: 960, exp: 720 }, { m: 'Apr', rev: 1100, exp: 780 }, { m: 'May', rev: 980, exp: 900 },
+  { m: 'Jun', rev: 1450, exp: 980 }, { m: 'Jul', rev: 1720, exp: 1240 }, { m: 'Aug', rev: 2080, exp: 1310 },
+]
+
+const purchaseRequests = [
+  { id: 'pr1', item: 'LED truss extension', category: 'Technical', amount: 42000, requestedBy: 'st8', date: '2026-08-02', status: 'approved' },
+  { id: 'pr2', item: 'Bulk flowers — stage decor', category: 'Decoration', amount: 28000, requestedBy: 'st5', date: '2026-08-03', status: 'pending' },
+  { id: 'pr3', item: 'Welcome banners', category: 'Branding', amount: 15500, requestedBy: 'st7', date: '2026-08-03', status: 'pending' },
+]
+
+export default function Finance() {
+  const { state, recordExpense, recordPayment, addInvoice, intent, clearIntent } = useData()
+  const [tab, setTab] = useState('overview')
+  const [open, setOpen] = useState(null)
+  const [toast, setToast] = useState(null)
+  const [form, setForm] = useState({})
+
+  const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
+
+  useEffect(() => {
+    if (intent === 'finance') {
+      setTab('overview')
+      setForm({ eventId: state.demo.lastEventId || 'ev1', category: 'Venue Rental' })
+      setOpen('expense')
+      clearIntent()
+    }
+  }, [intent])
+
+  const revenue = state.invoices.reduce((a, i) => a + i.paid, 0)
+  const expected = state.invoices.reduce((a, i) => a + i.amount, 0)
+  const outstanding = expected - revenue
+  const expenses = state.expenses.reduce((a, e) => a + e.amount, 0)
+  const profit = revenue - expenses
+
+  const pnl = [
+    { l: 'Total Revenue (collected)', v: revenue, tone: 'text-brand-800' },
+    { l: 'Outstanding Receivables', v: outstanding, tone: 'text-red-600' },
+    { l: 'Total Expenses', v: expenses, tone: 'text-gold-700' },
+    { l: 'Net Profit', v: profit, tone: profit >= 0 ? 'text-brand-700' : 'text-red-600' },
+  ]
+
+  const submitExpense = () => {
+    if (!form.amount) { show('Amount required', 'warn'); return }
+    recordExpense({ eventId: form.eventId || 'ev1', category: form.category || 'General', amount: Number(form.amount), date: new Date().toISOString().slice(0, 10), vendorId: form.vendorId })
+    show('Expense recorded')
+    setOpen(null); setForm({})
+  }
+
+  const submitPayment = () => {
+    if (!form.amount) { show('Amount required', 'warn'); return }
+    recordPayment(form.invoiceId, Number(form.amount))
+    show(`Payment of ${fmt(Number(form.amount))} recorded`)
+    setOpen(null); setForm({})
+  }
+
+  return (
+    <div>
+      <PageHeader
+        title="Financial Management"
+        subtitle="Budgets, expenses, payments and profitability."
+        icon={Wallet}
+        actions={
+          <>
+            <button className="btn-outline"><Download size={15} /> Export</button>
+            <button className="btn-primary" onClick={() => setOpen('expense')}><Plus size={15} /> Record Expense</button>
+          </>
+        }
+      />
+
+      <div className="mb-5 flex flex-wrap gap-1.5">
+        {[['overview', 'Overview', PieChart], ['invoices', 'Invoices', FileText], ['expenses', 'Expenses', TrendingDown], ['purchase', 'Purchase Requests', Wallet]].map(([v, l, I]) => (
+          <button key={v} onClick={() => setTab(v)} className={`tab ${tab === v ? 'tab-active' : 'tab-idle'}`}><I size={15} /> {l}</button>
+        ))}
+      </div>
+
+      {tab === 'overview' && (
+        <>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {pnl.map((p) => (
+              <div key={p.l} className="card p-5">
+                <p className="text-[13px] font-semibold text-ink/55">{p.l}</p>
+                <p className={`mt-2 text-xl font-black tracking-tight ${p.tone}`}>{fmt(p.v)}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <div className="card p-5">
+              <p className="mb-3 font-bold text-brand-950">Revenue vs Expenses</p>
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={monthly} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e8efe8" vertical={false} />
+                  <XAxis dataKey="m" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#122c1266' }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#122c1266' }} />
+                  <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #cfe0cf', fontSize: 12 }} formatter={(v) => `ETB ${v}K`} />
+                  <Bar dataKey="rev" name="Revenue" fill="#228b22" radius={[5, 5, 0, 0]} />
+                  <Bar dataKey="exp" name="Expenses" fill="#d1aa4d" radius={[5, 5, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="card p-5">
+              <p className="mb-3 font-bold text-brand-950">Profitability Trend</p>
+              <ResponsiveContainer width="100%" height={240}>
+                <AreaChart data={monthly} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                  <defs><linearGradient id="pf" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#71aa71" stopOpacity={0.3} /><stop offset="100%" stopColor="#71aa71" stopOpacity={0} /></linearGradient></defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e8efe8" vertical={false} />
+                  <XAxis dataKey="m" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#122c1266' }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#122c1266' }} />
+                  <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #d6e7d6', fontSize: 12 }} formatter={(v) => `ETB ${v}K`} />
+                  <Area type="monotone" dataKey="exp" name="Net" stroke="#228b22" strokeWidth={2} fill="url(#pf)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </>
+      )}
+
+      {tab === 'invoices' && (
+        <div className="card overflow-hidden">
+          <div className="flex items-center justify-between border-b border-brand-100 p-4">
+            <span className="text-sm text-ink/55">{state.invoices.length} invoices · {fmt(outstanding)} outstanding</span>
+            <button className="btn-primary !py-1.5 text-xs" onClick={() => setOpen('invoice')}><Plus size={14} /> New Invoice</button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px]">
+              <thead className="bg-brand-50/50"><tr><Th>Ref</Th><Th>Client</Th><Th>Event</Th><Th className="text-right">Amount</Th><Th className="text-right">Paid</Th><Th>Due</Th><Th>Status</Th><Th></Th></tr></thead>
+              <tbody className="divide-y divide-brand-50">
+                {state.invoices.map((inv) => {
+                  const c = state.clients.find((x) => x.id === inv.clientId)
+                  const ev = state.events.find((x) => x.id === inv.eventId)
+                  return (
+                    <tr key={inv.id} className="hover:bg-brand-50/40">
+                      <Td className="font-mono text-xs font-semibold text-brand-800">{inv.ref}</Td>
+                      <Td className="font-semibold text-brand-950">{c?.company}</Td>
+                      <Td className="text-ink/60">{ev?.name}</Td>
+                      <Td className="text-right font-semibold">{fmt(inv.amount)}</Td>
+                      <Td className="text-right text-brand-800">{fmt(inv.paid)}</Td>
+                      <Td className="text-ink/50">{inv.dueDate}</Td>
+                      <Td><Badge status={inv.status} label={inv.status} /></Td>
+                      <Td>{inv.status !== 'paid' && <button className="btn-outline !py-1 text-xs" onClick={() => { setOpen('payment'); setForm({ ...form, invoiceId: inv.id }) }}>Record Payment</button>}</Td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {tab === 'expenses' && (
+        <div className="card overflow-hidden">
+          <div className="border-b border-brand-100 p-4">
+            <span className="chip bg-brand-100 text-brand-800">{state.expenses.length} transactions · {fmt(expenses)} total</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[700px]">
+              <thead className="bg-brand-50/50"><tr><Th>Category</Th><Th>Event</Th><Th>Date</Th><Th className="text-right">Amount</Th></tr></thead>
+              <tbody className="divide-y divide-brand-50">
+                {state.expenses.map((e) => (
+                  <tr key={e.id} className="hover:bg-brand-50/40">
+                    <Td className="font-semibold text-brand-950">{e.category}</Td>
+                    <Td className="text-ink/60">{state.events.find((x) => x.id === e.eventId)?.name}</Td>
+                    <Td className="text-ink/50">{e.date}</Td>
+                    <Td className="text-right font-semibold text-red-600">-{fmt(e.amount)}</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {tab === 'purchase' && (
+        <div className="card overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-brand-50/50"><tr><Th>Item</Th><Th>Category</Th><Th>Requested By</Th><Th>Date</Th><Th className="text-right">Amount</Th><Th>Status</Th></tr></thead>
+            <tbody className="divide-y divide-brand-50">
+              {purchaseRequests.map((p) => {
+                const m = state.staff.find((x) => x.id === p.requestedBy)
+                return (
+                  <tr key={p.id} className="hover:bg-brand-50/40">
+                    <Td className="font-semibold text-brand-950">{p.item}</Td>
+                    <Td className="text-ink/60">{p.category}</Td>
+                    <Td className="text-ink/60">{m?.name}</Td>
+                    <Td className="text-ink/50">{p.date}</Td>
+                    <Td className="text-right font-semibold">{fmt(p.amount)}</Td>
+                    <Td><Badge status={p.status} label={p.status} /></Td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Expense modal */}
+      <Modal open={open === 'expense'} onClose={() => setOpen(null)} title="Record Expense">
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Event"><select className="input" value={form.eventId || ''} onChange={(e) => setForm({ ...form, eventId: e.target.value })}><option value="">Select…</option>{state.events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}</select></Field>
+          <Field label="Category"><select className="input" value={form.category || 'General'} onChange={(e) => setForm({ ...form, category: e.target.value })}><option>Venue Rental</option><option>Catering</option><option>Technical</option><option>Decoration</option><option>Transport</option><option>Marketing</option><option>General</option></select></Field>
+          <Field label="Amount (ETB) *"><input type="number" className="input" value={form.amount || ''} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></Field>
+          <Field label="Vendor"><select className="input" value={form.vendorId || ''} onChange={(e) => setForm({ ...form, vendorId: e.target.value })}><option value="">—</option>{state.vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></Field>
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <button className="btn-outline" onClick={() => setOpen(null)}>Cancel</button>
+          <button className="btn-primary" onClick={submitExpense}>Save Expense</button>
+        </div>
+      </Modal>
+
+      {/* Payment modal */}
+      <Modal open={open === 'payment'} onClose={() => setOpen(null)} title="Record Payment">
+        <div className="space-y-3">
+          <Field label="Invoice">
+            <select className="input" value={form.invoiceId || ''} onChange={(e) => setForm({ ...form, invoiceId: e.target.value })}>
+              <option value="">Select invoice…</option>
+              {state.invoices.filter((i) => i.status !== 'paid').map((inv) => (
+                <option key={inv.id} value={inv.id}>{inv.ref} — {fmt(inv.amount - inv.paid)} due</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Amount (ETB) *"><input type="number" className="input" value={form.amount || ''} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></Field>
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <button className="btn-outline" onClick={() => setOpen(null)}>Cancel</button>
+          <button className="btn-primary" onClick={submitPayment}>Save Payment</button>
+        </div>
+      </Modal>
+
+      {/* Invoice modal */}
+      <Modal open={open === 'invoice'} onClose={() => setOpen(null)} title="Issue Invoice">
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Client"><select className="input" value={form.clientId || ''} onChange={(e) => setForm({ ...form, clientId: e.target.value })}><option value="">Select…</option>{state.clients.map((c) => <option key={c.id} value={c.id}>{c.company}</option>)}</select></Field>
+          <Field label="Event"><select className="input" value={form.eventId || ''} onChange={(e) => setForm({ ...form, eventId: e.target.value })}><option value="">Select…</option>{state.events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}</select></Field>
+          <Field label="Amount (ETB) *"><input type="number" className="input" value={form.amount || ''} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></Field>
+          <Field label="Due Date"><input type="date" className="input" value={form.dueDate || ''} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></Field>
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <button className="btn-outline" onClick={() => setOpen(null)}>Cancel</button>
+          <button className="btn-primary" onClick={() => {
+            if (!form.amount) { show('Amount required', 'warn'); return }
+            addInvoice({ ...form, ref: 'INV-2026-' + String(Math.floor(1000 + Math.random() * 9000)), paid: 0 })
+            show('Invoice issued')
+            setOpen(null); setForm({})
+          }}>Issue Invoice</button>
+        </div>
+      </Modal>
+
+      <Toast toast={toast} />
+    </div>
+  )
+}

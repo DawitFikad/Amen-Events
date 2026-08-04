@@ -1,0 +1,255 @@
+import React, { useState } from 'react'
+import {
+  KanbanSquare, Plus, CalendarDays, Calendar, Grid3x3, Users, MessageSquare,
+  Paperclip, Clock3, ChevronRight, ArrowRight, LayoutGrid,
+} from 'lucide-react'
+import { useData } from '../store/DataContext'
+import { PageHeader, Badge, Progress, Avatar, Modal, Field, PriorityDot, SearchBox, Toast, EmptyState, Segmented, Th, Td } from '../components/ui'
+import { fmt, todayISO } from '../store/data'
+
+const columns = [
+  { key: 'todo', label: 'To Do', color: 'text-slate-500', bg: 'bg-slate-100' },
+  { key: 'in-progress', label: 'In Progress', color: 'text-brand-700', bg: 'bg-brand-100' },
+  { key: 'review', label: 'In Review', color: 'text-gold-700', bg: 'bg-gold-100' },
+  { key: 'done', label: 'Done', color: 'text-brand-700', bg: 'bg-brand-100' },
+]
+
+const milestones = [
+  { id: 'ms1', title: 'Planning complete', eventId: 'ev1', due: '2026-08-08', pct: 100 },
+  { id: 'ms2', title: 'Production ready', eventId: 'ev1', due: '2026-08-14', pct: 55 },
+  { id: 'ms3', title: 'Event delivery', eventId: 'ev1', due: '2026-08-18', pct: 20 },
+  { id: 'ms4', title: 'Post-event report', eventId: 'ev5', due: '2026-07-28', pct: 100 },
+]
+
+export default function Projects() {
+  const { state, updateTask, addTask } = useData()
+  const [view, setView] = useState('board')
+  const [open, setOpen] = useState(false)
+  const [toast, setToast] = useState(null)
+  const [form, setForm] = useState({})
+  const [detail, setDetail] = useState(null)
+
+  const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
+
+  const moveTask = (id, direction) => {
+    const order = columns.map((c) => c.key)
+    const t = state.tasks.find((x) => x.id === id)
+    const idx = order.indexOf(t.status)
+    const next = order[idx + direction]
+    if (next) {
+      updateTask(id, { status: next })
+      show(`Task moved to "${columns.find((c) => c.key === next).label}"`)
+    }
+  }
+
+  const submit = () => {
+    if (!form.title) { show('Task title is required', 'warn'); return }
+    addTask({ ...form, assigneeId: form.assigneeId || 'st2', priority: form.priority || 'medium', status: 'todo', eventId: form.eventId || 'ev1' })
+    show('Task added to board')
+    setOpen(false); setForm({})
+  }
+
+  const total = state.tasks.length
+  const done = state.tasks.filter((t) => t.status === 'done').length
+  const activeStaff = new Set(state.tasks.map((t) => t.assigneeId))
+
+  return (
+    <div>
+      <PageHeader
+        title="Project & Task Management"
+        subtitle="Plan milestones, assign work and track delivery."
+        icon={KanbanSquare}
+        actions={
+          <>
+            <button className="btn-outline"><CalendarDays size={15} /> Milestones</button>
+            <button className="btn-primary" onClick={() => setOpen(true)}><Plus size={15} /> New Task</button>
+          </>
+        }
+      />
+
+      {/* Status strip */}
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[['Total Tasks', total, 'bg-brand-800 text-white'], ['In Progress', state.tasks.filter((t) => t.status === 'in-progress').length, 'bg-gold-100 text-gold-700'], ['In Review', state.tasks.filter((t) => t.status === 'review').length, 'bg-brand-100 text-brand-800'], ['Completed', done, 'bg-brand-100 text-brand-800']].map(([l, v, cls]) => (
+          <div key={l} className={`card flex items-center justify-between px-4 py-3`}>
+            <p className="text-[13px] font-semibold text-ink/55">{l}</p>
+            <span className={`flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-sm font-black ${cls}`}>{v}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <Segmented value={view} onChange={setView} options={[{ value: 'board', label: 'Kanban' }, { value: 'list', label: 'List' }, { value: 'milestones', label: 'Milestones' }]} />
+        <button className="text-xs font-semibold text-brand-700 hover:text-brand-900">Team Workload →</button>
+      </div>
+
+      {view === 'board' && (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {columns.map((col) => {
+            const tasks = state.tasks.filter((t) => t.status === col.key)
+            return (
+              <div key={col.key} className="rounded-xl bg-brand-50/60 p-3">
+                <div className="mb-3 flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2">
+                    <span className={`h-2.5 w-2.5 rounded-full ${col.bg}`} />
+                    <span className="text-xs font-bold text-brand-950">{col.label}</span>
+                    <span className="chip bg-white text-ink/50 ring-1 ring-brand-100">{tasks.length}</span>
+                  </div>
+                  <button onClick={() => { setOpen(true); setForm({ ...form, status: col.key }) }} className="rounded-md p-1 text-ink/35 hover:bg-white hover:text-brand-800"><Plus size={15} /></button>
+                </div>
+                <div className="space-y-2.5">
+                  {tasks.map((t) => {
+                    const a = state.staff.find((m) => m.id === t.assigneeId)
+                    const ev = state.events.find((e) => e.id === t.eventId)
+                    const overdue = t.due < todayISO() && t.status !== 'done'
+                    return (
+                      <div key={t.id} onClick={() => setDetail(t)} className="cursor-pointer rounded-xl border border-brand-100 bg-white p-3.5 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-card">
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="flex items-center gap-1.5 text-[11px] font-semibold text-ink/50"><PriorityDot level={t.priority} /> {t.priority}</span>
+                          <Badge status={t.priority} label={col.label} />
+                        </div>
+                        <p className="text-sm font-semibold leading-snug text-brand-950">{t.title}</p>
+                        <p className="mt-0.5 truncate text-[11px] text-ink/45">{ev?.name}</p>
+                        <div className="mt-3 flex items-center justify-between border-t border-brand-50 pt-2.5">
+                          <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${overdue ? 'text-red-600' : 'text-ink/45'}`}><Clock3 size={12} /> {overdue ? 'Overdue' : t.due}</span>
+                          <div className="flex items-center gap-1">
+                            <span className="flex items-center gap-1 text-[11px] text-ink/40"><MessageSquare size={12} /> {t.comments}</span>
+                            <Avatar name={a?.name} initials={a?.initials} color={a?.color} size="xs" />
+                          </div>
+                        </div>
+                        {t.status !== 'done' && (
+                          <div className="mt-2 flex gap-1">
+                            {t.status !== 'todo' && <button onClick={(e) => { e.stopPropagation(); moveTask(t.id, -1) }} className="btn-ghost !py-1 text-[11px]">←</button>}
+                            {t.status !== 'done' && <button onClick={(e) => { e.stopPropagation(); moveTask(t.id, 1) }} className="btn-ghost !py-1 text-[11px]">→</button>}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                  {tasks.length === 0 && <div className="rounded-lg border border-dashed border-brand-200 p-4 text-center text-xs text-ink/35">Empty</div>}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {view === 'list' && (
+        <div className="card">
+          <table className="w-full">
+            <thead className="bg-brand-50/50"><tr><Th>Task</Th><Th>Event</Th><Th>Priority</Th><Th>Assignee</Th><Th>Status</Th><Th>Due</Th></tr></thead>
+            <tbody className="divide-y divide-brand-50">
+              {state.tasks.map((t) => {
+                const a = state.staff.find((m) => m.id === t.assigneeId)
+                return (
+                  <tr key={t.id} onClick={() => setDetail(t)} className="cursor-pointer hover:bg-brand-50/40">
+                    <Td className="font-semibold text-brand-950">{t.title}</Td>
+                    <Td className="text-ink/60">{state.events.find((e) => e.id === t.eventId)?.name}</Td>
+                    <Td><Badge status={t.priority} label={t.priority} /></Td>
+                    <Td><span className="flex items-center gap-2"><Avatar {...avatarMini(a)} size="xs" /> {a?.name}</span></Td>
+                    <Td><Badge status={t.status} label={t.status.replace('-', ' ')} /></Td>
+                    <Td className="text-ink/50">{t.due}</Td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {view === 'milestones' && (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {milestones.map((m) => (
+            <div key={m.id} className="card p-5">
+              <div className="mb-2 flex items-center justify-between">
+                <span className={`chip ${m.pct === 100 ? 'bg-brand-100 text-brand-800' : 'bg-gold-100 text-gold-700'}`}>{m.pct === 100 ? 'Complete' : 'Active'}</span>
+                <span className="text-xs text-ink/40">Due {m.due}</span>
+              </div>
+              <p className="font-bold text-brand-950">{m.title}</p>
+              <p className="mt-1 text-xs text-ink/45">{state.events.find((e) => e.id === m.eventId)?.name}</p>
+              <div className="mt-4 flex items-center gap-2">
+                <Progress value={m.pct} className="flex-1" />
+                <span className="text-xs font-bold text-brand-800">{m.pct}%</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* New task modal */}
+      <Modal open={open} onClose={() => setOpen(false)} title="Create Task">
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Title *" className="col-span-2"><input className="input" value={form.title || ''} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Arrange VIP transport" /></Field>
+          <Field label="Event"><select className="input" value={form.eventId || 'ev1'} onChange={(e) => setForm({ ...form, eventId: e.target.value })}>{state.events.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}</select></Field>
+          <Field label="Assignee"><select className="input" value={form.assigneeId || 'st2'} onChange={(e) => setForm({ ...form, assigneeId: e.target.value })}>{state.staff.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select></Field>
+          <Field label="Priority"><select className="input" value={form.priority || 'medium'} onChange={(e) => setForm({ ...form, priority: e.target.value })}><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></Field>
+          <Field label="Due Date"><input type="date" className="input" value={form.due || ''} onChange={(e) => setForm({ ...form, due: e.target.value })} /></Field>
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <button className="btn-outline" onClick={() => setOpen(false)}>Cancel</button>
+          <button className="btn-primary" onClick={submit}>Create Task</button>
+        </div>
+      </Modal>
+
+      {/* Task detail */}
+      {detail && state.tasks.find((t) => t.id === detail.id) && <TaskModal task={{ ...state.tasks.find((t) => t.id === detail.id) }} state={state} onClose={() => setDetail(null)} show={show} />}
+
+      <Toast toast={toast} />
+    </div>
+  )
+}
+
+function avatarMini(m) { return m ? { name: m.name, initials: m.initials, color: m.color } : { name: '?', initials: '?', color: 'bg-brand-400' } }
+
+function TaskModal({ task, state, onClose, show }) {
+  const a = state.staff.find((m) => m.id === task.assigneeId)
+  const ev = state.events.find((e) => e.id === task.eventId)
+  const [comments, setComments] = useState([
+    'Locking stage layout with client this week.',
+    `${a?.name}: Confirmed — tracker updated.`,
+  ])
+  const [draft, setDraft] = useState('')
+  const addComment = () => {
+    if (!draft.trim()) return
+    setComments((c) => [...c, draft.trim()])
+    setDraft('')
+    show('Comment added')
+  }
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-brand-950/40" onClick={onClose} />
+      <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-pop">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex gap-2"><Badge status={task.priority} label={task.priority} /><Badge status={task.status} label={task.status.replace('-', ' ')} /></div>
+          <button onClick={onClose} className="rounded-lg p-1 text-ink/40 hover:bg-brand-50"><X /></button>
+        </div>
+        <h3 className="text-lg font-bold text-brand-950">{task.title}</h3>
+        <p className="mt-1 text-sm text-ink/50">{ev?.name}</p>
+        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+          <div className="rounded-lg bg-brand-50 p-3"><p className="text-[11px] font-semibold text-ink/40">Assignee</p><p className="mt-1 flex items-center gap-2 font-semibold"><Avatar {...avatarMini(a)} size="xs" />{a?.name}</p></div>
+          <div className="rounded-lg bg-brand-50 p-3"><p className="text-[11px] font-semibold text-ink/40">Due</p><p className="mt-1 font-semibold">{task.due}</p></div>
+        </div>
+        <p className="mt-4 mb-2 text-xs font-bold uppercase tracking-wider text-ink/40">Comments ({comments.length})</p>
+        <div className="max-h-40 space-y-2 overflow-y-auto rounded-xl border border-brand-100 p-3">
+          {comments.map((c, i) => (
+            <p key={i} className="text-sm text-ink/70">{c}</p>
+          ))}
+        </div>
+        <div className="mt-4 flex items-center gap-3">
+          <input
+            className="flex-1 rounded-lg border border-brand-100 px-3 py-2 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/15"
+            placeholder="Write a comment…"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addComment()}
+          />
+          <button className="btn-primary" onClick={addComment}>Comment</button>
+        </div>
+        <p className="mt-3 flex items-center gap-2 text-xs text-ink/45"><Paperclip size={12} /> Attach a file to this task</p>
+      </div>
+    </div>
+  )
+}
+
+function X() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12" /></svg>
+}

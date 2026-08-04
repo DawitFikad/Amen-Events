@@ -1,0 +1,34 @@
+
+> amen-events-ems@1.0.0 dev
+> vite
+
+
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m785[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+[2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[2m2:15:49 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/index.css[22m
+[2m2:20:57 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtailwind.config.js[22m
+[2m2:21:02 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtailwind.config.js[22m
+[2m2:21:10 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m2:21:18 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Login.jsx, /src/index.css[22m
+[2m2:21:18 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Login.jsx, /src/index.css[22m
+[2m2:21:33 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/index.css[22m
+[2m2:21:33 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Reports.jsx, /src/index.css[22m
+[2m2:21:33 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Finance.jsx, /src/index.css[22m
+[2m2:21:33 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Ticketing.jsx, /src/index.css[22m
+[2m2:21:39 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Ticketing.jsx, /src/index.css[22m
+[2m2:25:52 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m2:25:56 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m2:26:00 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Sidebar.jsx, /src/index.css[22m
+[2m2:26:03 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Login.jsx, /src/index.css[22m
+[2m2:26:07 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Login.jsx, /src/index.css[22m
+[2m2:26:12 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/index.css[22m
+[2m2:26:12 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/CheckIn.jsx, /src/index.css[22m
+[2m2:26:12 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Ticketing.jsx, /src/index.css[22m
+[2m2:26:12 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Events.jsx, /src/index.css[22m
+[2m2:26:12 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Vendors.jsx, /src/index.css[22m
+[2m2:26:12 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Sponsorship.jsx, /src/index.css[22m
+[2m2:26:12 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/CRM.jsx, /src/index.css[22m
+[2m2:31:08 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/index.css[22m
