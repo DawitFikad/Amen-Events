@@ -1,0 +1,497 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── AUTH & RBAC ───────────────────────────────────────────────
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  passwordHash    String
+  name            String
+  initials        String   @default("")
+  color           String   @default("bg-brand-600")
+  phone           String   @default("")
+  dept            String   @default("")
+  jobTitle        String   @default("")
+  type            String   @default("Employee")
+  status          String   @default("active")
+  twoStepEnabled  Boolean  @default(false)
+  // Account lock fields
+  failedAttempts  Int      @default(0)
+  lockedUntil     DateTime?
+  // Profile
+  avatar          String   @default("")
+  bio             String   @default("")
+  // Client portal linking
+  clientId        String?
+  client          Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  // Relations
+  refreshTokens   RefreshToken[]
+  userRoles       UserRole[]
+  activities      ActivityLog[]
+  loginHistory    LoginHistory[]
+  passwordResets  PasswordReset[]
+  workflowLogs    WorkflowLog[]
+  approvalsSubmitted  ApprovalRequest[] @relation("ApprovalSubmittedBy")
+  approvalsReviewed   ApprovalRequest[] @relation("ApprovalReviewedBy")
+  documents      Document[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  revoked   Boolean  @default(false)
+}
+
+model LoginHistory {
+  id        String   @id @default(cuid())
+  userId    String?
+  email     String
+  success   Boolean
+  ipAddress String   @default("")
+  userAgent String   @default("")
+  reason    String   @default("")
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  used       Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Role {
+  id          String          @id @default(cuid())
+  key         String          @unique
+  label       String
+  description String          @default("")
+  userRoles   UserRole[]
+  rolePerms   RolePermission[]
+  createdAt   DateTime        @default(now())
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  key         String           @unique
+  label       String
+  rolePerms   RolePermission[]
+}
+
+model UserRole {
+  id      String @id @default(cuid())
+  userId  String
+  roleId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role    Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  @@unique([userId, roleId])
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  roleId       String
+  permissionId String
+  module       String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  @@unique([roleId, module, permissionId])
+}
+
+// ─── BUSINESS DATA ─────────────────────────────────────────────
+
+model Client {
+  id            String    @id @default(cuid())
+  company       String
+  industry      String    @default("General")
+  city          String    @default("Addis Ababa")
+  contactPerson String    @default("")
+  contactRole   String    @default("Contact")
+  phone         String    @default("")
+  email         String    @default("")
+  status        String    @default("active")
+  stage         String    @default("lead")
+  totalValue    Int       @default(0)
+  logo          String    @default("")
+  events        Event[]
+  invoices      Invoice[]
+  portalUsers   User[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Venue {
+  id        String   @id @default(cuid())
+  name      String
+  city      String   @default("Addis Ababa")
+  halls     Int      @default(1)
+  capacity  Int      @default(100)
+  price     Int      @default(0)
+  contact   String   @default("")
+  equipment String[]
+  status    String   @default("available")
+  color     String   @default("bg-brand-600")
+  abbr      String   @default("")
+  events    Event[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Resource {
+  id          String   @id @default(cuid())
+  name        String
+  category    String   @default("")
+  qty         Int      @default(1)
+  allocated   Int      @default(0)
+  maintenance Int      @default(0)
+  status      String   @default("available")
+  location    String   @default("Main Warehouse")
+  code        String   @default("")
+  allocations Allocation[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Vendor {
+  id        String   @id @default(cuid())
+  name      String
+  type      String   @default("")
+  contact   String   @default("")
+  phone     String   @default("")
+  rating    Float    @default(4.0)
+  contracts Int      @default(0)
+  status    String   @default("active")
+  expenses  Expense[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Event {
+  id         String        @id @default(cuid())
+  name       String
+  clientId   String?
+  venueId    String?
+  category   String        @default("")
+  date       String        @default("")
+  time       String        @default("09:00")
+  status     String        @default("upcoming")
+  pmId       String?
+  budget     Int           @default(0)
+  spent      Int           @default(0)
+  stage      Int           @default(0)
+  attendees  Int?
+  progress   Int           @default(0)
+  team       String[]
+  client     Client?       @relation(fields: [clientId], references: [id])
+  venue      Venue?        @relation(fields: [venueId], references: [id])
+  tasks      Task[]
+  speakers   Speaker[]
+  expenses   Expense[]
+  invoices   Invoice[]
+  registrations Registration[]
+  allocations   Allocation[]
+  workflowLogs  WorkflowLog[]
+  reviews       Review[]
+  wishlists     Wishlist[]
+  orders        Order[]
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+}
+
+model Task {
+  id        String   @id @default(cuid())
+  title     String
+  eventId   String?
+  assigneeId String?
+  priority  String   @default("medium")
+  status    String   @default("todo")
+  due       String   @default("")
+  comments  Int      @default(0)
+  event     Event?   @relation(fields: [eventId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Speaker {
+  id        String   @id @default(cuid())
+  name      String
+  topic     String   @default("TBD")
+  eventId   String?
+  company   String   @default("")
+  time      String   @default("12:00")
+  status    String   @default("pending")
+  initials  String   @default("")
+  color     String   @default("bg-brand-600")
+  event     Event?   @relation(fields: [eventId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Exhibitor {
+  id        String   @id @default(cuid())
+  company   String
+  booth     String   @default("")
+  size      String   @default("Standard")
+  package   String   @default("Exhibitor")
+  paid      Int      @default(0)
+  status    String   @default("registering")
+  createdAt DateTime @default(now())
+}
+
+model Sponsor {
+  id          String   @id @default(cuid())
+  name        String
+  package     String   @default("Silver")
+  amount      Int      @default(0)
+  status      String   @default("pending")
+  deliverables String[]
+  createdAt   DateTime @default(now())
+}
+
+model Invoice {
+  id        String   @id @default(cuid())
+  clientId  String?
+  eventId   String?
+  amount    Int      @default(0)
+  paid      Int      @default(0)
+  status    String   @default("outstanding")
+  dueDate   String   @default("")
+  ref       String   @default("")
+  client    Client?  @relation(fields: [clientId], references: [id])
+  event     Event?   @relation(fields: [eventId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Expense {
+  id        String   @id @default(cuid())
+  eventId   String?
+  category  String   @default("")
+  amount    Int      @default(0)
+  date      String   @default("")
+  vendorId  String?
+  event     Event?   @relation(fields: [eventId], references: [id])
+  vendor    Vendor?  @relation(fields: [vendorId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Registration {
+  id        String   @id @default(cuid())
+  eventId   String?
+  name      String
+  email     String   @default("")
+  type      String   @default("Standard")
+  amount    Int      @default(0)
+  paid      Boolean  @default(false)
+  checkedIn Boolean  @default(false)
+  qr        String   @default("") @unique
+  event     Event?   @relation(fields: [eventId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Allocation {
+  id         String   @id @default(cuid())
+  resourceId String?
+  eventId    String?
+  qty        Int      @default(1)
+  resource   Resource? @relation(fields: [resourceId], references: [id])
+  event      Event?    @relation(fields: [eventId], references: [id])
+  createdAt  DateTime  @default(now())
+}
+
+model Campaign {
+  id        String   @id @default(cuid())
+  name      String
+  channel   String   @default("Email")
+  audience  Int      @default(0)
+  sent      Int      @default(0)
+  opens     Int      @default(0)
+  clicks    Int      @default(0)
+  status    String   @default("draft")
+  createdAt DateTime @default(now())
+}
+
+model Coupon {
+  id     String @id @default(cuid())
+  code   String
+  type   String @default("Discount")
+  value  String @default("")
+  usage  Int    @default(0)
+  max    Int    @default(500)
+  status String @default("active")
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  text      String
+  type      String   @default("general")
+  at        String   @default("")
+  user      User?    @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model WorkflowLog {
+  id        String   @id @default(cuid())
+  eventId   String?
+  event     Event?   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  stage     Int      @default(0)
+  stageName String   @default("")
+  action    String   @default("advanced")
+  note      String   @default("")
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String?
+  text      String
+  type      String   @default("general")
+  at        String   @default("")
+  read      Boolean  @default(false)
+  link      String   @default("")
+  createdAt DateTime @default(now())
+}
+
+model ApprovalRequest {
+  id          String   @id @default(cuid())
+  type        String   // budget, contract, sponsorship, vendor_payment, purchase_request
+  entityId    String   // ID of the related record (event, sponsor, vendor, etc.)
+  entityName  String   @default("")
+  amount      Int      @default(0)
+  status      String   @default("pending") // pending, approved, rejected, revision_requested
+  submittedBy String?
+  submittedByUser User? @relation("ApprovalSubmittedBy", fields: [submittedBy], references: [id], onDelete: SetNull)
+  reviewedBy  String?
+  reviewedByUser  User? @relation("ApprovalReviewedBy", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  note        String   @default("")
+  reviewNote  String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Document {
+  id        String   @id @default(cuid())
+  name      String
+  type      String   @default("file") // file, contract, quotation, floor_plan, license, id, company_doc
+  module    String   @default("general") // events, clients, vendors, staff, finance
+  entityId  String?
+  mimeType  String   @default("")
+  size      Int      @default(0)
+  url       String   @default("")
+  uploadedBy String?
+  uploadedByUser User? @relation(fields: [uploadedBy], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+}
+
+model CalendarEvent {
+  id        String   @id @default(cuid())
+  title     String
+  type      String   @default("event") // event, task, meeting, venue_booking, resource_allocation, staff_leave
+  date      String
+  endDate   String?
+  time      String   @default("")
+  endTime   String   @default("")
+  location  String   @default("")
+  entityId  String?
+  userId    String?
+  color     String   @default("bg-brand-600")
+  notes     String   @default("")
+  createdAt DateTime @default(now())
+}
+
+// ─── PUBLIC PORTAL MODELS ─────────────────────────────────────
+
+model Attendee {
+  id            String   @id @default(cuid())
+  firstName     String
+  lastName      String
+  email         String   @unique
+  phone         String   @default("")
+  passwordHash  String
+  avatar        String   @default("")
+  status        String   @default("active") // active, suspended
+  notifications String[] @default([])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  orders        Order[]
+  reviews       Review[]
+  wishlists     Wishlist[]
+}
+
+model Order {
+  id           String      @id @default(cuid())
+  attendeeId   String
+  eventId      String
+  status       String      @default("pending") // pending, paid, failed, cancelled
+  subtotal     Int         @default(0)
+  tax          Int         @default(0)
+  discount     Int         @default(0)
+  total        Int         @default(0)
+  couponCode   String      @default("")
+  items        OrderItem[]
+  payments     Payment[]
+  attendee     Attendee    @relation(fields: [attendeeId], references: [id], onDelete: Cascade)
+  event        Event       @relation(fields: [eventId], references: [id])
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model OrderItem {
+  id           String   @id @default(cuid())
+  orderId      String
+  ticketType   String   @default("Standard")
+  quantity     Int      @default(1)
+  unitPrice    Int      @default(0)
+  lineTotal    Int      @default(0)
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+}
+
+model Payment {
+  id           String   @id @default(cuid())
+  orderId      String
+  amount       Int      @default(0)
+  method       String   @default("mock") // mock, telebirr, chapa, stripe
+  status       String   @default("pending") // pending, success, failed
+  reference    String   @default("")
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+}
+
+model Review {
+  id           String   @id @default(cuid())
+  eventId      String
+  attendeeId   String?
+  rating       Int      @default(5)
+  comment      String   @default("")
+  attendee     Attendee? @relation(fields: [attendeeId], references: [id], onDelete: SetNull)
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+}
+
+model Wishlist {
+  id           String   @id @default(cuid())
+  attendeeId   String
+  eventId      String
+  attendee     Attendee @relation(fields: [attendeeId], references: [id], onDelete: Cascade)
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  @@unique([attendeeId, eventId])
+}
