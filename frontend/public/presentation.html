@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Amen Events — Client Portal Presentation</title>
+<style>
+  :root {
+    --green: #3AAA1C;
+    --green-dark: #2d7a14;
+    --green-light: #e8f5e0;
+    --green-50: #f0f9eb;
+    --green-700: #1a5c0a;
+    --gold: #F5A623;
+    --ink: #1a2e1a;
+    --gray: #6b7d6b;
+    --bg: #f5f7f5;
+    --white: #ffffff;
+    --shadow: 0 4px 24px rgba(0,0,0,0.08);
+    --radius: 16px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    overflow: hidden;
+    height: 100vh;
+  }
+  .deck { position: relative; width: 100vw; height: 100vh; }
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    padding: 60px 80px;
+    opacity: 0; transform: translateX(40px);
+    transition: opacity 0.5s, transform 0.5s;
+    pointer-events: none;
+  }
+  .slide.active { opacity: 1; transform: translateX(0); pointer-events: auto; }
+  .slide-number {
+    position: absolute; bottom: 24px; right: 32px;
+    font-size: 13px; color: var(--gray); font-weight: 600;
+  }
+  .slide-tag {
+    position: absolute; top: 24px; left: 32px;
+    font-size: 11px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--green);
+  }
+
+  /* ── Navigation ── */
+  .nav {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 12px;
+    background: var(--white); padding: 10px 20px; border-radius: 40px;
+    box-shadow: var(--shadow); z-index: 100;
+  }
+  .nav button {
+    border: none; background: var(--green); color: var(--white);
+    width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
+    font-size: 18px; display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+  }
+  .nav button:hover { background: var(--green-dark); }
+  .nav .counter { font-size: 14px; font-weight: 700; color: var(--ink); min-width: 50px; text-align: center; }
+  .nav .dots { display: flex; gap: 6px; }
+  .nav .dot { width: 8px; height: 8px; border-radius: 50%; background: #ddd; cursor: pointer; transition: background 0.2s; }
+  .nav .dot.active { background: var(--green); }
+
+  /* ── Typography ── */
+  h1 { font-size: 48px; font-weight: 900; color: var(--ink); line-height: 1.1; }
+  h2 { font-size: 36px; font-weight: 800; color: var(--ink); margin-bottom: 12px; }
+  h3 { font-size: 22px; font-weight: 700; color: var(--ink); }
+  .subtitle { font-size: 18px; color: var(--gray); margin-top: 8px; }
+  .lead { font-size: 20px; color: var(--gray); line-height: 1.6; max-width: 700px; text-align: center; }
+
+  /* ── Components ── */
+  .card {
+    background: var(--white); border-radius: var(--radius);
+    padding: 28px; box-shadow: var(--shadow);
+  }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; width: 100%; max-width: 1000px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; width: 100%; max-width: 1100px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; width: 100%; max-width: 1100px; }
+  .feature {
+    background: var(--white); border-radius: 12px; padding: 24px;
+    box-shadow: var(--shadow); text-align: center;
+  }
+  .feature .icon {
+    width: 56px; height: 56px; border-radius: 14px;
+    background: var(--green-light); margin: 0 auto 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+  }
+  .feature h3 { font-size: 16px; margin-bottom: 6px; }
+  .feature p { font-size: 13px; color: var(--gray); line-height: 1.5; }
+  .badge {
+    display: inline-block; padding: 4px 14px; border-radius: 20px;
+    font-size: 12px; font-weight: 700;
+  }
+  .badge-green { background: var(--green-light); color: var(--green-700); }
+  .badge-gold { background: #fff4e0; color: #b8730a; }
+
+  /* ── Mockup styles ── */
+  .mockup {
+    background: var(--white); border-radius: 12px; box-shadow: var(--shadow);
+    overflow: hidden; width: 100%; max-width: 900px;
+  }
+  .mockup-bar {
+    background: var(--green-700); padding: 12px 20px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .mockup-bar .logo { color: var(--white); font-weight: 800; font-size: 14px; }
+  .mockup-bar .dot-r { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.3); }
+  .mockup-body { padding: 24px; }
+  .mockup-sidebar {
+    width: 200px; background: var(--green-700); padding: 20px 16px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .mockup-sidebar .nav-item {
+    padding: 8px 12px; border-radius: 8px; font-size: 12px;
+    color: rgba(255,255,255,0.7); font-weight: 600;
+  }
+  .mockup-sidebar .nav-item.active { background: var(--white); color: var(--green-700); }
+  .mockup-layout { display: flex; min-height: 400px; }
+  .mockup-content { flex: 1; padding: 24px; background: var(--bg); }
+  .stat-box {
+    background: var(--white); border-radius: 10px; padding: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .stat-box .label { font-size: 11px; color: var(--gray); }
+  .stat-box .value { font-size: 24px; font-weight: 900; color: var(--ink); }
+  .stat-box .icon-sm { font-size: 20px; }
+  .progress-bar { height: 6px; background: #e8e8e8; border-radius: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--green); border-radius: 4px; }
+  .table-row { display: flex; padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+  .table-row.header { font-weight: 700; color: var(--gray); font-size: 11px; text-transform: uppercase; }
+  .chip {
+    display: inline-block; padding: 2px 10px; border-radius: 12px;
+    font-size: 11px; font-weight: 700;
+  }
+  .chip-green { background: var(--green-light); color: var(--green-700); }
+  .chip-gold { background: #fff4e0; color: #b8730a; }
+  .chip-gray { background: #f0f0f0; color: var(--gray); }
+
+  /* ── Title slide ── */
+  .title-slide {
+    background: linear-gradient(135deg, var(--green-700) 0%, var(--green-dark) 100%);
+  }
+  .title-slide * { color: var(--white) !important; }
+  .title-slide .logo-circle {
+    width: 80px; height: 80px; border-radius: 20px;
+    background: rgba(255,255,255,0.15); display: flex;
+    align-items: center; justify-content: center;
+    font-size: 36px; margin-bottom: 24px;
+  }
+
+  /* ── Flow diagram ── */
+  .flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .flow-step {
+    background: var(--white); border: 2px solid var(--green); border-radius: 12px;
+    padding: 16px 20px; text-align: center; min-width: 140px;
+  }
+  .flow-step .num { font-size: 24px; font-weight: 900; color: var(--green); }
+  .flow-step .label { font-size: 13px; font-weight: 700; color: var(--ink); margin-top: 4px; }
+  .flow-arrow { font-size: 24px; color: var(--green); }
+
+  /* ── Timeline ── */
+  .timeline { display: flex; gap: 0; align-items: flex-start; width: 100%; max-width: 1100px; }
+  .tl-step { flex: 1; text-align: center; position: relative; }
+  .tl-step .circle {
+    width: 44px; height: 44px; border-radius: 50%; margin: 0 auto;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 800; color: var(--white);
+  }
+  .tl-step .circle.done { background: var(--green); }
+  .tl-step .circle.current { background: var(--gold); }
+  .tl-step .circle.pending { background: #ccc; }
+  .tl-step .label { font-size: 11px; font-weight: 700; color: var(--ink); margin-top: 8px; }
+  .tl-step .line { position: absolute; top: 22px; left: 50%; width: 100%; height: 3px; background: #ddd; z-index: -1; }
+  .tl-step:last-child .line { display: none; }
+  .tl-step .line.done { background: var(--green); }
+
+  /* ── Permissions ── */
+  .perm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; width: 100%; max-width: 900px; }
+  .perm-col { background: var(--white); border-radius: 12px; padding: 24px; box-shadow: var(--shadow); }
+  .perm-col h3 { margin-bottom: 16px; font-size: 16px; }
+  .perm-col.allow h3 { color: var(--green-700); }
+  .perm-col.deny h3 { color: #c0392b; }
+  .perm-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; font-size: 14px; border-bottom: 1px solid #f5f5f5; }
+  .perm-item:last-child { border-bottom: none; }
+  .perm-icon { font-size: 16px; }
+
+  /* ── Thank you ── */
+  .thank-you {
+    background: linear-gradient(135deg, var(--green-700) 0%, var(--green-dark) 100%);
+  }
+  .thank-you * { color: var(--white) !important; }
+
+  /* ── Animations ── */
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  .slide.active .anim { animation: fadeUp 0.6s ease forwards; opacity: 0; }
+  .slide.active .anim:nth-child(1) { animation-delay: 0.1s; }
+  .slide.active .anim:nth-child(2) { animation-delay: 0.2s; }
+  .slide.active .anim:nth-child(3) { animation-delay: 0.3s; }
+  .slide.active .anim:nth-child(4) { animation-delay: 0.4s; }
+  .slide.active .anim:nth-child(5) { animation-delay: 0.5s; }
+  .slide.active .anim:nth-child(6) { animation-delay: 0.6s; }
+
+  /* ── Highlight box ── */
+  .highlight {
+    background: var(--green-light); border-left: 4px solid var(--green);
+    padding: 16px 20px; border-radius: 8px; margin: 16px 0;
+  }
+  .highlight p { font-size: 15px; color: var(--green-700); font-weight: 600; }
+
+  /* ── Chat mockup ── */
+  .chat-msg { padding: 10px 16px; border-radius: 14px; max-width: 70%; font-size: 13px; margin-bottom: 8px; }
+  .chat-msg.them { background: var(--green-light); color: var(--ink); align-self: flex-start; }
+  .chat-msg.me { background: var(--green); color: var(--white); align-self: flex-end; }
+  .chat-container { display: flex; flex-direction: column; gap: 4px; padding: 16px; background: var(--bg); border-radius: 10px; min-height: 200px; }
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+  <!-- Slide 1: Title -->
+  <div class="slide title-slide active" data-slide="1">
+    <div class="anim logo-circle">🏢</div>
+    <h1 class="anim" style="font-size: 56px;">Amen Events</h1>
+    <p class="anim" style="font-size: 24px; opacity: 0.9; margin-top: 12px;">Client Portal System</p>
+    <p class="anim" style="font-size: 16px; opacity: 0.7; margin-top: 24px;">Premium Event Management & Ticketing Platform</p>
+    <p class="anim" style="font-size: 14px; opacity: 0.5; margin-top: 40px;">Gravity Technologies PLC · 2026</p>
+    <div class="slide-number">1</div>
+  </div>
+
+  <!-- Slide 2: What is Amen Events -->
+  <div class="slide" data-slide="2">
+    <div class="slide-tag">Overview</div>
+    <h2 class="anim" style="text-align:center;">What is Amen Events?</h2>
+    <p class="anim lead" style="margin-top: 16px;">A complete event management platform that lets clients monitor their events, purchase tickets, track finances, and communicate with their project managers — all from one elegant portal.</p>
+    <div class="anim grid-3" style="margin-top: 40px;">
+      <div class="feature">
+        <div class="icon">📊</div>
+        <h3>Real-Time Dashboard</h3>
+        <p>Track event progress, budgets, and deadlines at a glance</p>
+      </div>
+      <div class="feature">
+        <div class="icon">🎫</div>
+        <h3>Ticket Purchasing</h3>
+        <p>Browse events, select ticket types, and pay securely online</p>
+      </div>
+      <div class="feature">
+        <div class="icon">💬</div>
+        <h3>Direct Communication</h3>
+        <p>Chat with your assigned project manager in real time</p>
+      </div>
+    </div>
+    <div class="slide-number">2</div>
+  </div>
+
+  <!-- Slide 3: How It Works -->
+  <div class="slide" data-slide="3">
+    <div class="slide-tag">How It Works</div>
+    <h2 class="anim" style="text-align:center;">Simple 4-Step Process</h2>
+    <p class="anim lead" style="margin-top: 12px;">From login to event attendance in minutes</p>
+    <div class="anim flow" style="margin-top: 50px;">
+      <div class="flow-step">
+        <div class="num">1</div>
+        <div class="label">Login to<br/>Client Portal</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="num">2</div>
+        <div class="label">Browse<br/>Available Events</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="num">3</div>
+        <div class="label">Select Tickets<br/>& Pay Securely</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="num">4</div>
+        <div class="label">Get QR Ticket<br/>& Attend</div>
+      </div>
+    </div>
+    <div class="anim highlight" style="max-width: 600px; margin-top: 40px;">
+      <p>✓ No app download needed — works in any web browser</p>
+    </div>
+    <div class="slide-number">3</div>
+  </div>
+
+  <!-- Slide 4: Dashboard Mockup -->
+  <div class="slide" data-slide="4">
+    <div class="slide-tag">Feature · Dashboard</div>
+    <h2 class="anim" style="text-align:center;">Client Dashboard</h2>
+    <p class="anim lead" style="margin-top: 8px;">Everything at a glance — events, finances, deadlines</p>
+    <div class="anim mockup" style="margin-top: 24px;">
+      <div class="mockup-bar">
+        <div class="dot-r"></div><div class="dot-r"></div><div class="dot-r"></div>
+        <span class="logo">🏢 Amen Events — Client Portal</span>
+      </div>
+      <div class="mockup-layout">
+        <div class="mockup-sidebar">
+          <div class="nav-item active">📊 Dashboard</div>
+          <div class="nav-item">🎫 Browse Events</div>
+          <div class="nav-item">📅 My Events</div>
+          <div class="nav-item">👥 Attendees</div>
+          <div class="nav-item">🎟️ Tickets</div>
+          <div class="nav-item">💰 Invoices</div>
+          <div class="nav-item">📄 Documents</div>
+          <div class="nav-item">💬 Messages</div>
+        </div>
+        <div class="mockup-content">
+          <div style="background: linear-gradient(135deg, var(--green-700), var(--green-dark)); border-radius: 12px; padding: 20px; color: white; margin-bottom: 16px;">
+            <p style="font-size: 14px; opacity: 0.8;">Welcome back,</p>
+            <p style="font-size: 22px; font-weight: 800;">Dr. Meron Ayele</p>
+            <p style="font-size: 12px; opacity: 0.7;">ETH FINTECH Group · Financial Services</p>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
+            <div class="stat-box"><div class="icon-sm">📅</div><div class="label">Total Events</div><div class="value">3</div></div>
+            <div class="stat-box"><div class="icon-sm">⏰</div><div class="label">Upcoming</div><div class="value">2</div></div>
+            <div class="stat-box"><div class="icon-sm">✅</div><div class="label">Completed</div><div class="value">1</div></div>
+            <div class="stat-box"><div class="icon-sm">⚠️</div><div class="label">Outstanding</div><div class="value" style="color: var(--gold);">925K</div></div>
+          </div>
+          <div style="margin-top: 16px; background: white; border-radius: 10px; padding: 16px;">
+            <p style="font-size: 13px; font-weight: 700; margin-bottom: 12px;">Upcoming Events</p>
+            <div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f0f0f0;">
+              <div style="width: 40px; height: 40px; border-radius: 8px; background: var(--green-light); display: flex; align-items: center; justify-content: center; font-size: 18px;">📅</div>
+              <div style="flex: 1;"><p style="font-size: 13px; font-weight: 700;">EthFinTech Summit 2026</p><p style="font-size: 11px; color: var(--gray);">Aug 18 · Millennium Hall</p></div>
+              <div style="width: 80px;"><div class="progress-bar"><div class="progress-fill" style="width: 65%"></div></div><p style="font-size: 10px; text-align: right; margin-top: 4px; color: var(--gray);">65%</p></div>
+              <span class="chip chip-gold">Upcoming</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; padding: 10px 0;">
+              <div style="width: 40px; height: 40px; border-radius: 8px; background: var(--green-light); display: flex; align-items: center; justify-content: center; font-size: 18px;">📅</div>
+              <div style="flex: 1;"><p style="font-size: 13px; font-weight: 700;">Fintech Innovation Workshop</p><p style="font-size: 11px; color: var(--gray);">Sep 5 · Hilton Addis</p></div>
+              <div style="width: 80px;"><div class="progress-bar"><div class="progress-fill" style="width: 30%"></div></div><p style="font-size: 10px; text-align: right; margin-top: 4px; color: var(--gray);">30%</p></div>
+              <span class="chip chip-green">Ongoing</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-number">4</div>
+  </div>
+
+  <!-- Slide 5: Browse Events & Buy Tickets -->
+  <div class="slide" data-slide="5">
+    <div class="slide-tag">Feature · Ticketing</div>
+    <h2 class="anim" style="text-align:center;">Browse Events & Buy Tickets</h2>
+    <p class="anim lead" style="margin-top: 8px;">Discover events, choose your ticket type, and pay securely</p>
+    <div class="anim grid-3" style="margin-top: 32px;">
+      <div class="feature">
+        <div class="icon">🔍</div>
+        <h3>Search & Filter</h3>
+        <p>Find events by name, category, or date</p>
+      </div>
+      <div class="feature">
+        <div class="icon">🎟️</div>
+        <h3>4 Ticket Types</h3>
+        <p>VVIP, VIP, Standard, and Student options</p>
+      </div>
+      <div class="feature">
+        <div class="icon">💳</div>
+        <h3>Secure Checkout</h3>
+        <p>Card payment with 256-bit SSL encryption</p>
+      </div>
+    </div>
+    <div class="anim" style="margin-top: 32px; max-width: 800px; width: 100%;">
+      <div class="mockup">
+        <div class="mockup-body">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div style="border: 2px solid var(--green); border-radius: 12px; padding: 16px;">
+              <div style="background: var(--green-700); border-radius: 8px; padding: 12px; color: white; margin-bottom: 12px;">
+                <span class="chip" style="background: rgba(255,255,255,0.2); color: white;">Conference</span>
+                <p style="font-weight: 800; margin-top: 8px;">EthFinTech Summit 2026</p>
+              </div>
+              <p style="font-size: 12px; color: var(--gray);">📅 Aug 18 · 📍 Millennium Hall</p>
+              <p style="font-size: 12px; color: var(--gray);">👥 245 registered · 55 seats left</p>
+              <div class="progress-bar" style="margin: 8px 0;"><div class="progress-fill" style="width: 82%"></div></div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                <div><p style="font-size: 10px; color: var(--gray);">From</p><p style="font-size: 18px; font-weight: 900; color: var(--green);">ETB 300</p></div>
+                <button style="background: var(--green); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 12px;">Buy Tickets →</button>
+              </div>
+            </div>
+            <div style="background: var(--green-light); border-radius: 12px; padding: 20px;">
+              <p style="font-weight: 800; color: var(--green-700); margin-bottom: 12px;">Select Ticket Type</p>
+              <div style="background: white; border: 2px solid var(--green); border-radius: 8px; padding: 12px; margin-bottom: 8px;">
+                <div style="display: flex; justify-content: space-between;"><span style="font-weight: 700;">VIP</span><span style="font-weight: 900; color: var(--green);">ETB 2,500</span></div>
+                <p style="font-size: 11px; color: var(--gray); margin-top: 4px;">✓ Priority seating ✓ Lounge access</p>
+              </div>
+              <div style="background: white; border-radius: 8px; padding: 12px; margin-bottom: 8px; opacity: 0.6;">
+                <div style="display: flex; justify-content: space-between;"><span style="font-weight: 700;">Standard</span><span style="font-weight: 900;">ETB 1,000</span></div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-top: 12px;">
+                <span style="font-size: 13px; font-weight: 600;">Qty:</span>
+                <button style="border: 1px solid #ddd; border-radius: 6px; width: 28px; height: 28px; font-weight: 800;">−</button>
+                <span style="font-weight: 800;">2</span>
+                <button style="border: 1px solid #ddd; border-radius: 6px; width: 28px; height: 28px; font-weight: 800;">+</button>
+              </div>
+              <p style="font-size: 20px; font-weight: 900; color: var(--green); margin-top: 12px;">Total: ETB 5,000</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-number">5</div>
+  </div>
+
+  <!-- Slide 6: QR Ticket -->
+  <div class="slide" data-slide="6">
+    <div class="slide-tag">Feature · Digital Tickets</div>
+    <h2 class="anim" style="text-align:center;">Get Your QR Ticket Instantly</h2>
+    <p class="anim lead" style="margin-top: 8px;">After purchase, receive a QR code ticket — present at the entrance for check-in</p>
+    <div class="anim" style="margin-top: 40px; display: flex; gap: 32px; align-items: center; max-width: 900px; width: 100%;">
+      <div style="flex: 1;">
+        <div class="mockup">
+          <div class="mockup-body" style="text-align: center;">
+            <p style="font-size: 12px; font-weight: 700; color: var(--green);">VIP TICKET</p>
+            <p style="font-size: 20px; font-weight: 900; margin: 8px 0;">EthFinTech Summit 2026</p>
+            <div style="width: 160px; height: 160px; margin: 20px auto; border: 3px dashed var(--green); border-radius: 12px; display: flex; align-items: center; justify-content: center; background: var(--green-50);">
+              <span style="font-size: 80px;">📱</span>
+            </div>
+            <p style="font-size: 14px; font-weight: 800; color: var(--green);">AE-EV1-XK7M</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; font-size: 12px;">
+              <div><p style="color: var(--gray);">Attendee</p><p style="font-weight: 700;">Dr. Meron Ayele</p></div>
+              <div><p style="color: var(--gray);">Quantity</p><p style="font-weight: 700;">2 tickets</p></div>
+            </div>
+            <div style="background: var(--green-light); border-radius: 8px; padding: 8px; margin-top: 12px; font-size: 12px; font-weight: 700; color: var(--green-700);">
+              ✓ Present this QR at the entrance
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="flex: 1;">
+        <div class="feature" style="text-align: left; margin-bottom: 16px;">
+          <h3>📲 Digital QR Tickets</h3>
+          <p>Instant delivery after payment — no waiting</p>
+        </div>
+        <div class="feature" style="text-align: left; margin-bottom: 16px;">
+          <h3>📥 Download & Print</h3>
+          <p>Save as PDF or screenshot for offline access</p>
+        </div>
+        <div class="feature" style="text-align: left;">
+          <h3>✅ Real-Time Check-In</h3>
+          <p>Staff scans QR at entrance — instant verification</p>
+        </div>
+      </div>
+    </div>
+    <div class="slide-number">6</div>
+  </div>
+
+  <!-- Slide 7: Event Details & Timeline -->
+  <div class="slide" data-slide="7">
+    <div class="slide-tag">Feature · Event Tracking</div>
+    <h2 class="anim" style="text-align:center;">Track Event Progress with Timeline</h2>
+    <p class="anim lead" style="margin-top: 8px;">8-stage visual workflow from inquiry to completion</p>
+    <div class="anim" style="margin-top: 48px; width: 100%; max-width: 1100px;">
+      <div class="timeline">
+        <div class="tl-step"><div class="circle done">✓</div><div class="line done"></div><div class="label">Inquiry</div></div>
+        <div class="tl-step"><div class="circle done">✓</div><div class="line done"></div><div class="label">Planning</div></div>
+        <div class="tl-step"><div class="circle done">✓</div><div class="line done"></div><div class="label">Venue<br/>Confirmed</div></div>
+        <div class="tl-step"><div class="circle done">✓</div><div class="line done"></div><div class="label">Resources<br/>Ready</div></div>
+        <div class="tl-step"><div class="circle current">5</div><div class="line"></div><div class="label">Marketing</div></div>
+        <div class="tl-step"><div class="circle pending">6</div><div class="line"></div><div class="label">Registration<br/>Open</div></div>
+        <div class="tl-step"><div class="circle pending">7</div><div class="line"></div><div class="label">Event<br/>Running</div></div>
+        <div class="tl-step"><div class="circle pending">8</div><div class="label">Completed</div></div>
+      </div>
+    </div>
+    <div class="anim grid-4" style="margin-top: 48px;">
+      <div class="feature"><div class="icon">📋</div><h3>Overview</h3><p>Budget, progress, checklist</p></div>
+      <div class="feature"><div class="icon">📍</div><h3>Venue Details</h3><p>Capacity, facilities, equipment</p></div>
+      <div class="feature"><div class="icon">💰</div><h3>Budget</h3><p>Expenses breakdown & tracking</p></div>
+      <div class="feature"><div class="icon">👥</div><h3>Team</h3><p>PM, speakers, assigned staff</p></div>
+    </div>
+    <div class="slide-number">7</div>
+  </div>
+
+  <!-- Slide 8: Invoices & Payments -->
+  <div class="slide" data-slide="8">
+    <div class="slide-tag">Feature · Financials</div>
+    <h2 class="anim" style="text-align:center;">Invoices & Secure Payments</h2>
+    <p class="anim lead" style="margin-top: 8px;">View invoices, pay securely, and download receipts</p>
+    <div class="anim" style="margin-top: 32px; max-width: 900px; width: 100%;">
+      <div class="mockup">
+        <div class="mockup-body">
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px;">
+            <div class="stat-box"><div class="label">Total Invoiced</div><div class="value">ETB 1.85M</div></div>
+            <div class="stat-box"><div class="label">Paid</div><div class="value" style="color: var(--green);">ETB 925K</div></div>
+            <div class="stat-box"><div class="label">Outstanding</div><div class="value" style="color: var(--gold);">ETB 925K</div></div>
+          </div>
+          <div style="background: var(--bg); border-radius: 10px; padding: 16px;">
+            <div class="table-row header">
+              <div style="flex: 1;">Invoice #</div>
+              <div style="flex: 1;">Amount</div>
+              <div style="flex: 1;">Status</div>
+              <div style="flex: 1;">Due Date</div>
+              <div style="flex: 1;">Action</div>
+            </div>
+            <div class="table-row">
+              <div style="flex: 1; font-weight: 700; font-family: monospace;">INV-2026-0141</div>
+              <div style="flex: 1; font-weight: 700;">ETB 925,000</div>
+              <div style="flex: 1;"><span class="chip chip-green">Paid</span></div>
+              <div style="flex: 1; color: var(--gray);">Jul 15, 2026</div>
+              <div style="flex: 1;"><span style="font-size: 12px; color: var(--gray);">📄 PDF</span></div>
+            </div>
+            <div class="table-row">
+              <div style="flex: 1; font-weight: 700; font-family: monospace;">INV-2026-0178</div>
+              <div style="flex: 1; font-weight: 700;">ETB 925,000</div>
+              <div style="flex: 1;"><span class="chip chip-gold">Outstanding</span></div>
+              <div style="flex: 1; color: var(--gray);">Aug 10, 2026</div>
+              <div style="flex: 1;"><button style="background: var(--green); color: white; border: none; padding: 4px 12px; border-radius: 6px; font-size: 11px; font-weight: 700;">💳 Pay Now</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="anim highlight" style="max-width: 500px; margin-top: 24px;">
+      <p>🔒 All payments secured with 256-bit SSL encryption</p>
+    </div>
+    <div class="slide-number">8</div>
+  </div>
+
+  <!-- Slide 9: Messages -->
+  <div class="slide" data-slide="9">
+    <div class="slide-tag">Feature · Communication</div>
+    <h2 class="anim" style="text-align:center;">Chat with Your Project Manager</h2>
+    <p class="anim lead" style="margin-top: 8px;">Direct messaging with your assigned PM — no emails needed</p>
+    <div class="anim" style="margin-top: 32px; max-width: 800px; width: 100%; display: flex; gap: 24px;">
+      <div style="width: 220px;">
+        <div class="card" style="text-align: center;">
+          <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--gold); color: white; display: flex; align-items: center; justify-content: center; font-weight: 800; margin: 0 auto 12px;">DM</div>
+          <h3>Dawit Mengistu</h3>
+          <p style="font-size: 13px; color: var(--gray);">Project Manager</p>
+          <p style="font-size: 12px; color: var(--green); margin-top: 8px;">● Online</p>
+          <div style="margin-top: 16px; text-align: left; font-size: 12px; color: var(--gray);">
+            <p>📞 +251 912 778 301</p>
+            <p>✉️ dawit@amen.et</p>
+          </div>
+        </div>
+      </div>
+      <div style="flex: 1;">
+        <div class="mockup">
+          <div class="mockup-bar" style="padding: 10px 16px;">
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--gold); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: white;">DM</div>
+            <div><p style="color: white; font-weight: 700; font-size: 13px;">Dawit Mengistu</p><p style="color: rgba(255,255,255,0.7); font-size: 11px;">Online</p></div>
+          </div>
+          <div class="chat-container">
+            <div class="chat-msg them">Hi! Update on the EthFinTech Summit — everything is on track for August 18th. 🎉</div>
+            <div class="chat-msg me">That's great! How is the venue setup?</div>
+            <div class="chat-msg them">Millennium Hall confirmed ✓ 4 halls booked, catering tasting next week.</div>
+            <div class="chat-msg me">Perfect. Can you share the floor plan?</div>
+            <div class="chat-msg them">Absolutely! I'll upload it to Documents by end of week. 📎</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-number">9</div>
+  </div>
+
+  <!-- Slide 10: Documents & Notifications -->
+  <div class="slide" data-slide="10">
+    <div class="slide-tag">Feature · Documents & Alerts</div>
+    <h2 class="anim" style="text-align:center;">Documents & Smart Notifications</h2>
+    <div class="anim grid-2" style="margin-top: 32px;">
+      <div class="card">
+        <h3 style="margin-bottom: 16px;">📄 Document Library</h3>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--bg); border-radius: 8px;">
+            <span style="font-size: 24px;">📋</span>
+            <div style="flex: 1;"><p style="font-size: 13px; font-weight: 700;">Service Contract.pdf</p><p style="font-size: 11px; color: var(--gray);">2.4 MB · Jul 15</p></div>
+            <span style="font-size: 16px; color: var(--green);">↓</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--bg); border-radius: 8px;">
+            <span style="font-size: 24px;">🗺️</span>
+            <div style="flex: 1;"><p style="font-size: 13px; font-weight: 700;">Floor Plan - Millennium Hall.pdf</p><p style="font-size: 11px; color: var(--gray);">3.2 MB · Jul 20</p></div>
+            <span style="font-size: 16px; color: var(--green);">↓</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--bg); border-radius: 8px;">
+            <span style="font-size: 24px;">💰</span>
+            <div style="flex: 1;"><p style="font-size: 13px; font-weight: 700;">Invoice INV-2026-0141.pdf</p><p style="font-size: 11px; color: var(--gray);">340 KB · Jul 15</p></div>
+            <span style="font-size: 16px; color: var(--green);">↓</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--bg); border-radius: 8px;">
+            <span style="font-size: 24px;">📊</span>
+            <div style="flex: 1;"><p style="font-size: 13px; font-weight: 700;">Post-Event Report 2025.pdf</p><p style="font-size: 11px; color: var(--gray);">1.5 MB · Sep 1</p></div>
+            <span style="font-size: 16px; color: var(--green);">↓</span>
+          </div>
+        </div>
+        <p style="font-size: 12px; color: var(--gray); margin-top: 12px; text-align: center;">Contracts · Quotations · Invoices · Layouts · Reports · Certificates</p>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom: 16px;">🔔 Smart Notifications</h3>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; gap: 12px; padding: 12px; background: var(--green-light); border-radius: 8px;">
+            <span style="font-size: 20px;">💰</span>
+            <div><p style="font-size: 13px; font-weight: 700; color: var(--green-700);">Payment received — INV-2026-0141</p><p style="font-size: 11px; color: var(--gray);">5 hr ago</p></div>
+          </div>
+          <div style="display: flex; gap: 12px; padding: 12px; background: #fff4e0; border-radius: 8px;">
+            <span style="font-size: 20px;">⚠️</span>
+            <div><p style="font-size: 13px; font-weight: 700; color: #b8730a;">Budget alert: approaching 60%</p><p style="font-size: 11px; color: var(--gray);">10 min ago</p></div>
+          </div>
+          <div style="display: flex; gap: 12px; padding: 12px; background: var(--bg); border-radius: 8px;">
+            <span style="font-size: 20px;">📄</span>
+            <div><p style="font-size: 13px; font-weight: 700;">New document uploaded: Floor Plan</p><p style="font-size: 11px; color: var(--gray);">1 hr ago</p></div>
+          </div>
+          <div style="display: flex; gap: 12px; padding: 12px; background: var(--bg); border-radius: 8px;">
+            <span style="font-size: 20px;">📅</span>
+            <div><p style="font-size: 13px; font-weight: 700;">Task deadline approaching tomorrow</p><p style="font-size: 11px; color: var(--gray);">6 hr ago</p></div>
+          </div>
+        </div>
+        <p style="font-size: 12px; color: var(--gray); margin-top: 12px; text-align: center;">Budget alerts · Invoice updates · Document uploads · Reminders</p>
+      </div>
+    </div>
+    <div class="slide-number">10</div>
+  </div>
+
+  <!-- Slide 11: Client Permissions -->
+  <div class="slide" data-slide="11">
+    <div class="slide-tag">Security · Access Control</div>
+    <h2 class="anim" style="text-align:center;">Client Access Permissions</h2>
+    <p class="anim lead" style="margin-top: 8px;">Clients see only their data — nothing else</p>
+    <div class="anim perm-grid" style="margin-top: 32px;">
+      <div class="perm-col allow">
+        <h3>✓ Clients CAN Access</h3>
+        <div class="perm-item"><span class="perm-icon">✅</span> Their Dashboard</div>
+        <div class="perm-item"><span class="perm-icon">✅</span> Their Events & Details</div>
+        <div class="perm-item"><span class="perm-icon">✅</span> Event Timeline</div>
+        <div class="perm-item"><span class="perm-icon">✅</span> Attendees & Tickets</div>
+        <div class="perm-item"><span class="perm-icon">✅</span> Their Invoices & Payments</div>
+        <div class="perm-item"><span class="perm-icon">✅</span> Documents</div>
+        <div class="perm-item"><span class="perm-icon">✅</span> Notifications & Messages</div>
+        <div class="perm-item"><span class="perm-icon">✅</span> Profile & Support</div>
+      </div>
+      <div class="perm-col deny">
+        <h3>✖ Clients CANNOT Access</h3>
+        <div class="perm-item"><span class="perm-icon">🚫</span> Administration</div>
+        <div class="perm-item"><span class="perm-icon">🚫</span> CRM & Staff Management</div>
+        <div class="perm-item"><span class="perm-icon">🚫</span> Vendors & Resources</div>
+        <div class="perm-item"><span class="perm-icon">🚫</span> Finance Management</div>
+        <div class="perm-item"><span class="perm-icon">🚫</span> Company Settings</div>
+        <div class="perm-item"><span class="perm-icon">🚫</span> Other Clients' Data</div>
+        <div class="perm-item"><span class="perm-icon">🚫</span> Other Events</div>
+        <div class="perm-item"><span class="perm-icon">🚫</span> Internal Notes & Reports</div>
+      </div>
+    </div>
+    <div class="slide-number">11</div>
+  </div>
+
+  <!-- Slide 12: Design & Tech -->
+  <div class="slide" data-slide="12">
+    <div class="slide-tag">Design & Technology</div>
+    <h2 class="anim" style="text-align:center;">Premium Enterprise Design</h2>
+    <p class="anim lead" style="margin-top: 8px;">Built with modern technology for speed and reliability</p>
+    <div class="anim grid-4" style="margin-top: 40px;">
+      <div class="feature"><div class="icon">🎨</div><h3>Premium UI</h3><p>White background with Amen green accents</p></div>
+      <div class="feature"><div class="icon">📱</div><h3>Mobile Responsive</h3><p>Works perfectly on phone, tablet, desktop</p></div>
+      <div class="feature"><div class="icon">⚡</div><h3>Fast Loading</h3><p>Optimized for instant page loads</p></div>
+      <div class="feature"><div class="icon">🔒</div><h3>Secure</h3><p>Role-based access & SSL encryption</p></div>
+    </div>
+    <div class="anim grid-4" style="margin-top: 16px;">
+      <div class="feature"><div class="icon">📊</div><h3>Real-Time Data</h3><p>Live updates as events progress</p></div>
+      <div class="feature"><div class="icon">🎯</div><h3>Beautiful Charts</h3><p>Visual progress & revenue tracking</p></div>
+      <div class="feature"><div class="icon">🔄</div><h3>Timeline View</h3><p>8-stage visual workflow</p></div>
+      <div class="feature"><div class="icon">✨</div><h3>Smooth Animations</h3><p>Polished transitions throughout</p></div>
+    </div>
+    <div class="slide-number">12</div>
+  </div>
+
+  <!-- Slide 13: Thank You -->
+  <div class="slide thank-you" data-slide="13">
+    <div class="anim" style="width: 80px; height: 80px; border-radius: 20px; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 36px; margin-bottom: 24px;">🏢</div>
+    <h1 class="anim" style="font-size: 48px;">Thank You</h1>
+    <p class="anim" style="font-size: 20px; opacity: 0.9; margin-top: 16px;">Amen Events — Client Portal System</p>
+    <div class="anim" style="margin-top: 40px; display: flex; gap: 40px; text-align: center;">
+      <div>
+        <p style="font-size: 14px; opacity: 0.6; margin-bottom: 4px;">📞 Phone</p>
+        <p style="font-size: 16px; font-weight: 700;">+251 911 220 445</p>
+      </div>
+      <div>
+        <p style="font-size: 14px; opacity: 0.6; margin-bottom: 4px;">✉️ Email</p>
+        <p style="font-size: 16px; font-weight: 700;">support@amen.et</p>
+      </div>
+      <div>
+        <p style="font-size: 14px; opacity: 0.6; margin-bottom: 4px;">📍 Address</p>
+        <p style="font-size: 16px; font-weight: 700;">Bole Road, Addis Ababa</p>
+      </div>
+    </div>
+    <p class="anim" style="font-size: 14px; opacity: 0.5; margin-top: 48px;">Gravity Technologies PLC · Ethiopia · 2026</p>
+    <div class="slide-number">13</div>
+  </div>
+
+</div>
+
+<!-- Navigation -->
+<div class="nav">
+  <button onclick="prev()">‹</button>
+  <div class="dots" id="dots"></div>
+  <span class="counter" id="counter">1 / 13</span>
+  <button onclick="next()">›</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let current = 0;
+
+  const dotsContainer = document.getElementById('dots');
+  for (let i = 0; i < total; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'dot' + (i === 0 ? ' active' : '');
+    dot.onclick = () => goTo(i);
+    dotsContainer.appendChild(dot);
+  }
+  const dots = document.querySelectorAll('.dot');
+  const counter = document.getElementById('counter');
+
+  function update() {
+    slides.forEach((s, i) => s.classList.toggle('active', i === current));
+    dots.forEach((d, i) => d.classList.toggle('active', i === current));
+    counter.textContent = `${current + 1} / ${total}`;
+  }
+  function next() { current = Math.min(total - 1, current + 1); update(); }
+  function prev() { current = Math.max(0, current - 1); update(); }
+  function goTo(i) { current = i; update(); }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); next(); }
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
+    if (e.key === 'Home') { current = 0; update(); }
+    if (e.key === 'End') { current = total - 1; update(); }
+  });
+</script>
+</body>
+</html>
