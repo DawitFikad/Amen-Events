@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Light forest green brand scale (anchor #228B22)
+        // Light forest green brand scale (anchor #106910ff)
         brand: {
           50: '#f1f7f1',
           100: '#e1eee1',
@@ -12,8 +12,8 @@ export default {
           300: '#9cc69c',
           400: '#71aa71',
           500: '#4c8f4c',
-          600: '#228b22',
-          700: '#1c731c',
+          600: '#126e12ff',
+          700: '#0e5f0eff',
           800: '#175917',
           900: '#124112',
           950: '#082408',
