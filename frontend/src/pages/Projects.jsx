@@ -6,6 +6,7 @@ import {
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, Avatar, Modal, Field, PriorityDot, SearchBox, Toast, EmptyState, Segmented, Th, Td } from '../components/ui'
 import { fmt, todayISO } from '../store/data'
+import { textRequired, optional, dateRequired, validate } from '../store/validation'
 
 const columns = [
   { key: 'todo', label: 'To Do', color: 'text-slate-500', bg: 'bg-slate-100' },
@@ -27,9 +28,16 @@ export default function Projects() {
   const [open, setOpen] = useState(false)
   const [toast, setToast] = useState(null)
   const [form, setForm] = useState({})
+  const [errors, setErrors] = useState({})
   const [detail, setDetail] = useState(null)
+  const [workloadOpen, setWorkloadOpen] = useState(false)
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
+
+  const workload = state.staff
+    .map((m) => ({ member: m, count: state.tasks.filter((t) => t.assigneeId === m.id && t.status !== 'done').length }))
+    .filter((w) => w.count > 0)
+    .sort((a, b) => b.count - a.count)
 
   const moveTask = (id, direction) => {
     const order = columns.map((c) => c.key)
@@ -42,16 +50,30 @@ export default function Projects() {
     }
   }
 
-  const submit = () => {
-    if (!form.title) { show('Task title is required', 'warn'); return }
-    addTask({ ...form, assigneeId: form.assigneeId || 'st2', priority: form.priority || 'medium', status: 'todo', eventId: form.eventId || 'ev1' })
-    show('Task added to board')
-    setOpen(false); setForm({})
+const submit = () => {
+    const res = validate(form, { title: [textRequired('Task title', { min: 3, max: 120 })], due: [optional(dateRequired('Due date'))] })
+    if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
+    addTask({ ...form, assigneeId: form.assigneeId || 'st2', priority: form.priority || 'medium', status: 'todo', eventId: form.eventId || 'ev1', progress: 0 })
+    show(`${form.title} added to board`)
+    setOpen(false); setForm({}); setErrors({})
   }
 
   const total = state.tasks.length
   const done = state.tasks.filter((t) => t.status === 'done').length
   const activeStaff = new Set(state.tasks.map((t) => t.assigneeId))
+
+  const [cal] = React.useState(() => {
+    const now = new Date()
+    const first = new Date(now.getFullYear(), now.getMonth(), 1).getDay()
+    const days = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+    const cells = []
+    for (let i = 0; i < first; i++) cells.push(null)
+    for (let d = 1; d <= days; d++) cells.push(d)
+    while (cells.length % 7 !== 0) cells.push(null)
+    return cells
+  })
+  const tasksByDay = {}
+  state.tasks.forEach((t) => { if (t.due) (tasksByDay[t.due] = tasksByDay[t.due] || []).push(t) })
 
   return (
     <div>
@@ -61,7 +83,7 @@ export default function Projects() {
         icon={KanbanSquare}
         actions={
           <>
-            <button className="btn-outline"><CalendarDays size={15} /> Milestones</button>
+            <button className="btn-outline" onClick={() => setView('milestones')}><CalendarDays size={15} /> Milestones</button>
             <button className="btn-primary" onClick={() => setOpen(true)}><Plus size={15} /> New Task</button>
           </>
         }
@@ -78,8 +100,8 @@ export default function Projects() {
       </div>
 
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <Segmented value={view} onChange={setView} options={[{ value: 'board', label: 'Kanban' }, { value: 'list', label: 'List' }, { value: 'milestones', label: 'Milestones' }]} />
-        <button className="text-xs font-semibold text-brand-700 hover:text-brand-900">Team Workload →</button>
+        <Segmented value={view} onChange={setView} options={[{ value: 'board', label: 'Kanban' }, { value: 'list', label: 'List' }, { value: 'calendar', label: 'Calendar' }, { value: 'milestones', label: 'Milestones' }]} />
+        <button className="text-xs font-semibold text-brand-700 hover:text-brand-900" onClick={() => setWorkloadOpen(true)}>Team Workload →</button>
       </div>
 
       {view === 'board' && (
@@ -94,7 +116,7 @@ export default function Projects() {
                     <span className="text-xs font-bold text-brand-950">{col.label}</span>
                     <span className="chip bg-white text-ink/50 ring-1 ring-brand-100">{tasks.length}</span>
                   </div>
-                  <button onClick={() => { setOpen(true); setForm({ ...form, status: col.key }) }} className="rounded-md p-1 text-ink/35 hover:bg-white hover:text-brand-800"><Plus size={15} /></button>
+                  <button onClick={() => { setErrors({}); setOpen(true); setForm({ ...form, status: col.key }) }} className="rounded-md p-1 text-ink/35 hover:bg-white hover:text-brand-800"><Plus size={15} /></button>
                 </div>
                 <div className="space-y-2.5">
                   {tasks.map((t) => {
@@ -109,6 +131,12 @@ export default function Projects() {
                         </div>
                         <p className="text-sm font-semibold leading-snug text-brand-950">{t.title}</p>
                         <p className="mt-0.5 truncate text-[11px] text-ink/45">{ev?.name}</p>
+                        {typeof t.progress === 'number' && (
+                          <div className="mt-2 flex items-center gap-2">
+                            <Progress value={t.progress} className="flex-1" color={t.progress >= 100 ? 'bg-brand-700' : t.progress >= 50 ? 'bg-brand-600' : 'bg-gold-500'} />
+                            <span className="text-[11px] font-bold text-brand-800">{t.progress}%</span>
+                          </div>
+                        )}
                         <div className="mt-3 flex items-center justify-between border-t border-brand-50 pt-2.5">
                           <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${overdue ? 'text-red-600' : 'text-ink/45'}`}><Clock3 size={12} /> {overdue ? 'Overdue' : t.due}</span>
                           <div className="flex items-center gap-1">
@@ -136,7 +164,7 @@ export default function Projects() {
       {view === 'list' && (
         <div className="card">
           <table className="w-full">
-            <thead className="bg-brand-50/50"><tr><Th>Task</Th><Th>Event</Th><Th>Priority</Th><Th>Assignee</Th><Th>Status</Th><Th>Due</Th></tr></thead>
+            <thead className="bg-brand-50/50"><tr><Th>Task</Th><Th>Event</Th><Th>Priority</Th><Th>Assignee</Th><Th>Status</Th><Th>Progress</Th><Th>Due</Th></tr></thead>
             <tbody className="divide-y divide-brand-50">
               {state.tasks.map((t) => {
                 const a = state.staff.find((m) => m.id === t.assigneeId)
@@ -147,12 +175,55 @@ export default function Projects() {
                     <Td><Badge status={t.priority} label={t.priority} /></Td>
                     <Td><span className="flex items-center gap-2"><Avatar {...avatarMini(a)} size="xs" /> {a?.name}</span></Td>
                     <Td><Badge status={t.status} label={t.status.replace('-', ' ')} /></Td>
+                    <Td>
+                      <div className="flex w-28 items-center gap-2">
+                        <Progress value={t.progress || 0} className="flex-1" color={(t.progress || 0) >= 100 ? 'bg-brand-700' : 'bg-brand-600'} />
+                        <span className="text-[11px] font-bold text-brand-800">{t.progress || 0}%</span>
+                      </div>
+                    </Td>
                     <Td className="text-ink/50">{t.due}</Td>
                   </tr>
                 )
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {view === 'calendar' && (
+        <div className="card p-5">
+          <p className="mb-4 text-xs font-semibold text-ink/45">Tasks grouped by due date — click a task to open it.</p>
+          <div className="grid grid-cols-7 gap-1.5">
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+              <div key={d} className="pb-1 text-center text-[10px] font-bold uppercase tracking-wide text-ink/40">{d}</div>
+            ))}
+            {cal.map((day, i) => {
+              if (day === null) return <div key={'x' + i} />
+              const iso = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+              const dayTasks = tasksByDay[iso] || []
+              const isToday = iso === todayISO()
+              return (
+                <div key={iso} className={`min-h-[76px] rounded-lg border p-1.5 ${isToday ? 'border-brand-400 bg-brand-50' : 'border-brand-100 bg-white'}`}>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-[11px] font-bold ${isToday ? 'text-brand-800' : 'text-ink/55'}`}>{day}</span>
+                    {dayTasks.length > 0 && <span className="chip bg-brand-800 text-white !px-1.5 !py-0 text-[9px]">{dayTasks.length}</span>}
+                  </div>
+                  <div className="mt-1 space-y-1">
+                    {dayTasks.slice(0, 3).map((t) => {
+                      const a = state.staff.find((m) => m.id === t.assigneeId)
+                      return (
+                        <button key={t.id} onClick={() => setDetail(t)} className="block w-full rounded bg-brand-100 px-1.5 py-1 text-left hover:bg-brand-200">
+                          <p className="truncate text-[10px] font-semibold text-brand-800">{t.title}</p>
+                          <p className="truncate text-[9px] text-ink/45">{a?.name} · {t.progress || 0}%</p>
+                        </button>
+                      )
+                    })}
+                    {dayTasks.length > 3 && <p className="text-[9px] font-semibold text-ink/40">+{dayTasks.length - 3} more</p>}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 
@@ -178,7 +249,7 @@ export default function Projects() {
       {/* New task modal */}
       <Modal open={open} onClose={() => setOpen(false)} title="Create Task">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Title *" className="col-span-2"><input className="input" value={form.title || ''} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Arrange VIP transport" /></Field>
+          <Field label="Title *" className="col-span-2"><input className="input" value={form.title || ''} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Arrange VIP transport" />{errors.title && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.title}</p>}</Field>
           <Field label="Event"><select className="input" value={form.eventId || 'ev1'} onChange={(e) => setForm({ ...form, eventId: e.target.value })}>{state.events.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}</select></Field>
           <Field label="Assignee"><select className="input" value={form.assigneeId || 'st2'} onChange={(e) => setForm({ ...form, assigneeId: e.target.value })}>{state.staff.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select></Field>
           <Field label="Priority"><select className="input" value={form.priority || 'medium'} onChange={(e) => setForm({ ...form, priority: e.target.value })}><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></Field>
@@ -191,7 +262,30 @@ export default function Projects() {
       </Modal>
 
       {/* Task detail */}
-      {detail && state.tasks.find((t) => t.id === detail.id) && <TaskModal task={{ ...state.tasks.find((t) => t.id === detail.id) }} state={state} onClose={() => setDetail(null)} show={show} />}
+      {detail && state.tasks.find((t) => t.id === detail.id) && <TaskModal task={{ ...state.tasks.find((t) => t.id === detail.id) }} state={state} onClose={() => setDetail(null)} show={show} updateTask={updateTask} />}
+
+      {/* Team workload modal */}
+      <Modal open={workloadOpen} onClose={() => setWorkloadOpen(false)} title="Team Workload" width="max-w-md">
+        {workload.length === 0 ? (
+          <p className="py-8 text-center text-sm text-ink/40">No active tasks assigned right now.</p>
+        ) : (
+          <div className="space-y-3">
+            {workload.map((w) => (
+              <div key={w.member.id} className="flex items-center gap-3 rounded-lg border border-brand-100 p-3">
+                <Avatar name={w.member.name} initials={w.member.initials} color={w.member.color} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-brand-950">{w.member.name}</p>
+                  <p className="text-xs text-ink/45">{w.member.role}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Progress value={Math.min(100, (w.count / Math.max(1, workload[0].count)) * 100)} className="w-24" />
+                  <span className="text-sm font-black text-brand-800">{w.count}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Modal>
 
       <Toast toast={toast} />
     </div>
@@ -200,7 +294,7 @@ export default function Projects() {
 
 function avatarMini(m) { return m ? { name: m.name, initials: m.initials, color: m.color } : { name: '?', initials: '?', color: 'bg-brand-400' } }
 
-function TaskModal({ task, state, onClose, show }) {
+function TaskModal({ task, state, onClose, show, updateTask }) {
   const a = state.staff.find((m) => m.id === task.assigneeId)
   const ev = state.events.find((e) => e.id === task.eventId)
   const [comments, setComments] = useState([
@@ -227,6 +321,22 @@ function TaskModal({ task, state, onClose, show }) {
         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
           <div className="rounded-lg bg-brand-50 p-3"><p className="text-[11px] font-semibold text-ink/40">Assignee</p><p className="mt-1 flex items-center gap-2 font-semibold"><Avatar {...avatarMini(a)} size="xs" />{a?.name}</p></div>
           <div className="rounded-lg bg-brand-50 p-3"><p className="text-[11px] font-semibold text-ink/40">Due</p><p className="mt-1 font-semibold">{task.due}</p></div>
+        </div>
+        <div className="mt-4 rounded-xl border border-brand-100 p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-xs font-bold uppercase tracking-wider text-ink/40">Progress</p>
+            <span className="text-sm font-black text-brand-800">{task.progress || 0}%</span>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            step="5"
+            value={task.progress || 0}
+            onChange={(e) => { updateTask(task.id, { progress: Number(e.target.value) }); show(`Progress updated to ${e.target.value}%`) }}
+            className="w-full accent-brand-700"
+          />
+          <div className="mt-2"><Progress value={task.progress || 0} color={(task.progress || 0) >= 100 ? 'bg-brand-700' : 'bg-brand-600'} /></div>
         </div>
         <p className="mt-4 mb-2 text-xs font-bold uppercase tracking-wider text-ink/40">Comments ({comments.length})</p>
         <div className="max-h-40 space-y-2 overflow-y-auto rounded-xl border border-brand-100 p-3">

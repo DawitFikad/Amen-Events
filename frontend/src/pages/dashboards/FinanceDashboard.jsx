@@ -13,7 +13,7 @@ import {
 } from 'recharts'
 
 export default function FinanceDashboard() {
-  const { state } = useData()
+  const { state, patchBy, logActivity } = useData()
   const navigate = useNavigate()
 
   const invoices = state.invoices
@@ -182,7 +182,7 @@ export default function FinanceDashboard() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-bold text-brand-950">ETB {fmtCompact(exp.amount)}</p>
-                      <button className="text-[11px] font-bold text-brand-700 hover:text-brand-900">Approve</button>
+                      <button className="text-[11px] font-bold text-brand-700 hover:text-brand-900" onClick={() => { patchBy('expenses', exp.id, { status: 'approved' }); logActivity(`Expense ${exp.category || ''} approved (ETB ${fmtCompact(exp.amount)})`, 'finance') }}>Approve</button>
                     </div>
                   </div>
                 )

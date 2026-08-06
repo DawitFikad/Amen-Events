@@ -50,10 +50,10 @@ export default function PaymentSuccess() {
             <Ticket size={16} /> View My Tickets
           </Link>
           <div className="flex gap-2.5">
-            <button className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
+            <button onClick={() => window.print()} className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
               <Download size={16} /> PDF
             </button>
-            <button className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
+            <button onClick={() => { if (navigator.share) navigator.share({ title: eventName || 'Event Ticket', text: 'Check out my ticket' }).catch(() => {}); else navigator.clipboard?.writeText(window.location.href) }} className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
               <Share2 size={16} /> Share
             </button>
           </div>

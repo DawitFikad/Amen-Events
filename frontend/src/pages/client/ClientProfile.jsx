@@ -2,9 +2,10 @@ import React, { useState } from 'react'
 import { Building2, User, Phone, Mail, MapPin, Lock, Bell, Shield, CheckCircle2 } from 'lucide-react'
 import { useData } from '../../store/DataContext'
 import { Toast } from '../../components/ui'
+import { textRequired, nameOnly, phoneValid, emailValid, optional, validate, clearError } from '../../store/validation'
 
 export default function ClientProfile() {
-  const { state } = useData()
+  const { state, patch, patchBy, logActivity } = useData()
   const clientId = state.currentUserId
   const client = state.clients.find((c) => c.id === clientId)
   const [tab, setTab] = useState('company')
@@ -22,12 +23,27 @@ export default function ClientProfile() {
     budget: true, invoices: true, documents: true, timeline: true, reminders: true,
   })
   const [security, setSecurity] = useState({ twoFactor: false, currentPassword: '', newPassword: '' })
+  const [errors, setErrors] = useState({})
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
 
   const saveCompany = () => {
+    const res = validate(form, {
+      company: [textRequired('Company name', { max: 120 })],
+      contactPerson: [nameOnly('Contact person')],
+      phone: [optional(phoneValid('Phone'))],
+      email: [emailValid('Email')],
+      address: [optional(textRequired('Address', { max: 150 }))],
+      industry: [optional(textRequired('Industry', { max: 120 }))],
+    })
+    if (!res.ok) { setErrors(res.errors); show(res.first, 'error'); return }
+    setErrors({})
     setSaving(true)
-    setTimeout(() => { setSaving(false); show('Company profile updated successfully') }, 800)
+    setTimeout(() => {
+      patchBy('clients', clientId, { company: form.company, contactPerson: form.contactPerson, phone: form.phone, email: form.email, city: form.address, industry: form.industry })
+      logActivity('Client updated company profile', 'crm')
+      setSaving(false); show('Company profile updated successfully')
+    }, 800)
   }
 
   const tabs = [
@@ -82,40 +98,46 @@ export default function ClientProfile() {
               <label className="mb-1.5 block text-xs font-bold text-ink/60">Company Name</label>
               <div className="relative">
                 <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" />
-                <input className="input pl-10" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
+                <input className="input pl-10" value={form.company} onChange={(e) => { setForm({ ...form, company: e.target.value }); setErrors(clearError(errors, 'company')) }} />
               </div>
+              {errors.company && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.company}</p>}
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-bold text-ink/60">Industry</label>
-              <input className="input" value={form.industry} onChange={(e) => setForm({ ...form, industry: e.target.value })} />
+              <input className="input" value={form.industry} onChange={(e) => { setForm({ ...form, industry: e.target.value }); setErrors(clearError(errors, 'industry')) }} />
+              {errors.industry && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.industry}</p>}
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-bold text-ink/60">Contact Person</label>
               <div className="relative">
                 <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" />
-                <input className="input pl-10" value={form.contactPerson} onChange={(e) => setForm({ ...form, contactPerson: e.target.value })} />
+                <input className="input pl-10" value={form.contactPerson} onChange={(e) => { setForm({ ...form, contactPerson: e.target.value }); setErrors(clearError(errors, 'contactPerson')) }} />
               </div>
+              {errors.contactPerson && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.contactPerson}</p>}
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-bold text-ink/60">Phone</label>
               <div className="relative">
                 <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" />
-                <input className="input pl-10" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                <input className="input pl-10" value={form.phone} onChange={(e) => { setForm({ ...form, phone: e.target.value }); setErrors(clearError(errors, 'phone')) }} />
               </div>
+              {errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-bold text-ink/60">Email</label>
               <div className="relative">
                 <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" />
-                <input className="input pl-10" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                <input className="input pl-10" value={form.email} onChange={(e) => { setForm({ ...form, email: e.target.value }); setErrors(clearError(errors, 'email')) }} />
               </div>
+              {errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-bold text-ink/60">Address</label>
               <div className="relative">
                 <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" />
-                <input className="input pl-10" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+                <input className="input pl-10" value={form.address} onChange={(e) => { setForm({ ...form, address: e.target.value }); setErrors(clearError(errors, 'address')) }} />
               </div>
+              {errors.address && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.address}</p>}
             </div>
           </div>
           <div className="mt-5 flex justify-end">
@@ -153,7 +175,7 @@ export default function ClientProfile() {
             ))}
           </div>
           <div className="mt-5 flex justify-end">
-            <button onClick={() => show('Notification preferences saved')} className="btn-primary">
+            <button onClick={() => { patch('clientNotifPrefs', notifPrefs); logActivity('Client updated notification preferences', 'crm'); show('Notification preferences saved') }} className="btn-primary">
               <CheckCircle2 size={16} /> Save Preferences
             </button>
           </div>
@@ -180,7 +202,7 @@ export default function ClientProfile() {
                   <input type="password" className="input pl-10" placeholder="••••••••" value={security.newPassword} onChange={(e) => setSecurity({ ...security, newPassword: e.target.value })} />
                 </div>
               </div>
-              <button onClick={() => { setSecurity({ ...security, currentPassword: '', newPassword: '' }); show('Password changed successfully') }} className="btn-primary">
+              <button onClick={() => { if (security.currentPassword) { patch('clientPasswordUpdated', true); logActivity('Client changed password', 'crm') } else { show('Enter your current password', 'warn'); return } setSecurity({ ...security, currentPassword: '', newPassword: '' }); show('Password changed successfully') }} className="btn-primary">
                 <Lock size={16} /> Update Password
               </button>
             </div>
@@ -193,7 +215,7 @@ export default function ClientProfile() {
                 <p className="text-xs text-ink/50">Add an extra layer of security to your account</p>
               </div>
               <button
-                onClick={() => { setSecurity({ ...security, twoFactor: !security.twoFactor }); show(security.twoFactor ? '2FA disabled' : '2FA enabled') }}
+                onClick={() => { setSecurity({ ...security, twoFactor: !security.twoFactor }); patch('clientTwoFactor', !security.twoFactor); logActivity(`Client ${security.twoFactor ? 'disabled' : 'enabled'} two-factor auth`, 'crm'); show(security.twoFactor ? '2FA disabled' : '2FA enabled') }}
                 className={`relative h-6 w-11 rounded-full transition ${security.twoFactor ? 'bg-brand-600' : 'bg-ink/20'}`}
               >
                 <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${security.twoFactor ? 'left-[22px]' : 'left-0.5'}`} />

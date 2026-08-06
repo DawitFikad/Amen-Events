@@ -4,16 +4,19 @@ import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, Toast, EmptyState, Th, Td, Segmented, Modal, Field } from '../components/ui'
 import { fmt, fmtCompact } from '../store/data'
 import { downloadCSV, exportPDF } from '../store/exportUtils'
+import { numberPositive, textRequired, required, validate } from '../store/validation'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line, AreaChart, Area } from 'recharts'
 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 export default function Finance() {
-  const { state, recordExpense, recordPayment, addInvoice, intent, clearIntent } = useData()
+  const { state, recordExpense, recordPayment, addInvoice, intent, clearIntent, addPurchaseRequest, setPurchaseRequestStatus } = useData()
   const [tab, setTab] = useState('overview')
   const [open, setOpen] = useState(null)
   const [toast, setToast] = useState(null)
   const [form, setForm] = useState({})
+  const [prForm, setPrForm] = useState({})
+  const [errors, setErrors] = useState({})
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
 
@@ -34,6 +37,7 @@ export default function Finance() {
       setTab('overview')
       setForm({ eventId: state.demo.lastEventId || 'ev1', category: 'Venue Rental' })
       setOpen('expense')
+      setErrors({})
       clearIntent()
     }
   }, [intent])
@@ -59,19 +63,8 @@ export default function Finance() {
     return { m, rev: Math.round(rev / 1000), exp: Math.round(exp / 1000) }
   }).filter((d) => d.rev > 0 || d.exp > 0)
 
-  // Purchase requests from approval API data (or fallback to expenses without vendorId)
-  const purchaseRequests = state.expenses
-    .filter((e) => !e.vendorId)
-    .slice(0, 6)
-    .map((e) => ({
-      id: e.id,
-      item: e.category,
-      category: e.category,
-      amount: e.amount,
-      requestedBy: null,
-      date: e.date,
-      status: 'pending',
-    }))
+  // Purchase requests (real, persisted list)
+  const purchaseRequests = state.purchaseRequests || []
 
   const pnl = [
     { l: 'Total Revenue (collected)', v: revenue, tone: 'text-brand-800' },
@@ -81,17 +74,19 @@ export default function Finance() {
   ]
 
   const submitExpense = () => {
-    if (!form.amount) { show('Amount required', 'warn'); return }
+    const res = validate(form, { amount: [numberPositive('Amount')] })
+    if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
     recordExpense({ eventId: form.eventId || 'ev1', category: form.category || 'General', amount: Number(form.amount), date: new Date().toISOString().slice(0, 10), vendorId: form.vendorId })
     show('Expense recorded')
-    setOpen(null); setForm({})
+    setOpen(null); setForm({}); setErrors({})
   }
 
   const submitPayment = () => {
-    if (!form.amount) { show('Amount required', 'warn'); return }
+    const res = validate(form, { amount: [numberPositive('Amount')] })
+    if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
     recordPayment(form.invoiceId, Number(form.amount))
     show(`Payment of ${fmt(Number(form.amount))} recorded`)
-    setOpen(null); setForm({})
+    setOpen(null); setForm({}); setErrors({})
   }
 
   return (
@@ -103,7 +98,7 @@ export default function Finance() {
         actions={
           <>
             <button className="btn-outline" onClick={exportAll}><Download size={15} /> Export</button>
-            <button className="btn-primary" onClick={() => setOpen('expense')}><Plus size={15} /> Record Expense</button>
+            <button className="btn-primary" onClick={() => { setErrors({}); setOpen('expense') }}><Plus size={15} /> Record Expense</button>
           </>
         }
       />
@@ -168,7 +163,7 @@ export default function Finance() {
         <div className="card overflow-hidden">
           <div className="flex items-center justify-between border-b border-brand-100 p-4">
             <span className="text-sm text-ink/55">{state.invoices.length} invoices · {fmt(outstanding)} outstanding</span>
-            <button className="btn-primary !py-1.5 text-xs" onClick={() => setOpen('invoice')}><Plus size={14} /> New Invoice</button>
+            <button className="btn-primary !py-1.5 text-xs" onClick={() => { setErrors({}); setOpen('invoice') }}><Plus size={14} /> New Invoice</button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px]">
@@ -186,7 +181,7 @@ export default function Finance() {
                       <Td className="text-right text-brand-800">{fmt(inv.paid)}</Td>
                       <Td className="text-ink/50">{inv.dueDate}</Td>
                       <Td><Badge status={inv.status} label={inv.status} /></Td>
-                      <Td>{inv.status !== 'paid' && <button className="btn-outline !py-1 text-xs" onClick={() => { setOpen('payment'); setForm({ ...form, invoiceId: inv.id }) }}>Record Payment</button>}</Td>
+                      <Td>{inv.status !== 'paid' && <button className="btn-outline !py-1 text-xs" onClick={() => { setErrors({}); setOpen('payment'); setForm({ ...form, invoiceId: inv.id }) }}>Record Payment</button>}</Td>
                     </tr>
                   )
                 })}
@@ -221,21 +216,35 @@ export default function Finance() {
 
       {tab === 'purchase' && (
         <div className="card overflow-hidden">
+          <div className="flex items-center justify-between border-b border-brand-100 p-4">
+            <span className="text-xs text-ink/45">{purchaseRequests.filter((p) => p.status === 'pending').length} awaiting approval · {fmt(purchaseRequests.reduce((a, p) => a + (p.status === 'pending' ? p.amount : 0), 0))} pending</span>
+            <button className="btn-primary !py-1.5 text-xs" onClick={() => { setErrors({}); setOpen('purchase') }}><Plus size={14} /> New Request</button>
+          </div>
           <table className="w-full">
-            <thead className="bg-brand-50/50"><tr><Th>Item</Th><Th>Category</Th><Th>Requested By</Th><Th>Date</Th><Th className="text-right">Amount</Th><Th>Status</Th></tr></thead>
+            <thead className="bg-brand-50/50"><tr><Th>Item</Th><Th>Category</Th><Th>Requested By</Th><Th>Event</Th><Th>Date</Th><Th className="text-right">Amount</Th><Th>Status</Th><Th></Th></tr></thead>
             <tbody className="divide-y divide-brand-50">
               {purchaseRequests.length === 0 ? (
-                <tr><td colSpan={6} className="py-8 text-center text-sm text-ink/40">No purchase requests yet. Record expenses to see them here.</td></tr>
+                <tr><td colSpan={8} className="py-8 text-center text-sm text-ink/40">No purchase requests yet. Create one to route an expense for approval.</td></tr>
               ) : purchaseRequests.map((p) => {
                 const m = state.staff.find((x) => x.id === p.requestedBy)
+                const ev = state.events.find((x) => x.id === p.eventId)
                 return (
                   <tr key={p.id} className="hover:bg-brand-50/40">
                     <Td className="font-semibold text-brand-950">{p.item}</Td>
                     <Td className="text-ink/60">{p.category}</Td>
                     <Td className="text-ink/60">{m?.name || '—'}</Td>
+                    <Td className="text-ink/60">{ev?.name || '—'}</Td>
                     <Td className="text-ink/50">{p.date}</Td>
                     <Td className="text-right font-semibold">{fmt(p.amount)}</Td>
                     <Td><Badge status={p.status} label={p.status} /></Td>
+                    <Td>
+                      {p.status === 'pending' && (
+                        <div className="flex gap-1.5">
+                          <button className="btn-outline !px-2 !py-0.5 text-[11px] !text-brand-700" onClick={() => { setPurchaseRequestStatus(p.id, 'approved'); show(`${p.item} approved`) }}>Approve</button>
+                          <button className="btn-outline !px-2 !py-0.5 text-[11px] !text-red-600" onClick={() => { setPurchaseRequestStatus(p.id, 'rejected'); show(`${p.item} rejected`) }}>Reject</button>
+                        </div>
+                      )}
+                    </Td>
                   </tr>
                 )
               })}
@@ -249,7 +258,7 @@ export default function Finance() {
         <div className="grid grid-cols-2 gap-3">
           <Field label="Event"><select className="input" value={form.eventId || ''} onChange={(e) => setForm({ ...form, eventId: e.target.value })}><option value="">Select…</option>{state.events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}</select></Field>
           <Field label="Category"><select className="input" value={form.category || 'General'} onChange={(e) => setForm({ ...form, category: e.target.value })}><option>Venue Rental</option><option>Catering</option><option>Technical</option><option>Decoration</option><option>Transport</option><option>Marketing</option><option>General</option></select></Field>
-          <Field label="Amount (ETB) *"><input type="number" className="input" value={form.amount || ''} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></Field>
+          <Field label="Amount (ETB) *"><input type="number" className="input" value={form.amount || ''} onChange={(e) => setForm({ ...form, amount: e.target.value })} />{errors.amount && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.amount}</p>}</Field>
           <Field label="Vendor"><select className="input" value={form.vendorId || ''} onChange={(e) => setForm({ ...form, vendorId: e.target.value })}><option value="">—</option>{state.vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
@@ -269,7 +278,7 @@ export default function Finance() {
               ))}
             </select>
           </Field>
-          <Field label="Amount (ETB) *"><input type="number" className="input" value={form.amount || ''} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></Field>
+          <Field label="Amount (ETB) *"><input type="number" className="input" value={form.amount || ''} onChange={(e) => setForm({ ...form, amount: e.target.value })} />{errors.amount && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.amount}</p>}</Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button className="btn-outline" onClick={() => setOpen(null)}>Cancel</button>
@@ -282,17 +291,43 @@ export default function Finance() {
         <div className="grid grid-cols-2 gap-3">
           <Field label="Client"><select className="input" value={form.clientId || ''} onChange={(e) => setForm({ ...form, clientId: e.target.value })}><option value="">Select…</option>{state.clients.map((c) => <option key={c.id} value={c.id}>{c.company}</option>)}</select></Field>
           <Field label="Event"><select className="input" value={form.eventId || ''} onChange={(e) => setForm({ ...form, eventId: e.target.value })}><option value="">Select…</option>{state.events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}</select></Field>
-          <Field label="Amount (ETB) *"><input type="number" className="input" value={form.amount || ''} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></Field>
+          <Field label="Amount (ETB) *"><input type="number" className="input" value={form.amount || ''} onChange={(e) => setForm({ ...form, amount: e.target.value })} />{errors.amount && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.amount}</p>}</Field>
           <Field label="Due Date"><input type="date" className="input" value={form.dueDate || ''} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button className="btn-outline" onClick={() => setOpen(null)}>Cancel</button>
           <button className="btn-primary" onClick={() => {
-            if (!form.amount) { show('Amount required', 'warn'); return }
+            const res = validate(form, { amount: [numberPositive('Amount')], clientId: [required('Client')] })
+            if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
             addInvoice({ ...form, ref: 'INV-2026-' + String(Math.floor(1000 + Math.random() * 9000)), paid: 0 })
             show('Invoice issued')
-            setOpen(null); setForm({})
+            setOpen(null); setForm({}); setErrors({})
           }}>Issue Invoice</button>
+        </div>
+      </Modal>
+
+      {/* Purchase request modal */}
+      <Modal open={open === 'purchase'} onClose={() => setOpen(null)} title="New Purchase Request">
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Item / Description *" className="col-span-2"><input className="input" value={prForm.item || ''} onChange={(e) => setPrForm({ ...prForm, item: e.target.value })} placeholder="e.g. Extra moving head lights (12)" />{errors.item && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.item}</p>}</Field>
+          <Field label="Category"><select className="input" value={prForm.category || 'Technical'} onChange={(e) => setPrForm({ ...prForm, category: e.target.value })}><option>Technical</option><option>Catering</option><option>Decoration</option><option>Logistics</option><option>Marketing</option><option>Branding</option><option>General</option></select></Field>
+          <Field label="Amount (ETB) *"><input type="number" className="input" value={prForm.amount || ''} onChange={(e) => setPrForm({ ...prForm, amount: e.target.value })} />{errors.prAmount && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.prAmount}</p>}</Field>
+          <Field label="Event"><select className="input" value={prForm.eventId || ''} onChange={(e) => setPrForm({ ...prForm, eventId: e.target.value })}><option value="">—</option>{state.events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}</select></Field>
+          <Field label="Requested By"><select className="input" value={prForm.requestedBy || state.currentUserId || 'st2'} onChange={(e) => setPrForm({ ...prForm, requestedBy: e.target.value })}>{state.staff.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select></Field>
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <button className="btn-outline" onClick={() => setOpen(null)}>Cancel</button>
+          <button className="btn-primary" onClick={() => {
+            const res = validate(prForm, { item: [textRequired('Item / description')], amount: [numberPositive('Amount')] })
+            if (!res.ok) {
+              const mapped = { ...res.errors }
+              if (mapped.amount) { mapped.prAmount = mapped.amount; delete mapped.amount }
+              setErrors(mapped); show(res.first, 'warn'); return
+            }
+            addPurchaseRequest(prForm)
+            show('Purchase request submitted for approval')
+            setOpen(null); setPrForm({}); setErrors({})
+          }}>Submit Request</button>
         </div>
       </Modal>
 

@@ -2,6 +2,8 @@ import React, { useState } from 'react'
 import { Megaphone, Plus, Mail, MessageSquare, Send, Link2, Tag, TrendingUp, Globe } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, Toast, EmptyState, Th, Td, Modal, Field } from '../components/ui'
+import { exportPDF } from '../store/exportUtils'
+import { textRequired, numberPositive, optional, validate } from '../store/validation'
 
 const social = [
   { id: 'so1', platform: 'LinkedIn', followers: 18400, posts: 6, engagement: '4.2%' },
@@ -9,27 +11,57 @@ const social = [
   { id: 'so3', platform: 'Twitter / X', followers: 9800, posts: 11, engagement: '2.9%' },
 ]
 
+const channelDefaults = {
+  'Email Notifications': true,
+  'SMS Notifications': true,
+  'WhatsApp Notifications': true,
+  'Social Media Links': true,
+}
+
 export default function Marketing() {
-  const { state, addCampaign, addCoupon } = useData()
+  const { state, patch, addCampaign, addCoupon, logActivity } = useData()
   const [view, setView] = useState('campaigns')
   const [toast, setToast] = useState(null)
   const [open, setOpen] = useState(null) // 'campaign' | 'coupon'
   const [form, setForm] = useState({})
+  const [errors, setErrors] = useState({})
+  const [channels, setChannels] = useState({ ...channelDefaults, ...(state.channelSettings || {}) })
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
 
+  const campaignSchema = {
+    name: [textRequired('Campaign name', { min: 3, max: 120 })],
+    audience: [optional(numberPositive('Audience size', { integer: true }))],
+  }
+  const couponSchema = {
+    code: [textRequired('Coupon code', { min: 4, max: 30 })],
+    value: [textRequired('Value', { min: 1, max: 20 })],
+    max: [optional(numberPositive('Max uses', { integer: true }))],
+  }
+
   const submitCampaign = () => {
-    if (!form.name) { show('Campaign name is required', 'warn'); return }
+    const res = validate(form, campaignSchema)
+    if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
     addCampaign(form)
     show(`Campaign "${form.name}" created (${form.channel || 'Email'})`)
-    setOpen(null); setForm({})
+    setOpen(null); setForm({}); setErrors({})
   }
 
   const submitCoupon = () => {
-    if (!form.code) { show('Coupon code is required', 'warn'); return }
+    const res = validate(form, couponSchema)
+    if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
     addCoupon(form)
     show(`Coupon ${form.code} generated`)
-    setOpen(null); setForm({})
+    setOpen(null); setForm({}); setErrors({})
+  }
+
+  const viewReport = (c) => {
+    exportPDF(`Campaign Report — ${c.name}`, [
+      { title: 'Campaign', text: `${c.name} via ${c.channel}` },
+      { title: 'Delivery', rows: { headers: ['Metric', 'Value'], rows: [['Audience', c.audience.toLocaleString()], ['Sent', c.sent.toLocaleString()], ['Opens', c.opens || 0], ['Open Rate', c.opens ? Math.round((c.opens / c.sent) * 100) + '%' : '—']] } },
+    ])
+    logActivity(`Opened report for campaign "${c.name}"`, 'marketing')
+    show(`Report opened for ${c.name}`)
   }
 
   const sent = state.campaigns.filter((c) => c.status === 'sent' || c.status === 'sending')
@@ -42,7 +74,7 @@ export default function Marketing() {
         title="Marketing Module"
         subtitle="Email, SMS and WhatsApp campaigns with coupon management."
         icon={Megaphone}
-        actions={<button className="btn-primary" onClick={() => setOpen('campaign')}><Plus size={15} /> New Campaign</button>}
+        actions={<button className="btn-primary" onClick={() => { setErrors({}); setOpen('campaign') }}><Plus size={15} /> New Campaign</button>}
       />
 
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -80,7 +112,7 @@ export default function Marketing() {
                   </div>
                 </div>
                 <Progress value={c.audience ? (c.sent / c.audience) * 100 : 0} className="mt-3" />
-                <button className="btn-outline w-full !py-1.5 text-xs mt-3" onClick={() => show(`Opened ${c.name} report`)}>View Report</button>
+                <button className="btn-outline w-full !py-1.5 text-xs mt-3" onClick={() => viewReport(c)}>View Report</button>
               </div>
             )
           })}
@@ -91,7 +123,7 @@ export default function Marketing() {
         <div className="card overflow-hidden">
           <div className="flex items-center justify-between border-b border-brand-100 p-4">
             <span className="text-sm text-ink/55">{state.coupons.length} promo codes</span>
-            <button className="btn-primary !py-1.5 text-xs" onClick={() => setOpen('coupon')}><Plus size={14} /> Generate Coupon</button>
+            <button className="btn-primary !py-1.5 text-xs" onClick={() => { setErrors({}); setOpen('coupon') }}><Plus size={14} /> Generate Coupon</button>
           </div>
           <table className="w-full">
             <thead className="bg-brand-50/50"><tr><Th>Code</Th><Th>Type</Th><Th>Value</Th><Th>Usage</Th><Th>Status</Th></tr></thead>
@@ -137,28 +169,37 @@ export default function Marketing() {
               ['SMS Notifications', 'Event reminders, check-in alerts', Send, 'bg-gold-100 text-gold-700', true],
               ['WhatsApp Notifications', 'VIP invites & confirmations', MessageSquare, 'bg-sky-100 text-sky-700', true],
               ['Social Media Links', 'Broadcast on social pages', Link2, 'bg-violet-100 text-violet-700', true],
-            ].map(([name, desc, I, cls, on]) => (
-              <div key={name} className="flex items-center gap-4 rounded-xl border border-brand-100 p-4">
-                <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${cls}`}><I size={18} /></span>
-                <div className="min-w-0 flex-1">
-                  <p className="font-bold text-brand-950">{name}</p>
-                  <p className="text-xs text-ink/45">{desc}</p>
+            ].map(([name, desc, I, cls]) => {
+              const on = channels[name]
+              return (
+                <div key={name} className="flex items-center gap-4 rounded-xl border border-brand-100 p-4">
+                  <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${cls}`}><I size={18} /></span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-brand-950">{name}</p>
+                    <p className="text-xs text-ink/45">{desc}</p>
+                  </div>
+                  <span className={`relative inline-flex h-6 w-11 cursor-pointer items-center rounded-full transition ${on ? 'bg-brand-700' : 'bg-brand-100'}`}
+                    onClick={() => {
+                      const next = { ...channels, [name]: !on }
+                      setChannels(next)
+                      patch('channelSettings', next)
+                      logActivity(`Channel "${name}" ${next[name] ? 'enabled' : 'disabled'}`, 'marketing')
+                      show(`${name} ${next[name] ? 'enabled' : 'disabled'}`, next[name] ? 'success' : 'warn')
+                    }}>
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${on ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </span>
                 </div>
-                <span className={`relative inline-flex h-6 w-11 cursor-pointer items-center rounded-full transition ${on ? 'bg-brand-700' : 'bg-brand-100'}`}
-                  onClick={() => show(`${name} ${on ? 'disabled' : 'enabled'}`, 'info')}>
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${on ? 'translate-x-6' : 'translate-x-1'}`} />
-                </span>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
 
       <Modal open={open === 'campaign'} onClose={() => setOpen(null)} title="New Campaign">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Campaign Name *" className="col-span-2"><input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Post-Expo Follow-up" /></Field>
+          <Field label="Campaign Name *" className="col-span-2"><input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Post-Expo Follow-up" />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
           <Field label="Channel"><select className="input" value={form.channel || 'Email'} onChange={(e) => setForm({ ...form, channel: e.target.value })}><option>Email</option><option>SMS</option><option>WhatsApp</option></select></Field>
-          <Field label="Audience Size"><input type="number" className="input" value={form.audience || ''} onChange={(e) => setForm({ ...form, audience: e.target.value })} placeholder="5000" /></Field>
+          <Field label="Audience Size"><input type="number" className="input" value={form.audience || ''} onChange={(e) => setForm({ ...form, audience: e.target.value })} placeholder="5000" />{errors.audience && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.audience}</p>}</Field>
           <Field label="Status"><select className="input" value={form.status || 'draft'} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="draft">Draft</option><option value="sending">Sending</option><option value="sent">Sent</option></select></Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
@@ -169,10 +210,10 @@ export default function Marketing() {
 
       <Modal open={open === 'coupon'} onClose={() => setOpen(null)} title="Generate Coupon">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Coupon Code *"><input className="input" value={form.code || ''} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="SUMMIT20" /></Field>
-          <Field label="Value"><input className="input" value={form.value || '10%'} onChange={(e) => setForm({ ...form, value: e.target.value })} placeholder="15%" /></Field>
+          <Field label="Coupon Code *"><input className="input" value={form.code || ''} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="SUMMIT20" />{errors.code && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.code}</p>}</Field>
+          <Field label="Value"><input className="input" value={form.value || '10%'} onChange={(e) => setForm({ ...form, value: e.target.value })} placeholder="15%" />{errors.value && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.value}</p>}</Field>
           <Field label="Type"><select className="input" value={form.type || 'Discount'} onChange={(e) => setForm({ ...form, type: e.target.value })}><option>Discount</option><option>Referral</option></select></Field>
-          <Field label="Max Uses"><input type="number" className="input" value={form.max || 500} onChange={(e) => setForm({ ...form, max: e.target.value })} /></Field>
+          <Field label="Max Uses"><input type="number" className="input" value={form.max || 500} onChange={(e) => setForm({ ...form, max: e.target.value })} />{errors.max && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.max}</p>}</Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button className="btn-outline" onClick={() => setOpen(null)}>Cancel</button>

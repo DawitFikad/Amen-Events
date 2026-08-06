@@ -39,8 +39,8 @@ export default function PortalLayout() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3.5 sm:px-8">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2.5">
-            <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-portal-600 shadow-sm">
-              <img src={logo} alt="Amen Events" className="h-full w-full object-fill" />
+            <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-portal-100 shadow-sm">
+              <img src={logo} alt="Amen Events" className="h-full w-full object-cover" />
             </span>
             <span className="text-lg font-bold tracking-tight text-gray-900">Amen Events</span>
           </Link>
@@ -107,7 +107,7 @@ export default function PortalLayout() {
               </>
             ) : (
               <>
-                <Link to="/portal-login" className="rounded-xl px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Login</Link>
+                <Link to="/client-login" className="rounded-xl px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Login</Link>
                 <Link to="/register" className="rounded-xl bg-portal-500 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-portal-600 hover:shadow-md">Register</Link>
               </>
             )}
@@ -143,7 +143,7 @@ export default function PortalLayout() {
                 </>
               ) : (
                 <div className="flex gap-2 pt-2">
-                  <Link to="/portal-login" onClick={() => setMobileOpen(false)} className="flex-1 rounded-xl border border-gray-200 px-4 py-3 text-center text-sm font-semibold text-gray-700">Login</Link>
+                  <Link to="/client-login" onClick={() => setMobileOpen(false)} className="flex-1 rounded-xl border border-gray-200 px-4 py-3 text-center text-sm font-semibold text-gray-700">Login</Link>
                   <Link to="/register" onClick={() => setMobileOpen(false)} className="flex-1 rounded-xl bg-portal-500 px-4 py-3 text-center text-sm font-semibold text-white">Register</Link>
                 </div>
               )}
@@ -163,8 +163,8 @@ export default function PortalLayout() {
           <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <div className="flex items-center gap-2.5">
-                <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-portal-600">
-                  <img src={logo} alt="Amen Events" className="h-full w-full object-fill" />
+                <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-portal-100 shadow-sm">
+                  <img src={logo} alt="Amen Events" className="h-full w-full object-cover" />
                 </span>
                 <span className="font-bold text-gray-900">Amen Events</span>
               </div>
@@ -181,7 +181,7 @@ export default function PortalLayout() {
             <div>
               <p className="text-sm font-bold text-gray-900">Account</p>
               <div className="mt-4 space-y-2.5">
-                <Link to="/portal-login" className="block text-sm text-gray-500 transition hover:text-portal-600">Login</Link>
+                <Link to="/client-login" className="block text-sm text-gray-500 transition hover:text-portal-600">Login</Link>
                 <Link to="/register" className="block text-sm text-gray-500 transition hover:text-portal-600">Create Account</Link>
                 <Link to="/my-tickets" className="block text-sm text-gray-500 transition hover:text-portal-600">My Tickets</Link>
               </div>

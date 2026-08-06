@@ -6,6 +6,7 @@ import {
   Ticket, Users, GitBranch,
 } from 'lucide-react'
 import { useData } from '../../store/DataContext'
+import logo from '../../logo.jpg'
 
 const groups = [
   {
@@ -56,7 +57,7 @@ export default function ClientSidebar({ collapsed, mobileNav, setMobileNav }) {
 
   const handleLogout = () => {
     logout()
-    navigate('/login', { replace: true })
+    navigate('/client-login', { replace: true })
   }
 
   return (
@@ -67,9 +68,9 @@ export default function ClientSidebar({ collapsed, mobileNav, setMobileNav }) {
     >
       {/* Logo */}
       <div className="flex h-16 items-center gap-2.5 px-4 border-b border-white/10">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10">
-          <Building2 size={20} className="text-white" />
-        </div>
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/10 ring-1 ring-white/15">
+          <img src={logo} alt="Amen Events" className="h-full w-full object-cover" />
+        </span>
         {!collapsed && (
           <div className="min-w-0">
             <p className="text-[15px] font-bold leading-tight text-white">Amen Events</p>

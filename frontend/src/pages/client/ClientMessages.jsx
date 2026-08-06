@@ -20,6 +20,7 @@ export default function ClientMessages() {
   const [messages, setMessages] = useState(MOCK_MESSAGES)
   const [input, setInput] = useState('')
   const endRef = useRef(null)
+  const fileRef = useRef(null)
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -29,6 +30,14 @@ export default function ClientMessages() {
     if (!input.trim()) return
     setMessages([...messages, { id: 'm' + Date.now(), from: 'client', text: input, time: 'Just now' }])
     setInput('')
+  }
+
+  const attach = (e) => {
+    const f = e.target.files?.[0]
+    if (f) {
+      setMessages([...messages, { id: 'm' + Date.now(), from: 'client', text: `📎 Attached: ${f.name}`, time: 'Just now' }])
+      e.target.value = ''
+    }
   }
 
   return (
@@ -96,7 +105,8 @@ export default function ClientMessages() {
           {/* Input */}
           <div className="border-t border-brand-50 p-3">
             <div className="flex items-center gap-2">
-              <button className="flex h-9 w-9 items-center justify-center rounded-lg border border-brand-100 text-ink/50 hover:bg-brand-50">
+              <input ref={fileRef} type="file" className="hidden" onChange={attach} />
+              <button onClick={() => fileRef.current?.click()} className="flex h-9 w-9 items-center justify-center rounded-lg border border-brand-100 text-ink/50 hover:bg-brand-50">
                 <Paperclip size={16} />
               </button>
               <input

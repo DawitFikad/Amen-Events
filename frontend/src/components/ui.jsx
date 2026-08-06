@@ -1,5 +1,26 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Check, X, AlertTriangle, Info, TrendingUp, ChevronRight, Loader2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Check, X, AlertTriangle, Info, TrendingUp, ChevronRight, Loader2, ArrowLeft } from 'lucide-react'
+
+// ---- Back navigation ---- 
+export function BackButton({ fallback = '/', className = '', label = 'Back' }) {
+  const navigate = useNavigate()
+  const goBack = () => {
+    const idx = window.history.state && typeof window.history.state.idx === 'number' ? window.history.state.idx : 0
+    if (idx > 0) navigate(-1)
+    else navigate(fallback, { replace: true })
+  }
+  return (
+    <button
+      onClick={goBack}
+      aria-label={label}
+      title={label}
+      className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-brand-100 text-brand-700 transition hover:bg-brand-50 hover:text-brand-900 ${className}`}
+    >
+      <ArrowLeft size={18} />
+    </button>
+  )
+}
 
 // ---- Avatars / initials ---- 
 export function Avatar({ name, initials, color = 'bg-brand-700', size = 'md' }) {
@@ -43,6 +64,11 @@ const statusStyles = {
   high: 'bg-red-100 text-red-700',
   medium: 'bg-gold-100 text-gold-700',
   low: 'bg-slate-100 text-slate-500',
+  signed: 'bg-brand-100 text-brand-800',
+  closed: 'bg-slate-100 text-slate-500',
+  scheduled: 'bg-sky-100 text-sky-700',
+  approved: 'bg-brand-100 text-brand-800',
+  rejected: 'bg-red-100 text-red-700',
 }
 
 export function Badge({ status, label }) {

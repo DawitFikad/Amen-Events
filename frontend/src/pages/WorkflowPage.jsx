@@ -13,8 +13,25 @@ const STAGE_ICONS = [
   MapPin, Package, Wallet, Ticket, QrCode, BarChart3, Trophy, Trophy,
 ]
 
+const WORKFLOW_STAGES = [
+  { id: 's0', name: 'Client Created', detail: 'New client profile added to the CRM' },
+  { id: 's1', name: 'Proposal', detail: 'Scope and budget proposal shared with client' },
+  { id: 's2', name: 'Contract', detail: 'Contract drafted and signed' },
+  { id: 's3', name: 'Onboarding', detail: 'Kickoff meeting and requirements brief' },
+  { id: 's4', name: 'Event Created', detail: 'Event record created in the system' },
+  { id: 's5', name: 'Team Assigned', detail: 'Project team assigned to the event' },
+  { id: 's6', name: 'Venue Allocated', detail: 'Venue booked and confirmed' },
+  { id: 's7', name: 'Resources', detail: 'Equipment and inventory allocated' },
+  { id: 's8', name: 'Budget', detail: 'Event budget locked' },
+  { id: 's9', name: 'Registrations', detail: 'Attendees registered' },
+  { id: 's10', name: 'QR Tickets', detail: 'Tickets generated with QR codes' },
+  { id: 's11', name: 'Check-in', detail: 'Guest check-in at the venue' },
+  { id: 's12', name: 'Finance & Reports', detail: 'Payments recorded and reports issued' },
+  { id: 's13', name: 'Event Completed', detail: 'Event closed and evaluated' },
+]
+
 export default function WorkflowPage() {
-  const { rbac, backendOnline } = useData()
+  const { rbac, backendOnline, state, patch, logActivity } = useData()
   const [events, setEvents] = useState([])
   const [stages, setStages] = useState([])
   const [selected, setSelected] = useState(null)
@@ -26,12 +43,41 @@ export default function WorkflowPage() {
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 3000) }
 
+  // Offline mode: derive pipeline from store events
+  const offlineEvents = useMemo(() => {
+    if (backendOnline) return events
+    return state.events.map((e) => {
+      const stage = Math.max(0, Math.min(13, Math.round(((e.progress ?? 0) / 100) * 13)))
+      return {
+        id: e.id,
+        name: e.name,
+        date: e.date,
+        status: e.status,
+        progress: e.progress ?? 0,
+        client: { company: state.clients.find((c) => c.id === e.clientId)?.company || 'No client' },
+        stage,
+        completedSteps: stage,
+        totalSteps: 14,
+        checklist: WORKFLOW_STAGES.map((s, i) => ({ id: s.id, name: s.name, detail: s.detail })),
+      }
+    })
+  }, [backendOnline, events, state.events, state.clients])
+
+  const stagesMap = useMemo(() => {
+    if (backendOnline) return stages
+    return WORKFLOW_STAGES.reduce((m, s) => { m[s.id] = s; return m }, {})
+  }, [backendOnline, stages])
+
+  const eventList = backendOnline ? events : offlineEvents
+
   useEffect(() => {
     if (backendOnline) {
       loadWorkflow()
     } else {
       setLoading(false)
+      if (!selected && offlineEvents.length) setSelected(offlineEvents[0])
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [backendOnline])
 
   const loadWorkflow = async () => {
@@ -46,13 +92,32 @@ export default function WorkflowPage() {
     setLoading(false)
   }
 
+  const applyStage = (id, stage) => {
+    const progress = Math.round((stage / 13) * 100)
+    patch('events', (arr) => arr.map((e) => (e.id === id ? { ...e, stage, progress } : e)))
+    const cur = (offlineEvents.find((e) => e.id === id) || selected)
+    if (cur) {
+      setSelected({ ...cur, stage, progress, completedSteps: stage })
+      setLogs((l) => [
+        { id: 'wf-' + Math.random().toString(36).slice(2, 8), user: { name: state.currentUser?.name || 'System' }, action: stage > cur.stage ? 'advanced' : 'reverted', stageName: WORKFLOW_STAGES[stage].name, createdAt: new Date().toISOString() },
+        ...l,
+      ])
+    }
+    logActivity(`Workflow stage set to "${WORKFLOW_STAGES[stage].name}"`, 'workflow')
+    show(`Stage set to ${WORKFLOW_STAGES[stage].name}`)
+  }
+
   const selectEvent = async (event) => {
     setSelected(event)
     setView('pipeline')
-    try {
-      const { logs: l } = await api.workflow.getLogs(event.id)
-      setLogs(l)
-    } catch (err) {
+    if (backendOnline) {
+      try {
+        const { logs: l } = await api.workflow.getLogs(event.id)
+        setLogs(l)
+      } catch (err) {
+        setLogs([])
+      }
+    } else {
       setLogs([])
     }
   }
@@ -60,18 +125,21 @@ export default function WorkflowPage() {
   const advance = async () => {
     if (!selected) return
     setBusy(true)
-    try {
-      await api.workflow.advance(selected.id)
-      show(`Advanced to next stage`)
-      await loadWorkflow()
-      const refreshed = events.find((e) => e.id === selected.id)
-      if (refreshed) selectEvent(refreshed)
-      // Refresh selected from updated list
-      const { events: evts } = await api.workflow.getAll()
-      const updated = evts.find((e) => e.id === selected.id)
-      if (updated) setSelected(updated)
-    } catch (err) {
-      show(err.message || 'Failed to advance', 'error')
+    if (backendOnline) {
+      try {
+        await api.workflow.advance(selected.id)
+        show(`Advanced to next stage`)
+        await loadWorkflow()
+        const refreshed = events.find((e) => e.id === selected.id)
+        if (refreshed) selectEvent(refreshed)
+        const { events: evts } = await api.workflow.getAll()
+        const updated = evts.find((e) => e.id === selected.id)
+        if (updated) setSelected(updated)
+      } catch (err) {
+        show(err.message || 'Failed to advance', 'error')
+      }
+    } else {
+      applyStage(selected.id, Math.min(selected.stage + 1, 13))
     }
     setBusy(false)
   }
@@ -79,17 +147,21 @@ export default function WorkflowPage() {
   const revert = async () => {
     if (!selected) return
     setBusy(true)
-    try {
-      await api.workflow.revert(selected.id)
-      show(`Reverted to previous stage`)
-      const { events: evts } = await api.workflow.getAll()
-      setEvents(evts)
-      const updated = evts.find((e) => e.id === selected.id)
-      if (updated) setSelected(updated)
-      const { logs: l } = await api.workflow.getLogs(selected.id)
-      setLogs(l)
-    } catch (err) {
-      show(err.message || 'Failed to revert', 'error')
+    if (backendOnline) {
+      try {
+        await api.workflow.revert(selected.id)
+        show(`Reverted to previous stage`)
+        const { events: evts } = await api.workflow.getAll()
+        setEvents(evts)
+        const updated = evts.find((e) => e.id === selected.id)
+        if (updated) setSelected(updated)
+        const { logs: l } = await api.workflow.getLogs(selected.id)
+        setLogs(l)
+      } catch (err) {
+        show(err.message || 'Failed to revert', 'error')
+      }
+    } else {
+      applyStage(selected.id, Math.max(selected.stage - 1, 0))
     }
     setBusy(false)
   }
@@ -97,17 +169,22 @@ export default function WorkflowPage() {
   const setStage = async (stageId) => {
     if (!selected) return
     setBusy(true)
-    try {
-      await api.workflow.setStage(selected.id, stageId)
-      show(`Stage set to ${stages[stageId]?.name}`)
-      const { events: evts } = await api.workflow.getAll()
-      setEvents(evts)
-      const updated = evts.find((e) => e.id === selected.id)
-      if (updated) setSelected(updated)
-      const { logs: l } = await api.workflow.getLogs(selected.id)
-      setLogs(l)
-    } catch (err) {
-      show(err.message || 'Failed to set stage', 'error')
+    if (backendOnline) {
+      try {
+        await api.workflow.setStage(selected.id, stageId)
+        show(`Stage set to ${stages[stageId]?.name}`)
+        const { events: evts } = await api.workflow.getAll()
+        setEvents(evts)
+        const updated = evts.find((e) => e.id === selected.id)
+        if (updated) setSelected(updated)
+        const { logs: l } = await api.workflow.getLogs(selected.id)
+        setLogs(l)
+      } catch (err) {
+        show(err.message || 'Failed to set stage', 'error')
+      }
+    } else {
+      const idx = WORKFLOW_STAGES.findIndex((s) => s.id === stageId)
+      applyStage(selected.id, idx)
     }
     setBusy(false)
   }
@@ -121,16 +198,7 @@ export default function WorkflowPage() {
     )
   }
 
-  if (!backendOnline) {
-    return (
-      <div>
-        <PageHeader title="Event Workflow" subtitle="Track events through the full pipeline" icon={Workflow} />
-        <div className="card p-8 text-center text-ink/50">
-          Workflow requires backend connection. Start the backend server to use this feature.
-        </div>
-      </div>
-    )
-  }
+  const stagesArr = backendOnline ? (Object.values(stages).length ? Object.values(stages) : WORKFLOW_STAGES) : WORKFLOW_STAGES
 
   return (
     <div>
@@ -144,14 +212,14 @@ export default function WorkflowPage() {
         {/* Event list sidebar */}
         <div className="card overflow-hidden">
           <div className="border-b border-brand-100 p-3">
-            <p className="font-bold text-brand-950 text-sm">Events ({events.length})</p>
+            <p className="font-bold text-brand-950 text-sm">Events ({eventList.length})</p>
           </div>
           <div className="max-h-[600px] overflow-y-auto divide-y divide-brand-50">
-            {events.length === 0 ? (
+            {eventList.length === 0 ? (
               <div className="p-4 text-center text-sm text-ink/40">No events yet</div>
             ) : (
-              events.map((e) => {
-                const stage = stages[e.stage] || stages[0]
+              eventList.map((e) => {
+                const stage = stagesArr[e.stage] || stagesArr[0]
                 const Icon = STAGE_ICONS[e.stage] || Circle
                 return (
                   <button

@@ -18,12 +18,18 @@ const ICON_MAP = {
 export default function ClientNotifications() {
   const { state } = useData()
   const [filter, setFilter] = useState('all')
+  const [read, setRead] = useState({})
 
   const notifications = state.notifications
   const filtered = filter === 'all' ? notifications : notifications.filter((n) => n.type === filter)
 
   const types = ['all', 'alert', 'finance', 'task', 'registration']
-  const unread = notifications.length
+  const unread = notifications.filter((n) => !read[n.id]).length
+
+  const markAllRead = () => {
+    setRead(notifications.reduce((a, n) => ({ ...a, [n.id]: true }), {}))
+  }
+  const markRead = (id) => setRead((r) => ({ ...r, [id]: true }))
 
   return (
     <div className="space-y-5">
@@ -32,7 +38,7 @@ export default function ClientNotifications() {
           <h1 className="text-xl font-black text-brand-950">Notifications</h1>
           <p className="text-sm text-ink/50">{unread} notification{unread !== 1 ? 's' : ''}</p>
         </div>
-        <button className="btn-outline text-xs"><CheckCheck size={14} /> Mark All Read</button>
+        <button className="btn-outline text-xs" onClick={markAllRead}><CheckCheck size={14} /> Mark All Read</button>
       </div>
 
       {/* Filters */}
@@ -62,7 +68,7 @@ export default function ClientNotifications() {
             {filtered.map((n) => {
               const Icon = ICON_MAP[n.type] || Bell
               return (
-                <div key={n.id} className="flex items-start gap-3 p-4 transition hover:bg-brand-50/40">
+                <div key={n.id} onClick={() => markRead(n.id)} className={`flex items-start gap-3 p-4 transition hover:bg-brand-50/40 ${!read[n.id] ? 'cursor-pointer' : ''}`}>
                   <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
                     <Icon size={16} />
                   </span>
@@ -70,7 +76,7 @@ export default function ClientNotifications() {
                     <p className="text-sm font-semibold text-brand-950">{n.text}</p>
                     <p className="text-[11px] text-ink/40">{n.at}</p>
                   </div>
-                  <span className="h-2 w-2 shrink-0 rounded-full bg-brand-500" />
+                  {!read[n.id] && <span className="h-2 w-2 shrink-0 rounded-full bg-brand-500" />}
                 </div>
               )
             })}

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { Ticket, TrendingUp, Download, QrCode, Users, X, CalendarDays, MapPin, CheckCircle2 } from 'lucide-react'
 import { useData } from '../../store/DataContext'
 import { fmtCompact, fmt } from '../../store/data'
+import { exportPDF } from '../../store/exportUtils'
 
 export default function ClientTickets() {
   const { state } = useData()
@@ -62,7 +63,10 @@ export default function ClientTickets() {
       <div className="card p-5">
         <div className="mb-4 flex items-center justify-between">
           <p className="font-bold text-brand-950">Ticket Types Breakdown</p>
-          <button className="btn-outline text-xs"><Download size={14} /> Download Report</button>
+          <button className="btn-outline text-xs" onClick={() => exportPDF('Ticket Sales Report', [
+            { title: 'Overview', text: `${allRegs.length} tickets · ETB ${fmtCompact(totalRevenue)} revenue` },
+            { title: 'By Type', rows: { headers: ['Type', 'Sold', 'Revenue'], rows: ticketTypes.map((t) => { const regs = allRegs.filter((r) => r.type === t); return [t, regs.length, fmt(regs.reduce((a, r) => a + (r.amount || 0), 0))] }) } },
+          ])}><Download size={14} /> Download Report</button>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {ticketTypes.map((type) => {

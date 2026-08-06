@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Package, Plus, Wrench, Truck, Boxes, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, SearchBox, Toast, EmptyState, Th, Td, Avatar, Modal, Field } from '../components/ui'
+import { textRequired, required, numberPositive, optional, dateRequired, validate } from '../store/validation'
 
 const categories = ['LED Screens', 'Sound Systems', 'Lighting', 'Stages', 'Furniture', 'Decoration', 'Vehicles', 'Generators', 'Branding']
 
@@ -12,20 +13,39 @@ const allocations = [
 ]
 
 export default function Resources() {
-  const { state, addResource } = useData()
+  const { state, addResource, scheduleMaintenance, completeMaintenance } = useData()
   const [q, setQ] = useState('')
   const [toast, setToast] = useState(null)
   const [cat, setCat] = useState('All')
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({})
+  const [mtOpen, setMtOpen] = useState(false)
+  const [mtForm, setMtForm] = useState({})
+  const [errors, setErrors] = useState({})
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
 
+  const mtSchema = { resourceId: [required('Asset')], task: [optional(textRequired('Task', { min: 3, max: 100 }))], date: [optional(dateRequired('Date'))] }
+
+  const submitMaintenance = () => {
+    const res = validate(mtForm, mtSchema)
+    if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
+    scheduleMaintenance(mtForm.resourceId, mtForm.date || new Date().toISOString().slice(0, 10), mtForm.task || 'Routine maintenance')
+    show('Maintenance scheduled — asset moved to maintenance')
+    setMtOpen(false); setMtForm({}); setErrors({})
+  }
+
+  const resourceSchema = {
+    name: [textRequired('Asset name', { min: 2, max: 100 })],
+    qty: [numberPositive('Quantity', { integer: true })],
+  }
+
   const submit = () => {
-    if (!form.name) { show('Asset name is required', 'warn'); return }
+    const res = validate(form, resourceSchema)
+    if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
     addResource({ ...form, category: form.category || 'Branding', code: 'A-AS-' + String(Math.floor(Math.random() * 99)).padStart(2, '0') })
     show(`Asset "${form.name}" added to inventory`)
-    setOpen(false); setForm({})
+    setOpen(false); setForm({}); setErrors({})
   }
 
   const filtered = state.resources.filter((r) =>
@@ -44,7 +64,7 @@ export default function Resources() {
         title="Resource & Inventory"
         subtitle="Assets, availability, maintenance and allocation."
         icon={Package}
-        actions={<button className="btn-primary" onClick={() => setOpen(true)}><Plus size={15} /> Add Asset</button>}
+        actions={<button className="btn-primary" onClick={() => { setOpen(true); setErrors({}) }}><Plus size={15} /> Add Asset</button>}
       />
 
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -128,17 +148,62 @@ export default function Resources() {
         </div>
       </div>
 
+      <div className="mt-5 card p-5">
+        <div className="mb-3 flex items-center justify-between">
+          <p className="font-bold text-brand-950">Maintenance Schedule</p>
+          <button className="btn-outline !px-3 !py-1.5 text-xs" onClick={() => setMtOpen(true)}><Plus size={13} /> Schedule</button>
+        </div>
+        <div className="space-y-2">
+          {(state.maintenance || []).length === 0 && <p className="rounded-lg border border-dashed border-brand-200 p-4 text-center text-xs text-ink/35">No maintenance tasks scheduled.</p>}
+          {(state.maintenance || []).map((mt) => {
+            const r = state.resources.find((x) => x.id === mt.resourceId)
+            const overdue = mt.status !== 'done' && mt.date < new Date().toISOString().slice(0, 10)
+            return (
+              <div key={mt.id} className="flex flex-wrap items-center gap-3 rounded-lg border border-brand-100 p-3">
+                <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${mt.status === 'done' ? 'bg-brand-100 text-brand-700' : 'bg-gold-100 text-gold-700'}`}><Wrench size={16} /></span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-brand-950">{r?.name} — {mt.task}</p>
+                  <p className="text-[11px] text-ink/45">{r?.code} · scheduled {mt.date}{overdue ? ' · overdue' : ''}</p>
+                </div>
+                <Badge status={mt.status === 'done' ? 'done' : 'scheduled'} label={mt.status} />
+                {mt.status !== 'done' && (
+                  <button className="btn-outline !px-2.5 !py-1 text-xs" onClick={() => { completeMaintenance(mt.id); show('Maintenance marked complete') }}>Complete</button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
       <Modal open={open} onClose={() => setOpen(false)} title="Add Asset to Inventory">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Asset Name *" className="col-span-2"><input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Par LED Lights (10)" /></Field>
+          <Field label="Asset Name *" className="col-span-2"><input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Par LED Lights (10)" />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
           <Field label="Category"><select className="input" value={form.category || 'Branding'} onChange={(e) => setForm({ ...form, category: e.target.value })}>{categories.map((c) => <option key={c}>{c}</option>)}</select></Field>
-          <Field label="Quantity"><input type="number" className="input" value={form.qty || 1} onChange={(e) => setForm({ ...form, qty: e.target.value })} /></Field>
+          <Field label="Quantity"><input type="number" className="input" value={form.qty || 1} onChange={(e) => setForm({ ...form, qty: e.target.value })} />{errors.qty && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.qty}</p>}</Field>
           <Field label="Location"><input className="input" value={form.location || 'Main Warehouse'} onChange={(e) => setForm({ ...form, location: e.target.value })} /></Field>
           <Field label="Status"><select className="input" value={form.status || 'available'} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="available">Available</option><option value="in-use">In Use</option><option value="maintenance">Maintenance</option></select></Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button className="btn-outline" onClick={() => setOpen(false)}>Cancel</button>
           <button className="btn-primary" onClick={submit}>Add Asset</button>
+        </div>
+      </Modal>
+
+      <Modal open={mtOpen} onClose={() => setMtOpen(false)} title="Schedule Maintenance">
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Asset *" className="col-span-2">
+            <select className="input" value={mtForm.resourceId || ''} onChange={(e) => setMtForm({ ...mtForm, resourceId: e.target.value })}>
+              <option value="">Select asset…</option>
+              {state.resources.filter((r) => r.status !== 'maintenance').map((r) => <option key={r.id} value={r.id}>{r.name} ({r.code})</option>)}
+            </select>
+            {errors.resourceId && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.resourceId}</p>}
+          </Field>
+          <Field label="Task"><input className="input" value={mtForm.task || ''} onChange={(e) => setMtForm({ ...mtForm, task: e.target.value })} placeholder="Routine maintenance" />{errors.task && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.task}</p>}</Field>
+          <Field label="Date"><input type="date" className="input" value={mtForm.date || ''} onChange={(e) => setMtForm({ ...mtForm, date: e.target.value })} />{errors.date && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.date}</p>}</Field>
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <button className="btn-outline" onClick={() => setMtOpen(false)}>Cancel</button>
+          <button className="btn-primary" onClick={submitMaintenance}><Plus size={14} /> Schedule</button>
         </div>
       </Modal>
 

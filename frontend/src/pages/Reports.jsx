@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { BarChart3, FileSpreadsheet, FileText, Download, TrendingUp, TrendingDown, Users, Ticket, Wallet, Building2 } from 'lucide-react'
+import { BarChart3, FileSpreadsheet, FileText, Download, TrendingUp, TrendingDown, Users, Ticket, Wallet, Building2, Package, MapPin } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, Toast, Th, Td, Segmented } from '../components/ui'
 import { fmt, fmtCompact } from '../store/data'
-import { downloadCSV, exportPDF } from '../store/exportUtils'
+import { exportXLSX, exportXLSXBook, exportPDF } from '../store/exportUtils'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
 
 const PIE = ['#228b22', '#c9a227', '#9cc69c', '#175917', '#d1aa4d']
@@ -56,6 +56,8 @@ export default function Reports() {
     'Attendance Report': state.registrations.map((r) => [eventName(r.eventId), r.name, r.type, r.paid ? 'Paid' : 'Unpaid', r.checkedIn ? 'Checked in' : 'Pending']),
     'Ticket Sales Report': state.registrations.map((r) => [eventName(r.eventId), r.name, r.type, r.amount, r.paid ? 'Paid' : 'Unpaid']),
     'Vendor Report': state.vendors.map((v) => [v.name, v.type, v.contact, v.rating, v.contracts, v.status]),
+    'Resource Report': state.resources.map((r) => [r.name, r.type, r.qty, r.allocated, (r.qty || 0) - (r.allocated || 0), r.status, r.location]),
+    'Venue Report': state.venues.map((v) => [v.name, v.city, v.capacity, v.price, v.status, v.equipment?.join(', ') || '']),
     'Staff Performance': state.staff.map((m) => {
       const mine = state.tasks.filter((t) => t.assigneeId === m.id)
       const done = mine.filter((t) => t.status === 'done').length
@@ -69,9 +71,11 @@ export default function Reports() {
 
   const exportExcel = (name) => {
     if (name === 'Financial Overview') {
-      downloadCSV('financial-overview.csv',
-        ['Reference', 'Client', 'Event', 'Amount', 'Paid', 'Outstanding', 'Status'],
-        state.invoices.map((i) => [i.ref, clientName(i.clientId), eventName(i.eventId), i.amount, i.paid, i.amount - i.paid, i.status]))
+      exportXLSXBook('financial-overview', [
+        { sheet: 'Invoices', headers: ['Reference', 'Client', 'Event', 'Amount', 'Paid', 'Outstanding', 'Status'], rows: state.invoices.map((i) => [i.ref, clientName(i.clientId), eventName(i.eventId), i.amount, i.paid, i.amount - i.paid, i.status]) },
+        { sheet: 'Expenses', headers: ['Event', 'Category', 'Date', 'Amount'], rows: state.expenses.map((e) => [eventName(e.eventId), e.category, e.date, e.amount]) },
+        { sheet: 'Summary', headers: ['Metric', 'Value'], rows: [['Revenue', revenue], ['Expenses', expenses], ['Ticket Sales', ticketRevenue], ['Attendance', `${attended}/${state.registrations.length}`]] },
+      ])
     } else if (reportRows[name]) {
       const headers = {
         'Events Report': ['Event', 'Category', 'Client', 'Date', 'Status', 'Budget', 'Spent', 'Attendees'],
@@ -81,16 +85,18 @@ export default function Reports() {
         'Attendance Report': ['Event', 'Attendee', 'Type', 'Payment', 'Check-in'],
         'Ticket Sales Report': ['Event', 'Attendee', 'Type', 'Amount', 'Payment'],
         'Vendor Report': ['Vendor', 'Type', 'Contact', 'Rating', 'Contracts', 'Status'],
+        'Resource Report': ['Resource', 'Type', 'Total', 'Allocated', 'Available', 'Status', 'Location'],
+        'Venue Report': ['Venue', 'City', 'Capacity', 'Price', 'Status', 'Equipment'],
         'Staff Performance': ['Name', 'Role', 'Dept', 'Tasks', 'Done', 'Completion'],
         'Profitability Report': ['Event', 'Budget', 'Spent', 'Revenue', 'Net'],
       }[name]
-      downloadCSV(name.toLowerCase().replace(/\s+/g, '-') + '.csv', headers, reportRows[name])
+      exportXLSX(name.toLowerCase().replace(/\s+/g, '-'), headers, reportRows[name], name)
     } else {
-      downloadCSV('events-report.csv',
+      exportXLSX('events-report',
         ['Event', 'Category', 'Client', 'Date', 'Status', 'Budget', 'Spent', 'Attendees'],
         state.events.map((e) => [e.name, e.category, clientName(e.clientId), e.date, e.status, e.budget, e.spent, e.attendees || '']))
     }
-    show(`${name} exported to Excel`, 'success')
+    show(`${name} exported as Excel (.xlsx)`, 'success')
   }
 
   const exportPdf = (name) => {
@@ -110,15 +116,17 @@ export default function Reports() {
             'Attendance Report': ['Event', 'Attendee', 'Type', 'Payment', 'Check-in'],
             'Ticket Sales Report': ['Event', 'Attendee', 'Type', 'Amount', 'Payment'],
             'Vendor Report': ['Vendor', 'Type', 'Contact', 'Rating', 'Contracts', 'Status'],
+            'Resource Report': ['Resource', 'Type', 'Total', 'Allocated', 'Available', 'Status', 'Location'],
+            'Venue Report': ['Venue', 'City', 'Capacity', 'Price', 'Status', 'Equipment'],
             'Staff Performance': ['Name', 'Role', 'Dept', 'Tasks', 'Done', 'Completion'],
             'Profitability Report': ['Event', 'Budget', 'Spent', 'Revenue', 'Net'],
           }[name], reportRows[name]),
           make('Overall Summary', ['Revenue', 'Expenses', 'Net'], [[fmt(revenue), fmt(expenses), fmt(revenue - expenses)]]),
         ]
     if (exportPDF(`${name} — ${new Date().toLocaleDateString()}`, sections)) {
-      show(`${name} opened for PDF export`, 'success')
+      show(`${name} downloaded as PDF (.pdf)`, 'success')
     } else {
-      show('Popup blocked — allow popups to export PDF', 'warn')
+      show('PDF export failed — allow downloads to export', 'warn')
     }
   }
 
@@ -130,6 +138,8 @@ export default function Reports() {
     ['Attendance Report', 'Registrations vs check-ins', Users],
     ['Ticket Sales Report', 'Ticket types, sales & revenue', Ticket],
     ['Vendor Report', 'Contracts, payments & ratings', Building2],
+    ['Resource Report', 'Inventory, allocation & availability', Package],
+    ['Venue Report', 'Capacity, pricing & bookings', MapPin],
     ['Staff Performance', 'Tasks, delivery & ratings', Users],
     ['Profitability Report', 'P&L per event & overall', Wallet],
   ]

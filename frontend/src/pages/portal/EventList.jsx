@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Calendar, MapPin, Users, ArrowRight, Search, SlidersHorizontal, X, Star } from 'lucide-react'
+import { portalCategoriesFallback, portalEventsFallback } from '../../store/portalFallback'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
@@ -26,7 +27,7 @@ export default function PortalEventList() {
   const [showFilters, setShowFilters] = useState(false)
 
   useEffect(() => {
-    fetch(`${API_URL}/portal/categories`).then((r) => r.json()).then((d) => setCategories(d.categories || []))
+    fetch(`${API_URL}/portal/categories`).then((r) => r.json()).then((d) => setCategories(d.categories || portalCategoriesFallback())).catch(() => setCategories(portalCategoriesFallback()))
   }, [])
 
   useEffect(() => {
@@ -38,10 +39,13 @@ export default function PortalEventList() {
     fetch(`${API_URL}/portal/events?${params}`)
       .then((r) => r.json())
       .then((data) => {
-        setEvents(data.events || [])
+        setEvents(data.events || portalEventsFallback({ search: filters.search, category: filters.category, sort: filters.sort }))
         setLoading(false)
       })
-      .catch(() => setLoading(false))
+      .catch(() => {
+        setEvents(portalEventsFallback({ search: filters.search, category: filters.category, sort: filters.sort }))
+        setLoading(false)
+      })
   }, [filters.search, filters.category, filters.sort])
 
   const cities = useMemo(() => {

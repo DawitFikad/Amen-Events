@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { LifeBuoy, Phone, Mail, Send, ChevronDown, ChevronUp, MessageSquare, Building2 } from 'lucide-react'
 import { Toast } from '../../components/ui'
+import { textRequired, validate, clearError } from '../../store/validation'
 
 const FAQS = [
   { q: 'How do I track the progress of my event?', a: 'You can track your event progress from the Dashboard or by visiting the My Events page. Each event card shows real-time progress, timeline stages, and upcoming deadlines.' },
@@ -16,11 +17,17 @@ export default function ClientSupport() {
   const [toast, setToast] = useState(null)
   const [ticket, setTicket] = useState({ subject: '', message: '', priority: 'normal' })
   const [sending, setSending] = useState(false)
+  const [errors, setErrors] = useState({})
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
 
   const submitTicket = () => {
-    if (!ticket.subject.trim() || !ticket.message.trim()) { show('Please fill in all fields', 'error'); return }
+    const res = validate(ticket, {
+      subject: [textRequired('Subject', { min: 3, max: 120 })],
+      message: [textRequired('Message', { min: 10, max: 2000 })],
+    })
+    if (!res.ok) { setErrors(res.errors); show(res.first, 'error'); return }
+    setErrors({})
     setSending(true)
     setTimeout(() => {
       setSending(false)
@@ -86,7 +93,8 @@ export default function ClientSupport() {
           <div className="space-y-4">
             <div>
               <label className="mb-1.5 block text-xs font-bold text-ink/60">Subject</label>
-              <input className="input" placeholder="Brief description of your issue" value={ticket.subject} onChange={(e) => setTicket({ ...ticket, subject: e.target.value })} />
+              <input className="input" placeholder="Brief description of your issue" value={ticket.subject} onChange={(e) => { setTicket({ ...ticket, subject: e.target.value }); setErrors(clearError(errors, 'subject')) }} />
+              {errors.subject && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.subject}</p>}
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-bold text-ink/60">Priority</label>
@@ -99,7 +107,8 @@ export default function ClientSupport() {
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-bold text-ink/60">Message</label>
-              <textarea className="input min-h-[120px] resize-y" placeholder="Describe your issue in detail…" value={ticket.message} onChange={(e) => setTicket({ ...ticket, message: e.target.value })} />
+              <textarea className="input min-h-[120px] resize-y" placeholder="Describe your issue in detail…" value={ticket.message} onChange={(e) => { setTicket({ ...ticket, message: e.target.value }); setErrors(clearError(errors, 'message')) }} />
+              {errors.message && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.message}</p>}
             </div>
             <button onClick={submitTicket} disabled={sending} className="btn-primary w-full">
               {sending ? 'Submitting…' : <><Send size={16} /> Submit Ticket</>}

@@ -24,7 +24,7 @@ const STATUS_TONES = {
 }
 
 export default function Approvals() {
-  const { backendOnline } = useData()
+  const { backendOnline, state, patch, setApprovalStatus, addApprovalRequest, logActivity } = useData()
   const [approvals, setApprovals] = useState([])
   const [filter, setFilter] = useState('all')
   const [toast, setToast] = useState(null)
@@ -47,46 +47,62 @@ export default function Approvals() {
     }
   }
 
+  // Offline mode: enrich store approvals with staff names for the cards
+  const enrich = (a) => {
+    const sb = state.staff.find((s) => s.id === a.submittedBy) || (a.submittedByUser && state.staff.find((s) => s.id === a.submittedByUser.id))
+    const rb = state.staff.find((s) => s.id === a.reviewedBy) || (a.reviewedByUser && state.staff.find((s) => s.id === a.reviewedByUser.id))
+    return {
+      ...a,
+      createdAt: a.createdAt || a.date,
+      submittedByUser: sb ? { name: sb.name, initials: sb.initials } : a.submittedByUser,
+      reviewedByUser: rb ? { name: rb.name, initials: rb.initials } : a.reviewedByUser,
+    }
+  }
+
+  const offlineApprovals = state.approvals.map(enrich)
+  const list = backendOnline ? approvals : offlineApprovals
+
   const handleAction = async (id, action) => {
     setBusy(true)
-    try {
-      const note = reviewNote[id] || ''
-      if (action === 'approve') await api.approvals.approve(id, note)
-      else if (action === 'reject') await api.approvals.reject(id, note)
-      else if (action === 'revision') await api.approvals.revision(id, note)
+    const note = reviewNote[id] || ''
+    if (backendOnline) {
+      try {
+        if (action === 'approve') await api.approvals.approve(id, note)
+        else if (action === 'reject') await api.approvals.reject(id, note)
+        else if (action === 'revision') await api.approvals.revision(id, note)
+        show(`Request ${action}d`)
+        await loadApprovals()
+      } catch (err) {
+        show(err.message || 'Action failed', 'error')
+      }
+    } else {
+      setApprovalStatus(id, action === 'revision' ? 'revision_requested' : action === 'approve' ? 'approved' : 'rejected', note)
       show(`Request ${action}d`)
-      await loadApprovals()
-      setShowNote((s) => ({ ...s, [id]: false }))
-      setReviewNote((s) => ({ ...s, [id]: '' }))
-    } catch (err) {
-      show(err.message || 'Action failed', 'error')
     }
+    setShowNote((s) => ({ ...s, [id]: false }))
+    setReviewNote((s) => ({ ...s, [id]: '' }))
     setBusy(false)
   }
 
   const handleSubmit = async (type, entityId, entityName, amount, note) => {
     setBusy(true)
-    try {
-      await api.approvals.submit({ type, entityId, entityName, amount, note })
+    if (backendOnline) {
+      try {
+        await api.approvals.submit({ type, entityId, entityName, amount, note })
+        show('Approval request submitted')
+        await loadApprovals()
+      } catch (err) {
+        show(err.message || 'Submit failed', 'error')
+      }
+    } else {
+      addApprovalRequest({ type, entityId, entityName, amount, note })
       show('Approval request submitted')
-      await loadApprovals()
-    } catch (err) {
-      show(err.message || 'Submit failed', 'error')
     }
     setBusy(false)
   }
 
-  const filtered = filter === 'all' ? approvals : approvals.filter((a) => a.status === filter)
-  const pendingCount = approvals.filter((a) => a.status === 'pending').length
-
-  if (!backendOnline) {
-    return (
-      <div>
-        <PageHeader title="Approvals" subtitle="Budget, contract, and payment approval workflows" icon={FileText} />
-        <div className="card p-8 text-center text-ink/50">Backend connection required.</div>
-      </div>
-    )
-  }
+  const filtered = filter === 'all' ? list : list.filter((a) => a.status === filter)
+  const pendingCount = list.filter((a) => a.status === 'pending').length
 
   return (
     <div>
@@ -154,29 +170,29 @@ export default function Approvals() {
                 {/* Action buttons for pending */}
                 {a.status === 'pending' && (
                   <div className="mt-4 border-t border-brand-50 pt-3">
-                    {showNote[id] ? (
+                    {showNote[a.id] ? (
                       <div className="space-y-2">
                         <input
                           type="text"
                           placeholder="Review note (optional)…"
-                          value={reviewNote[id] || ''}
-                          onChange={(e) => setReviewNote((s) => ({ ...s, [id]: e.target.value }))}
+                          value={reviewNote[a.id] || ''}
+                          onChange={(e) => setReviewNote((s) => ({ ...s, [a.id]: e.target.value }))}
                           className="input !py-2 text-sm"
                         />
                         <div className="flex gap-2">
-                          <button onClick={() => handleAction(id, 'approve')} disabled={busy} className="btn-primary !py-2 text-xs flex-1">
+                          <button onClick={() => handleAction(a.id, 'approve')} disabled={busy} className="btn-primary !py-2 text-xs flex-1">
                             <CheckCircle2 size={14} /> Approve
                           </button>
-                          <button onClick={() => handleAction(id, 'reject')} disabled={busy} className="btn-outline !py-2 text-xs !text-red-600 !border-red-200 hover:!bg-red-50 flex-1">
+                          <button onClick={() => handleAction(a.id, 'reject')} disabled={busy} className="btn-outline !py-2 text-xs !text-red-600 !border-red-200 hover:!bg-red-50 flex-1">
                             <XCircle size={14} /> Reject
                           </button>
-                          <button onClick={() => handleAction(id, 'revision')} disabled={busy} className="btn-outline !py-2 text-xs flex-1">
+                          <button onClick={() => handleAction(a.id, 'revision')} disabled={busy} className="btn-outline !py-2 text-xs flex-1">
                             <RotateCcw size={14} /> Revision
                           </button>
                         </div>
                       </div>
                     ) : (
-                      <button onClick={() => setShowNote((s) => ({ ...s, [id]: true }))} className="btn-outline !py-2 text-xs w-full">
+                      <button onClick={() => setShowNote((s) => ({ ...s, [a.id]: true }))} className="btn-outline !py-2 text-xs w-full">
                         Review Request
                       </button>
                     )}

@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { Calendar, MapPin, Users, Mic, ArrowLeft, Ticket, CheckCircle2, QrCode, AlertCircle } from 'lucide-react'
 import { publicApi } from '../store/api'
 import { Spinner, EmptyState } from '../components/ui'
+import { nameOnly, emailValid, phoneValid, optional, validate } from '../store/validation'
 
 const TICKET_TYPES = [
   { type: 'Standard', price: 1000, label: 'Standard', perks: ['Event access', 'Networking session', 'Lunch included'] },
@@ -38,8 +39,13 @@ export default function PublicEventDetail() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setFormError(null)
-    if (!form.name.trim() || !form.email.trim()) {
-      setFormError('Name and email are required')
+    const res = validate(form, {
+      name: [nameOnly('Full name')],
+      email: [emailValid('Email')],
+      phone: [optional(phoneValid('Phone number'))],
+    })
+    if (!res.ok) {
+      setFormError(res.first)
       return
     }
     setSubmitting(true)

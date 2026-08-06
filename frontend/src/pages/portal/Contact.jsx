@@ -1,12 +1,21 @@
 import React, { useState } from 'react'
 import { Mail, Phone, MapPin, Send, CheckCircle2 } from 'lucide-react'
+import { nameOnly, emailValid, textRequired, validate, clearError } from '../../store/validation'
 
 export default function Contact() {
   const [form, setForm] = useState({ name: '', email: '', message: '' })
   const [sent, setSent] = useState(false)
+  const [errors, setErrors] = useState({})
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    const res = validate(form, {
+      name: [nameOnly('Your name')],
+      email: [emailValid('Email')],
+      message: [textRequired('Message', { min: 10, max: 2000 })],
+    })
+    if (!res.ok) { setErrors(res.errors); return }
+    setErrors({})
     setSent(true)
     setForm({ name: '', email: '', message: '' })
     setTimeout(() => setSent(false), 5000)
@@ -41,9 +50,9 @@ export default function Contact() {
           </div>
         )}
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          <div><label className="label">Your Name</label><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></div>
-          <div><label className="label">Email</label><input className="input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required /></div>
-          <div><label className="label">Message</label><textarea className="input min-h-[120px]" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} required /></div>
+          <div><label className="label">Your Name</label><input className="input" value={form.name} onChange={(e) => { setForm({ ...form, name: e.target.value }); setErrors(clearError(errors, 'name')) }} required />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</div>
+          <div><label className="label">Email</label><input className="input" type="email" value={form.email} onChange={(e) => { setForm({ ...form, email: e.target.value }); setErrors(clearError(errors, 'email')) }} required />{errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}</div>
+          <div><label className="label">Message</label><textarea className="input min-h-[120px]" value={form.message} onChange={(e) => { setForm({ ...form, message: e.target.value }); setErrors(clearError(errors, 'message')) }} required />{errors.message && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.message}</p>}</div>
           <button type="submit" className="btn-primary"><Send size={16} /> Send Message</button>
         </form>
       </div>

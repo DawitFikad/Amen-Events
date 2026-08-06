@@ -2,7 +2,7 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   CalendarDays, TrendingUp, CheckCircle2, Clock3, Wallet, AlertCircle, Activity,
-  Users, Target, ArrowUpRight, ArrowRight, Sparkles, Server, Database, ShieldCheck,
+  Users, Target, ArrowUpRight, ArrowRight, Sparkles, Server, Database, ShieldCheck, Bell,
 } from 'lucide-react'
 import { useData } from '../../store/DataContext'
 import { StatCard, Badge, Progress, Avatar, PageHeader } from '../../components/ui'
@@ -28,6 +28,9 @@ export default function AdminDashboard() {
   const outstanding = state.invoices.filter((i) => i.status === 'outstanding').reduce((a, i) => a + (i.amount - i.paid), 0)
   const expenses = state.expenses.reduce((a, e) => a + e.amount, 0)
   const profit = revenue - expenses
+  const totalBudget = state.events.reduce((a, e) => a + (e.budget || 0), 0)
+  const totalSpent = state.events.reduce((a, e) => a + (e.spent || 0), 0)
+  const budgetUsedPct = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0
   const totalClients = state.clients.length
   const activeClients = state.clients.filter((c) => c.status === 'active').length
   const totalStaff = state.staff.length
@@ -35,10 +38,12 @@ export default function AdminDashboard() {
 
   const stats = [
     { label: 'Total Revenue', value: `ETB ${fmtCompact(revenue)}`, icon: Wallet, tone: 'brand', sub: 'collected', delta: '8%' },
-    { label: 'Active Events', value: ongoing + upcoming, icon: CalendarDays, tone: 'brand', sub: `${ongoing} ongoing · ${upcoming} upcoming`, delta: '12%' },
-    { label: 'Total Clients', value: totalClients, icon: Users, tone: 'gold', sub: `${activeClients} active`, delta: null },
+    { label: 'Total Events', value: total, icon: CalendarDays, tone: 'brand', sub: `${upcoming} upcoming · ${ongoing} ongoing`, delta: '12%' },
+    { label: 'Completed', value: completed, icon: CheckCircle2, tone: 'gold', sub: `${total ? Math.round((completed / total) * 100) : 0}% of all events`, delta: null },
+    { label: 'Total Clients', value: totalClients, icon: Users, tone: 'brand', sub: `${activeClients} active`, delta: null },
     { label: 'Outstanding', value: `ETB ${fmtCompact(outstanding)}`, icon: AlertCircle, tone: 'red', sub: 'due from clients', delta: null },
     { label: 'Net Profit', value: `ETB ${fmtCompact(Math.max(0, profit))}`, icon: TrendingUp, tone: 'gold', sub: 'after expenses', delta: '5%' },
+    { label: 'Budget Pool', value: `ETB ${fmtCompact(totalBudget)}`, icon: Target, tone: 'brand', sub: `${budgetUsedPct}% utilized across events`, delta: null },
     { label: 'Staff', value: totalStaff, icon: Users, tone: 'brand', sub: `${activeStaff} active`, delta: null },
   ]
 
@@ -69,6 +74,30 @@ export default function AdminDashboard() {
     return out
   })
 
+  // Month calendar cells for the Event Calendar widget
+  const [calendar] = React.useState(() => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = now.getMonth()
+    const first = new Date(year, month, 1).getDay() // 0 = Sunday
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+    const cells = []
+    for (let i = 0; i < first; i++) cells.push(null)
+    for (let d = 1; d <= daysInMonth; d++) cells.push(d)
+    while (cells.length % 7 !== 0) cells.push(null)
+    return cells
+  })
+  const eventsByDay = {}
+  state.events.forEach((e) => { if (e.date) (eventsByDay[e.date] = eventsByDay[e.date] || []).push(e) })
+
+  const meId = state.currentUserId
+  const myNotifications = state.notifications.filter((n) => !n.userId || n.userId === meId).slice(0, 5)
+  const notifTone = {
+    alert: 'bg-red-100 text-red-600', crm: 'bg-brand-100 text-brand-700',
+    inventory: 'bg-gold-100 text-gold-700', finance: 'bg-emerald-100 text-emerald-700',
+    task: 'bg-sky-100 text-sky-700', budget: 'bg-emerald-100 text-emerald-700', general: 'bg-slate-100 text-slate-600',
+  }
+
   return (
     <div>
       <PageHeader
@@ -83,7 +112,7 @@ export default function AdminDashboard() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
         {stats.map((s) => <StatCard key={s.label} {...s} />)}
       </div>
 
@@ -130,6 +159,68 @@ export default function AdminDashboard() {
               <div key={c.name} className="flex items-center justify-between text-xs">
                 <span className="flex items-center gap-2 text-ink/60"><span className="h-2 w-2 rounded-full" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />{c.name}</span>
                 <span className="font-semibold text-ink/80">{c.value}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Event calendar + notifications */}
+      <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <div className="card p-5 xl:col-span-2">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <p className="font-bold text-brand-950">Event Calendar</p>
+              <p className="text-xs text-ink/45">Scheduled events this month · click a day's event to open it</p>
+            </div>
+            <button className="btn-ghost !px-2.5 !py-1 text-xs" onClick={() => navigate('/erp/admin/events')}><CalendarDays size={13} /> All Events</button>
+          </div>
+          <div className="grid grid-cols-7 gap-1.5">
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+              <div key={d} className="pb-1 text-center text-[10px] font-bold uppercase tracking-wide text-ink/40">{d}</div>
+            ))}
+            {calendar.map((day, i) => {
+              if (day === null) return <div key={'x' + i} />
+              const iso = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+              const dayEvents = eventsByDay[iso] || []
+              const isToday = iso === todayISO()
+              return (
+                <div key={iso} className={`min-h-[64px] rounded-lg border p-1.5 ${isToday ? 'border-brand-400 bg-brand-50' : 'border-brand-100 bg-white'}`}>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-[11px] font-bold ${isToday ? 'text-brand-800' : 'text-ink/55'}`}>{day}</span>
+                    {dayEvents.length > 0 && <span className="chip bg-brand-800 text-white !px-1.5 !py-0 text-[9px]">{dayEvents.length}</span>}
+                  </div>
+                  <div className="mt-1 space-y-1">
+                    {dayEvents.slice(0, 2).map((e) => (
+                      <button key={e.id} onClick={() => navigate('/erp/admin/events')} className="block w-full truncate rounded bg-brand-100 px-1 py-0.5 text-left text-[10px] font-semibold text-brand-800 hover:bg-brand-200">
+                        {e.name}
+                      </button>
+                    ))}
+                    {dayEvents.length > 2 && <p className="text-[9px] font-semibold text-ink/40">+{dayEvents.length - 2} more</p>}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="card p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bell size={16} className="text-brand-600" />
+              <p className="font-bold text-brand-950">Notifications</p>
+            </div>
+            <button className="inline-flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-900" onClick={() => navigate('/erp/notifications')}>View all <ArrowRight size={13} /></button>
+          </div>
+          <div className="space-y-1">
+            {myNotifications.length === 0 && <p className="py-8 text-center text-sm text-ink/40">No notifications yet.</p>}
+            {myNotifications.map((n) => (
+              <div key={n.id} className="flex items-start gap-3 rounded-lg border border-brand-100 p-2.5 transition hover:bg-brand-50/40">
+                <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${notifTone[n.type] || notifTone.general}`}><Bell size={14} /></span>
+                <div className="min-w-0">
+                  <p className="text-[13px] leading-snug text-ink/80">{n.text}</p>
+                  <p className="text-[11px] text-ink/35">{n.at}</p>
+                </div>
               </div>
             ))}
           </div>

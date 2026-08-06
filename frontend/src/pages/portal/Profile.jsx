@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { User, Ticket, Heart, Bell, Lock, Trash2, Check, ArrowRight, Settings, Calendar } from 'lucide-react'
 import { useAttendee } from '../../store/AttendeeContext'
+import { nameOnly, emailValid, phoneValid, textRequired, optional, validate, clearError } from '../../store/validation'
 
 export default function Profile() {
   const { attendee, isAuthenticated, authFetch, logout } = useAttendee()
@@ -19,6 +20,7 @@ export default function Profile() {
   const [pwd, setPwd] = useState({ current: '', next: '', confirm: '' })
   const [prefs, setPrefs] = useState({ emailNotif: true, smsNotif: false, eventReminders: true, newsletter: true })
   const [error, setError] = useState(null)
+  const [errors, setErrors] = useState({})
 
   if (!isAuthenticated) {
     return (
@@ -30,6 +32,15 @@ export default function Profile() {
   }
 
   const handleSave = async () => {
+    const res = validate(form, {
+      firstName: [nameOnly('First name')],
+      lastName: [nameOnly('Last name')],
+      email: [emailValid('Email')],
+      phone: [optional(phoneValid('Phone'))],
+      city: [optional(textRequired('City', { max: 100 }))],
+    })
+    if (!res.ok) { setErrors(res.errors); setError(res.first); return }
+    setErrors({})
     setSaving(true)
     setError(null)
     const data = await authFetch('/portal/me', { method: 'PATCH', body: JSON.stringify(form) })
@@ -99,7 +110,7 @@ export default function Profile() {
         {tabs.map((t) => (
           <button
             key={t.id}
-            onClick={() => { setTab(t.id); setError(null) }}
+            onClick={() => { setTab(t.id); setError(null); setErrors({}) }}
             className={`flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-bold transition ${tab === t.id ? 'border-portal-500 text-portal-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
           >
             <t.icon size={16} /> {t.label}
@@ -115,13 +126,13 @@ export default function Profile() {
         {tab === 'info' && (
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
-              <div><label className="mb-1.5 block text-xs font-semibold text-gray-600">First Name</label><input className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-portal-400 focus:ring-2 focus:ring-portal-500/15" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} /></div>
-              <div><label className="mb-1.5 block text-xs font-semibold text-gray-600">Last Name</label><input className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-portal-400 focus:ring-2 focus:ring-portal-500/15" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} /></div>
+              <div><label className="mb-1.5 block text-xs font-semibold text-gray-600">First Name</label><input className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-portal-400 focus:ring-2 focus:ring-portal-500/15" value={form.firstName} onChange={(e) => { setForm({ ...form, firstName: e.target.value }); setErrors(clearError(errors, 'firstName')) }} />{errors.firstName && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.firstName}</p>}</div>
+              <div><label className="mb-1.5 block text-xs font-semibold text-gray-600">Last Name</label><input className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-portal-400 focus:ring-2 focus:ring-portal-500/15" value={form.lastName} onChange={(e) => { setForm({ ...form, lastName: e.target.value }); setErrors(clearError(errors, 'lastName')) }} />{errors.lastName && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.lastName}</p>}</div>
             </div>
-            <div><label className="mb-1.5 block text-xs font-semibold text-gray-600">Email</label><input className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-portal-400 focus:ring-2 focus:ring-portal-500/15" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+            <div><label className="mb-1.5 block text-xs font-semibold text-gray-600">Email</label><input className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-portal-400 focus:ring-2 focus:ring-portal-500/15" value={form.email} onChange={(e) => { setForm({ ...form, email: e.target.value }); setErrors(clearError(errors, 'email')) }} />{errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}</div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div><label className="mb-1.5 block text-xs font-semibold text-gray-600">Phone</label><input className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-portal-400 focus:ring-2 focus:ring-portal-500/15" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+251..." /></div>
-              <div><label className="mb-1.5 block text-xs font-semibold text-gray-600">City</label><input className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-portal-400 focus:ring-2 focus:ring-portal-500/15" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Addis Ababa" /></div>
+              <div><label className="mb-1.5 block text-xs font-semibold text-gray-600">Phone</label><input className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-portal-400 focus:ring-2 focus:ring-portal-500/15" value={form.phone} onChange={(e) => { setForm({ ...form, phone: e.target.value }); setErrors(clearError(errors, 'phone')) }} placeholder="+251..." />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</div>
+              <div><label className="mb-1.5 block text-xs font-semibold text-gray-600">City</label><input className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-portal-400 focus:ring-2 focus:ring-portal-500/15" value={form.city} onChange={(e) => { setForm({ ...form, city: e.target.value }); setErrors(clearError(errors, 'city')) }} placeholder="Addis Ababa" />{errors.city && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.city}</p>}</div>
             </div>
             <button onClick={handleSave} disabled={saving} className="rounded-xl bg-portal-500 px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-portal-600 disabled:opacity-50">
               {saving ? 'Saving…' : 'Save Changes'}

@@ -6,6 +6,7 @@ import {
 import api from '../store/api'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Toast } from '../components/ui'
+import { textRequired, dateRequired, validate } from '../store/validation'
 
 const TYPE_META = {
   event: { icon: CalendarDays, color: 'bg-brand-600', label: 'Event' },
@@ -20,12 +21,13 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 export default function CalendarPage() {
-  const { backendOnline } = useData()
+  const { backendOnline, state, addCalendarEvent, logActivity } = useData()
   const [events, setEvents] = useState([])
   const [cursor, setCursor] = useState(() => { const d = new Date(); return { month: d.getMonth(), year: d.getFullYear() } })
   const [selectedDate, setSelectedDate] = useState(null)
   const [showAdd, setShowAdd] = useState(false)
   const [newEvent, setNewEvent] = useState({ title: '', type: 'meeting', date: '', time: '', location: '', notes: '' })
+  const [errors, setErrors] = useState({})
   const [toast, setToast] = useState(null)
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 3000) }
@@ -43,15 +45,27 @@ export default function CalendarPage() {
     }
   }
 
+  // Offline mode: derive entries from store events, tasks and meetings
+  const offlineEvents = useMemo(() => {
+    if (backendOnline) return events
+    const venueName = (id) => state.venues.find((v) => v.id === id)?.name || ''
+    const evts = state.events.map((e) => ({ id: 'evt-' + e.id, title: e.name, type: 'event', date: e.date, time: e.time || '', location: venueName(e.venueId), notes: '' }))
+    const tks = state.tasks.map((t) => ({ id: 'tkt-' + t.id, title: t.title, type: 'task', date: t.due, time: '', location: '', notes: '' }))
+    const meetings = state.calendarEvents.map((m) => ({ ...m }))
+    return [...evts, ...tks, ...meetings]
+  }, [backendOnline, events, state.events, state.tasks, state.calendarEvents, state.venues])
+
+  const sourceEvents = backendOnline ? events : offlineEvents
+
   const eventsByDate = useMemo(() => {
     const map = {}
-    events.forEach((e) => {
+    sourceEvents.forEach((e) => {
       if (!e.date) return
       if (!map[e.date]) map[e.date] = []
       map[e.date].push(e)
     })
     return map
-  }, [events])
+  }, [sourceEvents])
 
   const days = useMemo(() => {
     const first = new Date(cursor.year, cursor.month, 1)
@@ -78,28 +92,28 @@ export default function CalendarPage() {
   })
 
   const addEvent = async () => {
-    if (!newEvent.title || !newEvent.date) { show('Title and date required', 'error'); return }
-    try {
-      await api.calendar.create(newEvent)
+    const res = validate(newEvent, { title: [textRequired('Title', { min: 3, max: 120 })], date: [dateRequired('Date')] })
+    if (!res.ok) { setErrors(res.errors); show(res.first, 'error'); return }
+    setErrors({})
+    if (backendOnline) {
+      try {
+        await api.calendar.create(newEvent)
+        show('Calendar event created')
+        setShowAdd(false)
+        setNewEvent({ title: '', type: 'meeting', date: '', time: '', location: '', notes: '' })
+        await loadCalendar()
+      } catch (err) {
+        show(err.message || 'Failed to create event', 'error')
+      }
+    } else {
+      addCalendarEvent(newEvent)
       show('Calendar event created')
       setShowAdd(false)
       setNewEvent({ title: '', type: 'meeting', date: '', time: '', location: '', notes: '' })
-      await loadCalendar()
-    } catch (err) {
-      show(err.message || 'Failed to create event', 'error')
     }
   }
 
   const selectedEvents = selectedDate ? eventsByDate[selectedDate] || [] : []
-
-  if (!backendOnline) {
-    return (
-      <div>
-        <PageHeader title="Calendar" subtitle="Enterprise calendar — events, tasks, bookings" icon={CalendarDays} />
-        <div className="card p-8 text-center text-ink/50">Backend connection required.</div>
-      </div>
-    )
-  }
 
   return (
     <div>
@@ -108,7 +122,7 @@ export default function CalendarPage() {
         subtitle="Events, tasks, venue bookings, registrations and meetings in one view."
         icon={CalendarDays}
         actions={
-          <button className="btn-primary" onClick={() => { setNewEvent((n) => ({ ...n, date: selectedDate || today })); setShowAdd(true) }}>
+          <button className="btn-primary" onClick={() => { setErrors({}); setNewEvent((n) => ({ ...n, date: selectedDate || today })); setShowAdd(true) }}>
             <Plus size={15} /> New Event
           </button>
         }
@@ -212,6 +226,7 @@ export default function CalendarPage() {
               <div>
                 <label className="lbl">Title</label>
                 <input className="input" value={newEvent.title} onChange={(e) => setNewEvent((n) => ({ ...n, title: e.target.value }))} placeholder="Meeting title…" />
+                {errors.title && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.title}</p>}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -225,6 +240,7 @@ export default function CalendarPage() {
                 <div>
                   <label className="lbl">Date</label>
                   <input type="date" className="input" value={newEvent.date} onChange={(e) => setNewEvent((n) => ({ ...n, date: e.target.value }))} />
+                  {errors.date && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.date}</p>}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">

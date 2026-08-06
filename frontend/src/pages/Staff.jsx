@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { UserCog, Plus, CalendarDays, Award, Clock3, ShieldCheck } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, SearchBox, Toast, EmptyState, Th, Td, Avatar, Segmented, Modal, Field } from '../components/ui'
+import { nameOnly, phoneValid, emailValid, validate } from '../store/validation'
 
 const attendance = [
   { id: 'at1', staffId: 'st2', eventId: 'ev3', role: 'Project Lead', hours: 18, status: 'present' },
@@ -18,14 +19,18 @@ export default function Staff() {
   const [toast, setToast] = useState(null)
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({})
+  const [errors, setErrors] = useState({})
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
 
+  const schema = { name: [nameOnly('Full name')], phone: [phoneValid('Phone number')], email: [emailValid('Email')] }
+
   const submit = () => {
-    if (!form.name) { show('Name is required', 'warn'); return }
+    const res = validate(form, schema)
+    if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
     addStaffMember(form)
     show(`${form.name} added to team`)
-    setOpen(false); setForm({})
+    setOpen(false); setForm({}); setErrors({})
   }
 
   const filtered = state.staff.filter((m) => (m.name + m.role + m.dept).toLowerCase().includes(q.toLowerCase()))
@@ -42,7 +47,7 @@ export default function Staff() {
         title="Staff Management"
         subtitle="Directory, attendance, availability and performance."
         icon={UserCog}
-        actions={<button className="btn-primary" onClick={() => setOpen(true)}><Plus size={15} /> Add Team Member</button>}
+        actions={<button className="btn-primary" onClick={() => { setOpen(true); setErrors({}) }}><Plus size={15} /> Add Team Member</button>}
       />
 
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -126,11 +131,11 @@ export default function Staff() {
       {/* Add member modal */}
       <Modal open={open} onClose={() => setOpen(false)} title="Add Team Member">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Full Name *" className="col-span-2"><input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Elias Bekele" /></Field>
+          <Field label="Full Name *" className="col-span-2"><input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Elias Bekele" />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
           <Field label="Role"><input className="input" value={form.role || 'Coordinator'} onChange={(e) => setForm({ ...form, role: e.target.value })} /></Field>
           <Field label="Department"><select className="input" value={form.dept || 'Operations'} onChange={(e) => setForm({ ...form, dept: e.target.value })}><option>Management</option><option>Operations</option><option>Finance</option><option>Procurement</option><option>Marketing</option><option>Technical</option></select></Field>
-          <Field label="Phone"><input className="input" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></Field>
-          <Field label="Email"><input className="input" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
+          <Field label="Phone"><input className="input" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</Field>
+          <Field label="Email"><input className="input" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} />{errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}</Field>
           <Field label="Type"><select className="input" value={form.type || 'Employee'} onChange={(e) => setForm({ ...form, type: e.target.value })}><option>Employee</option><option>Freelancer</option><option>Volunteer</option></select></Field>
           <Field label="Status"><select className="input" value={form.status || 'active'} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="active">Active</option><option value="inactive">Inactive</option></select></Field>
         </div>

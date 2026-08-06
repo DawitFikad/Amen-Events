@@ -1,6 +1,8 @@
-// Lightweight Excel (CSV) and PDF (print-ready) export helpers — no extra dependencies.
-// CSV files open directly in Excel/LibreOffice; PDF reports open a print dialog
-// where the user can "Save as PDF".
+// Export helpers — CSV, real .xlsx (SheetJS) and real .pdf (jsPDF + autotable).
+
+import * as XLSX from 'xlsx'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 function esc(v) {
   const s = v == null ? '' : String(v)
@@ -21,6 +23,74 @@ export function downloadCSV(filename, headers, rows) {
   URL.revokeObjectURL(url)
 }
 
+function safeName(name) {
+  return String(name || 'report').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') || 'report'
+}
+
+// Real Excel file export (.xlsx)
+export function exportXLSX(filename, headers, rows, sheetName) {
+  const sheet = XLSX.utils.aoa_to_sheet([headers, ...rows])
+  sheet['!cols'] = (headers || []).map((h) => ({ wch: Math.max(12, String(h).length + 4) }))
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, sheet, (sheetName || 'Report').slice(0, 31))
+  XLSX.writeFile(wb, safeName(filename) + '.xlsx')
+}
+
+// Multi-sheet Excel export: [{ sheet, headers, rows }]
+export function exportXLSXBook(filename, sections) {
+  const wb = XLSX.utils.book_new()
+  sections.forEach((s) => {
+    const sheet = XLSX.utils.aoa_to_sheet([s.headers, ...(s.rows || [])])
+    sheet['!cols'] = (s.headers || []).map((h) => ({ wch: Math.max(12, String(h).length + 4) }))
+    XLSX.utils.book_append_sheet(wb, sheet, (s.sheet || 'Sheet').slice(0, 31))
+  })
+  XLSX.writeFile(wb, safeName(filename) + '.xlsx')
+}
+
+// Real PDF file export. sections: [{ title, headers?, rows?, text? }]
+export function exportPDF(title, sections) {
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' })
+  doc.setFontSize(17)
+  doc.setTextColor(12, 44, 18)
+  doc.text(String(title), 40, 42)
+  doc.setFontSize(9)
+  doc.setTextColor(130, 130, 130)
+  doc.text(`Amen Events EMS · Generated ${new Date().toLocaleString()}`, 40, 56)
+  doc.setDrawColor(34, 139, 34)
+  doc.setLineWidth(1.5)
+  doc.line(40, 62, 560, 62)
+
+  let y = 78
+  sections.forEach((s) => {
+    if (y > 770) { doc.addPage(); y = 50 }
+    doc.setFontSize(12)
+    doc.setTextColor(28, 115, 28)
+    doc.text(String(s.title), 40, y)
+    y += 8
+    if (s.rows && s.rows.length) {
+      autoTable(doc, {
+        startY: y,
+        head: [s.headers || []],
+        body: s.rows,
+        margin: { left: 40, right: 40 },
+        styles: { fontSize: 8, cellPadding: 4, textColor: [18, 44, 18] },
+        headStyles: { fillColor: [34, 139, 34], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [240, 248, 240] },
+      })
+      y = doc.lastAutoTable.finalY + 22
+    } else if (s.text != null) {
+      doc.setFontSize(10)
+      doc.setTextColor(80, 80, 80)
+      const lines = doc.splitTextToSize(String(s.text), 520)
+      doc.text(lines, 40, y)
+      y += lines.length * 14 + 8
+    }
+    if (s.rows && s.rows.length) y += 8
+  })
+  doc.save(safeName(title) + '.pdf')
+  return true
+}
+
 function tableHTML(headers, rows) {
   return (
     `<table><thead><tr>${headers.map((h) => `<th>${h}</th>`).join('')}</tr></thead>` +
@@ -28,7 +98,8 @@ function tableHTML(headers, rows) {
   )
 }
 
-export function exportPDF(title, sections) {
+// Print-window fallback (kept for browsers that block downloads / preview use)
+export function exportPDFPrint(title, sections) {
   const win = window.open('', '_blank', 'width=960,height=720')
   if (!win) return false
   const body = sections.map((s) =>

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { FileText, Download, File, Image, FileCheck, FileSpreadsheet, Search } from 'lucide-react'
 import { useData } from '../../store/DataContext'
+import { downloadCSV } from '../../store/exportUtils'
 
 const DOC_CATEGORIES = [
   { key: 'all', label: 'All' },
@@ -100,7 +101,10 @@ export default function ClientDocuments() {
                   <p className="truncate text-sm font-bold text-brand-950">{doc.name}</p>
                   <p className="text-[11px] text-ink/45">{evt?.name || '—'} · {doc.size} · {doc.date}</p>
                 </div>
-                <button className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-brand-100 text-brand-700 transition hover:bg-brand-50">
+                <button
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-brand-100 text-brand-700 transition hover:bg-brand-50"
+                  onClick={() => downloadCSV(`${doc.name.replace(/\.[^/.]+$/, '')}.csv`, ['Document', 'Category', 'Event', 'Size', 'Date'], [[doc.name, doc.category, evt?.name || '—', doc.size, doc.date]])}
+                >
                   <Download size={16} />
                 </button>
               </div>

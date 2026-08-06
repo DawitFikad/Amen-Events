@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, CalendarDays, KanbanSquare, MapPin, Package, Handshake,
   UserCog, Wallet, Ticket, QrCode, Mic2, Building2, BadgeDollarSign, Megaphone,
   BarChart3, Settings, ChevronDown, CalendarCheck2, UserCircle, Workflow,
-  FileCheck, CalendarRange, FileText, MessageSquare,
+  FileCheck, CalendarRange, FileText, MessageSquare, Bell,
 } from 'lucide-react'
 import { useData } from '../../store/DataContext'
 import logo from '../../logo.jpg'
@@ -14,6 +14,7 @@ const groups = [
     label: 'Overview',
     items: [
       { to: '/erp/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true, module: 'dashboard' },
+      { to: '/erp/notifications', label: 'My Notifications', icon: Bell, module: null },
       { to: '/erp/calendar', label: 'Enterprise Calendar', icon: CalendarRange, module: 'dashboard' },
       { to: '/erp/reports', label: 'Reporting & Analytics', icon: BarChart3, module: 'reports' },
     ],

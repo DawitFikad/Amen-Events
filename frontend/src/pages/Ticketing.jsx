@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Ticket, Plus, QrCode, Users, Download, Search, Clock3, XCircle, CheckCircle2 } from 'lucide-react'
-import { QRCodeSVG } from 'qrcode.react'
+import { QRCodeCanvas } from 'qrcode.react'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, SearchBox, Toast, EmptyState, Th, Td, Segmented, Modal, Field } from '../components/ui'
 import { fmt } from '../store/data'
 import { downloadCSV } from '../store/exportUtils'
+import { ticketPayload, encodeTicket } from '../store/ticket'
+import { nameOnly, emailValid, phoneValid, optional, validate } from '../store/validation'
 
 const ticketTypes = [
   { id: 'tt1', name: 'Early Bird', price: 9000, qty: 200, sold: 148 },
@@ -24,9 +26,10 @@ export default function Ticketing() {
   const [open, setOpen] = useState(false)
   const [toast, setToast] = useState(null)
   const [form, setForm] = useState({})
+  const [errors, setErrors] = useState({})
   const [qrView, setQrView] = useState(null)
   const [q, setQ] = useState('')
-  const qrRef = useRef(null)
+  const qrCanvasRef = useRef(null)
 
   const exportList = () => {
     downloadCSV('ticket-registrations.csv',
@@ -36,26 +39,21 @@ export default function Ticketing() {
   }
 
   const downloadQr = () => {
-    const node = qrRef.current
-    if (!node) return
-    const svg = node.querySelector('svg')
-    if (!svg) return
-    const clone = svg.cloneNode(true)
-    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
-    const blob = new Blob([new XMLSerializer().serializeToString(clone)], { type: 'image/svg+xml' })
-    const url = URL.createObjectURL(blob)
+    const canvas = qrCanvasRef.current
+    if (!canvas) return
+    const safeName = (qrView?.name || 'attendee').replace(/[^\w\u00C0-\u024F]+/g, '_').slice(0, 40)
+    const fname = `${qrView?.qr || 'TICKET'}-${safeName}.png`
     const a = document.createElement('a')
-    a.href = url
-    a.download = `ticket-${qrView.qr}.svg`
+    a.href = canvas.toDataURL('image/png')
+    a.download = fname
     a.click()
-    URL.revokeObjectURL(url)
-    show('QR ticket downloaded')
+    show(`QR ticket saved as ${fname}`)
   }
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
 
   useEffect(() => {
-    if (intent === 'new-registration') { setOpen(true); setView('registrations'); clearIntent() }
+    if (intent === 'new-registration') { setOpen(true); setErrors({}); setView('registrations'); clearIntent() }
     if (intent === 'view-qr') {
       const lastReg = state.registrations.find((r) => r.id === state.demo.lastRegId) || state.registrations.find((r) => r.eventId === activeEvent.id)
       if (lastReg) { setQrView(lastReg); viewQr() }
@@ -70,12 +68,20 @@ export default function Ticketing() {
   const totalSold = ticketTypes.reduce((a, t) => a + t.sold, 0)
   const capacity = ticketTypes.reduce((a, t) => a + t.qty, 0)
 
+  const activeVenue = activeEvent ? state.venues.find((v) => v.id === activeEvent.venueId) : null
+  const qrPayload = qrView ? encodeTicket(ticketPayload(qrView, activeEvent, activeVenue)) : null
+
   const submit = () => {
-    if (!form.name) { show('Attendee name required', 'warn'); return }
-    const rec = registerAttendee({ ...form, eventId: activeEvent.id, amount: ticketTypes.find((t) => t.name === form.type)?.price || 6000, paid: !!form.paid })
+    const res = validate(form, {
+      name: [nameOnly('Full name')],
+      email: [optional(emailValid('Email'))],
+      phone: [optional(phoneValid('Phone number'))],
+    })
+    if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
+    const rec = registerAttendee({ ...form, eventId: activeEvent.id, amount: ticketTypes.find((t) => t.name === form.type)?.price || 6000, paid: true })
     show('Attendee registered')
     setQrView(rec)
-    setOpen(false); setForm({})
+    setOpen(false); setForm({}); setErrors({})
   }
 
   return (
@@ -87,7 +93,7 @@ export default function Ticketing() {
         actions={
           <>
             <button className="btn-outline" onClick={exportList}><Download size={15} /> Export List</button>
-            <button className="btn-primary" onClick={() => setOpen(true)}><Plus size={15} /> Register Attendee</button>
+            <button className="btn-primary" onClick={() => { setOpen(true); setErrors({}) }}><Plus size={15} /> Register Attendee</button>
           </>
         }
       />
@@ -187,21 +193,23 @@ export default function Ticketing() {
 
       {view === 'refunds' && (
         <div className="card overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-brand-50/50"><tr><Th>Attendee</Th><Th>Type</Th><Th className="text-right">Amount</Th><Th>Reason</Th><Th>Status</Th><Th></Th></tr></thead>
-            <tbody className="divide-y divide-brand-50">
-              {refundRequests.map((r) => (
-                <tr key={r.id}>
-                  <Td className="font-semibold text-brand-950">{r.name}</Td>
-                  <Td className="text-ink/60">{r.type}</Td>
-                  <Td className="font-semibold">{fmt(r.amount)}</Td>
-                  <Td className="text-ink/55">{r.reason}</Td>
-                  <Td><Badge status={r.status} label={r.status} /></Td>
-                  <Td>{r.status === 'pending' && <div className="flex gap-1"><button className="btn-outline !py-1 text-xs" onClick={() => show('Refund approved')}><CheckCircle2 size={12} /> Approve</button><button className="btn-ghost !py-1 text-xs text-red-600" onClick={() => show('Refund declined', 'warn')}><XCircle size={12} /> Decline</button></div>}</Td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-brand-50/50"><tr><Th>Attendee</Th><Th>Type</Th><Th className="text-right">Amount</Th><Th>Reason</Th><Th>Status</Th><Th></Th></tr></thead>
+              <tbody className="divide-y divide-brand-50">
+                {refundRequests.map((r) => (
+                  <tr key={r.id}>
+                    <Td className="font-semibold text-brand-950">{r.name}</Td>
+                    <Td className="text-ink/60">{r.type}</Td>
+                    <Td className="font-semibold">{fmt(r.amount)}</Td>
+                    <Td className="text-ink/55">{r.reason}</Td>
+                    <Td><Badge status={r.status} label={r.status} /></Td>
+                    <Td>{r.status === 'pending' && <div className="flex gap-1"><button className="btn-outline !py-1 text-xs" onClick={() => show('Refund approved')}><CheckCircle2 size={12} /> Approve</button><button className="btn-ghost !py-1 text-xs text-red-600" onClick={() => show('Refund declined', 'warn')}><XCircle size={12} /> Decline</button></div>}</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -224,10 +232,13 @@ export default function Ticketing() {
       {/* Register modal */}
       <Modal open={open} onClose={() => setOpen(false)} title="Register Attendee">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Full Name *" className="col-span-2"><input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
-          <Field label="Email" className="col-span-2"><input className="input" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
+          <Field label="Full Name *" className="col-span-2"><input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
+          <Field label="Email" className="col-span-2"><input className="input" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} />{errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}</Field>
+          <Field label="Phone" className="col-span-2"><input className="input" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+251 9XX XXX XXX" />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</Field>
           <Field label="Ticket Type"><select className="input" value={form.type || 'Standard'} onChange={(e) => setForm({ ...form, type: e.target.value })}>{ticketTypes.map((t) => <option key={t.id} value={t.name}>{t.name} — {fmt(t.price)}</option>)}</select></Field>
-          <Field label="Payment"><select className="input" value={form.paid || true} onChange={(e) => setForm({ ...form, paid: e.target.value === 'true' })}><option value="true">Paid</option><option value="false">Unpaid</option></select></Field>
+          <div className="flex items-end">
+            <p className="rounded-lg bg-brand-50/70 px-3 py-2 text-[11px] font-medium text-brand-800">Payment is collected at registration — the QR ticket is issued after the attendee pays.</p>
+          </div>
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button className="btn-outline" onClick={() => setOpen(false)}>Cancel</button>
@@ -239,7 +250,7 @@ export default function Ticketing() {
       {qrView && (
         <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-brand-950/60" onClick={() => setQrView(null)} />
-          <div className="relative w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-pop">
+          <div className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-pop">
             <div className="bg-brand-900 px-6 py-4 text-white">
               <div className="flex items-center justify-between">
                 <div>
@@ -250,29 +261,50 @@ export default function Ticketing() {
               </div>
             </div>
             <div className="border-b border-dashed border-brand-200 px-6 py-5 text-center">
-              <div ref={qrRef} className="mx-auto mb-3 flex h-44 w-44 items-center justify-center rounded-2xl border-2 border-brand-100 bg-white p-3">
-                <QRCodeSVG
-                  value={qrView.qr || 'AE-REG-0012'}
+              <div className="mx-auto mb-3 flex h-44 w-44 items-center justify-center rounded-2xl border-2 border-brand-100 bg-white p-3" data-payload={qrPayload || ''}>
+                <QRCodeCanvas
+                  ref={qrCanvasRef}
+                  value={qrPayload || (qrView.qr || 'AE-REG-0012')}
                   size={152}
-                  level="H"
+                  level="M"
                   includeMargin={false}
                   fgColor="#082408"
                   bgColor="#ffffff"
                 />
               </div>
               <p className="font-mono text-sm font-bold tracking-widest text-brand-900">{qrView.qr || 'AE-REG-0012'}</p>
-              <p className="mt-1 text-xs text-ink/45">Scan this ticket at the entrance to check in</p>
+              <p className="mt-1 text-xs text-ink/45">This QR embeds the attendee's full details — scan at the entrance to validate instantly.</p>
             </div>
             <div className="px-6 py-4">
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center justify-between">
                 <div>
                   <p className="font-bold text-brand-950">{qrView.name}</p>
                   <p className="text-xs text-ink/45">{qrView.email}</p>
+                  {qrView.phone && <p className="text-xs text-ink/45">{qrView.phone}</p>}
                 </div>
                 <Badge status={qrView.type === 'VIP' ? 'pending' : 'done'} label={qrView.type} />
               </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-brand-50/60 p-3 text-sm">
+                {[
+                  ['Event', activeEvent?.name || '—'],
+                  ['Date & Time', activeEvent ? `${activeEvent.date} · ${activeEvent.time}` : '—'],
+                  ['Venue', activeVenue?.name || '—'],
+                  ['Ticket Type', qrView.type || '—'],
+                  ['Amount', fmt(qrView.amount)],
+                  ['Payment', qrView.paid ? 'Paid' : 'Unpaid'],
+                  ['Ticket Code', qrView.qr || '—'],
+                  ['Status', qrView.checkedIn ? 'Used' : 'Valid'],
+                ].map(([k, val]) => (
+                  <div key={k} className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-semibold text-ink/45">{k}</span>
+                    <span className="truncate text-xs font-bold text-brand-950">{val}</span>
+                  </div>
+                ))}
+              </div>
+
               <div className="mt-3 flex gap-2">
-                <button className="btn-primary flex-1" onClick={downloadQr}><Download size={15} /> Download</button>
+                <button className="btn-primary flex-1" onClick={downloadQr}><Download size={15} /> Download PNG</button>
                 <button className="btn-outline" onClick={() => setQrView(null)}>Close</button>
               </div>
             </div>

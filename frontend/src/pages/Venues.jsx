@@ -3,6 +3,7 @@ import { MapPin, Plus, CalendarDays, Users, LayoutTemplate, Phone, Image } from 
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, SearchBox, Toast, EmptyState, Th, Td, Segmented, Avatar, Modal, Field } from '../components/ui'
 import { fmt } from '../store/data'
+import { textRequired, nameOnly, numberPositive, optional, validate } from '../store/validation'
 
 const bookings = [
   { id: 'bk1', venueId: 'vn1', eventId: 'ev1', date: '2026-08-18', status: 'confirmed', contact: 'Sara Ahmed' },
@@ -24,16 +25,27 @@ export default function Venues() {
   const [toast, setToast] = useState(null)
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({})
+  const [errors, setErrors] = useState({})
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
 
   const filtered = state.venues.filter((v) => v.name.toLowerCase().includes(q.toLowerCase()))
 
+  const venueSchema = {
+    name: [textRequired('Venue name', { min: 2, max: 100 })],
+    city: [textRequired('City', { min: 2, max: 60 })],
+    capacity: [numberPositive('Capacity', { integer: true })],
+    halls: [optional(numberPositive('Halls', { integer: true }))],
+    price: [optional(numberPositive('Daily rate'))],
+    contact: [optional(nameOnly('Booking contact'))],
+  }
+
   const submit = () => {
-    if (!form.name) { show('Venue name is required', 'warn'); return }
+    const res = validate(form, venueSchema)
+    if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
     addVenue(form)
     show(`Venue "${form.name}" added`)
-    setOpen(false); setForm({})
+    setOpen(false); setForm({}); setErrors({})
   }
 
   const bookVenue = (v) => {
@@ -48,7 +60,7 @@ export default function Venues() {
         title="Venue Management"
         subtitle="Halls, capacity, equipment and booking availability."
         icon={MapPin}
-        actions={<button className="btn-primary" onClick={() => setOpen(true)}><Plus size={15} /> Add Venue</button>}
+        actions={<button className="btn-primary" onClick={() => { setOpen(true); setErrors({}) }}><Plus size={15} /> Add Venue</button>}
       />
 
       <div className="mb-5">
@@ -162,11 +174,11 @@ export default function Venues() {
       {/* Add venue modal */}
       <Modal open={open} onClose={() => setOpen(false)} title="Add Venue">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Venue Name *" className="col-span-2"><input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Intercontinental Ballroom" /></Field>
-          <Field label="City"><input className="input" value={form.city || 'Addis Ababa'} onChange={(e) => setForm({ ...form, city: e.target.value })} /></Field>
+          <Field label="Venue Name *" className="col-span-2"><input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Intercontinental Ballroom" />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
+          <Field label="City"><input className="input" value={form.city || 'Addis Ababa'} onChange={(e) => setForm({ ...form, city: e.target.value })} />{errors.city && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.city}</p>}</Field>
           <Field label="Halls"><input type="number" className="input" value={form.halls || 1} onChange={(e) => setForm({ ...form, halls: e.target.value })} /></Field>
-          <Field label="Capacity *"><input type="number" className="input" value={form.capacity || ''} onChange={(e) => setForm({ ...form, capacity: e.target.value })} placeholder="1500" /></Field>
-          <Field label="Daily Rate (ETB)"><input type="number" className="input" value={form.price || ''} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="250000" /></Field>
+          <Field label="Capacity *"><input type="number" className="input" value={form.capacity || ''} onChange={(e) => setForm({ ...form, capacity: e.target.value })} placeholder="1500" />{errors.capacity && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.capacity}</p>}</Field>
+          <Field label="Daily Rate (ETB)"><input type="number" className="input" value={form.price || ''} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="250000" />{errors.price && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.price}</p>}</Field>
           <Field label="Booking Contact"><input className="input" value={form.contact || ''} onChange={(e) => setForm({ ...form, contact: e.target.value })} /></Field>
           <Field label="Equipment (comma separated)"><input className="input" value={form.equipment || ''} onChange={(e) => setForm({ ...form, equipment: e.target.value })} placeholder="Stage, Sound, AV" /></Field>
         </div>

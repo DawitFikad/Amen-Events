@@ -8,7 +8,14 @@ import {
   staffSeed, clientsSeed, venuesSeed, resourcesSeed, vendorsSeed, eventsSeed,
   tasksSeed, speakersSeed, exhibitorsSeed, sponsorsSeed, invoicesSeed, expensesSeed,
   registrationsSeed, activitiesSeed, notificationsSeed, campaignsSeed, couponsSeed,
+  contractsSeed, clientDocsSeed, maintenanceSeed, purchaseRequestsSeed,
+  eventSuppliersSeed, eventChecklistsSeed,
+  sessionsSeed, sessionAttendanceSeed, certificateHoldersSeed,
+  exhibitionBoothsSeed, visitorsSeed, brandingLocationsSeed, sponsorDeliverablesSeed,
+  approvalsSeed, calendarEventsSeed,
+  fmt, todayISO,
 } from './data'
+import { decodeTicket } from './ticket'
 
 const DataContext = createContext(null)
 
@@ -17,6 +24,11 @@ const emptyState = {
   events: [], tasks: [], speakers: [], exhibitors: [], sponsors: [],
   invoices: [], expenses: [], registrations: [], activities: [],
   notifications: [], campaigns: [], coupons: [],
+  contracts: [], clientDocs: [], maintenance: [], purchaseRequests: [],
+  eventSuppliers: [], eventChecklists: [],
+  sessions: [], sessionAttendance: [], certificateHolders: [],
+  exhibitionBooths: [], visitors: [], brandingLocations: [], sponsorDeliverables: [],
+  approvals: [], calendarEvents: [],
   currentUserId: null, currentUser: null,
   lastLogin: null, intent: null,
   demo: {
@@ -35,6 +47,14 @@ const getFallbackSeed = () => ({
   sponsors: sponsorsSeed, invoices: invoicesSeed, expenses: expensesSeed,
   registrations: registrationsSeed, activities: activitiesSeed,
   notifications: notificationsSeed, campaigns: campaignsSeed, coupons: couponsSeed,
+  contracts: contractsSeed, clientDocs: clientDocsSeed, maintenance: maintenanceSeed,
+  purchaseRequests: purchaseRequestsSeed,
+  eventSuppliers: eventSuppliersSeed, eventChecklists: eventChecklistsSeed,
+  sessions: sessionsSeed, sessionAttendance: sessionAttendanceSeed,
+  certificateHolders: certificateHoldersSeed,
+  exhibitionBooths: exhibitionBoothsSeed, visitors: visitorsSeed,
+  brandingLocations: brandingLocationsSeed, sponsorDeliverables: sponsorDeliverablesSeed,
+  approvals: approvalsSeed, calendarEvents: calendarEventsSeed(),
 })
 
 export function DataProvider({ children }) {
@@ -92,6 +112,14 @@ export function DataProvider({ children }) {
         registrations: data.registrations || [], activities: data.activities || [],
         notifications: data.notifications || [], campaigns: data.campaigns || [],
         coupons: data.coupons || [],
+        contracts: data.contracts || [], clientDocs: data.clientDocs || [],
+        maintenance: data.maintenance || [], purchaseRequests: data.purchaseRequests || [],
+        eventSuppliers: data.eventSuppliers || [], eventChecklists: data.eventChecklists || [],
+        sessions: data.sessions || [], sessionAttendance: data.sessionAttendance || [],
+        certificateHolders: data.certificateHolders || [],
+        exhibitionBooths: data.exhibitionBooths || [], visitors: data.visitors || [],
+        brandingLocations: data.brandingLocations || [], sponsorDeliverables: data.sponsorDeliverables || [],
+        approvals: data.approvals || [], calendarEvents: data.calendarEvents || [],
         currentUserId: user.id, currentUser: user,
         lastLogin: new Date().toISOString(),
       }))
@@ -103,38 +131,77 @@ export function DataProvider({ children }) {
 
   // ─── AUTH ────────────────────────────────────────────────────
 
+  // True when a backend auth error is a genuine credentials/lock rejection
+  // (as opposed to a rate-limit, network, or server error we can retry offline).
+  const isRealAuthFailure = (err) => {
+    const m = String(err?.message || '').toLowerCase()
+    return /credential|invalid|locked|for [a-z ]* minutes|sign in through|client portal|not found|staff accounts/i.test(m)
+  }
+
+  // Local (seed) staff login — used offline or as a fallback when the backend
+  // is unreachable / rate-limited (keeps the demo working without a DB).
+  const loginOffline = useCallback(async (email) => {
+    const member = staffSeed.find((s) => s.email === email)
+    if (!member) throw new Error('User not found')
+    setState((s) => ({
+      ...s, ...getFallbackSeed(),
+      currentUserId: member.id,
+      currentUser: { id: member.id, name: member.name, email: member.email, userRoles: [{ role: { key: STAFF_ROLES[member.id] || 'manager' } }] },
+      lastLogin: new Date().toISOString(),
+    }))
+    setLoading(false)
+    return member
+  }, [])
+
+  const clientLoginOffline = useCallback(async (email) => {
+    const client = clientsSeed.find((c) => c.email === email)
+    if (!client) throw new Error('No client portal account found for this email')
+    setState((s) => ({
+      ...s, ...getFallbackSeed(),
+      currentUserId: client.id,
+      currentUser: { id: client.id, name: client.contactPerson, email: client.email, userRoles: [{ role: { key: 'client' } }] },
+      lastLogin: new Date().toISOString(),
+    }))
+    setLoading(false)
+    return client
+  }, [])
+
   const login = useCallback(async (email, password) => {
     if (backendOnline) {
-      const data = await authApi.login(email, password)
-      setTokens(data.accessToken, data.refreshToken)
-      await loadDashboardData(data.user)
-      return data.user
+      try {
+        const data = await authApi.login(email, password)
+        if (data.user?.userRoles?.[0]?.role?.key === 'client') {
+          throw new Error('Client accounts sign in through the Client Portal')
+        }
+        setTokens(data.accessToken, data.refreshToken)
+        await loadDashboardData(data.user)
+        return data.user
+      } catch (err) {
+        if (isRealAuthFailure(err)) throw err
+        return loginOffline(email)
+      }
     } else {
-      const member = staffSeed.find((s) => s.email === email)
-      if (member) {
-        setState((s) => ({
-          ...s, ...getFallbackSeed(),
-          currentUserId: member.id,
-          currentUser: { id: member.id, name: member.name, email: member.email, userRoles: [{ role: { key: STAFF_ROLES[member.id] || 'manager' } }] },
-          lastLogin: new Date().toISOString(),
-        }))
-        setLoading(false)
-        return member
-      }
-      const client = clientsSeed.find((c) => c.email === email)
-      if (client) {
-        setState((s) => ({
-          ...s, ...getFallbackSeed(),
-          currentUserId: client.id,
-          currentUser: { id: client.id, name: client.contactPerson, email: client.email, userRoles: [{ role: { key: 'client' } }] },
-          lastLogin: new Date().toISOString(),
-        }))
-        setLoading(false)
-        return client
-      }
-      throw new Error('User not found')
+      return loginOffline(email)
     }
-  }, [backendOnline, loadDashboardData])
+  }, [backendOnline, loadDashboardData, loginOffline])
+
+  const loginClient = useCallback(async (email, password) => {
+    if (backendOnline) {
+      try {
+        const data = await authApi.login(email, password)
+        const isClient = data.user?.userRoles?.some?.((ur) => ur.role?.key === 'client')
+        if (!isClient) throw new Error('Staff accounts sign in through the ERP sign-in')
+        setTokens(data.accessToken, data.refreshToken)
+        await loadDashboardData(data.user)
+        return data.user
+      } catch (err) {
+        if (isRealAuthFailure(err)) throw err
+        return clientLoginOffline(email)
+      }
+    } else {
+      return clientLoginOffline(email)
+    }
+  }, [backendOnline, loadDashboardData, clientLoginOffline])
 
   const logout = useCallback(async () => {
     if (backendOnline) {
@@ -165,10 +232,11 @@ export function DataProvider({ children }) {
     }))
   }, [])
 
-  const addNotification = useCallback((text, type = 'general') => {
+  const addNotification = useCallback((text, type = 'general', opts = {}) => {
+    const payload = typeof text === 'object' && text !== null ? text : { text, type }
     setState((s) => ({
       ...s,
-      notifications: [{ id: 'tmp-' + Math.random().toString(36).slice(2, 8), text, type, at: 'Just now' }, ...s.notifications],
+      notifications: [{ id: 'tmp-' + Math.random().toString(36).slice(2, 8), text: payload.text, type: payload.type || 'general', userId: payload.userId, read: !!payload.read, at: 'Just now' }, ...s.notifications],
     }))
   }, [])
 
@@ -188,6 +256,14 @@ export function DataProvider({ children }) {
         registrations: data.registrations || [], activities: data.activities || [],
         notifications: data.notifications || [], campaigns: data.campaigns || [],
         coupons: data.coupons || [],
+        contracts: data.contracts || [], clientDocs: data.clientDocs || [],
+        maintenance: data.maintenance || [], purchaseRequests: data.purchaseRequests || [],
+        eventSuppliers: data.eventSuppliers || [], eventChecklists: data.eventChecklists || [],
+        sessions: data.sessions || [], sessionAttendance: data.sessionAttendance || [],
+        certificateHolders: data.certificateHolders || [],
+        exhibitionBooths: data.exhibitionBooths || [], visitors: data.visitors || [],
+        brandingLocations: data.brandingLocations || [], sponsorDeliverables: data.sponsorDeliverables || [],
+        approvals: data.approvals || [], calendarEvents: data.calendarEvents || [],
       }))
     } catch (e) { /* ignore */ }
   }, [backendOnline])
@@ -196,6 +272,10 @@ export function DataProvider({ children }) {
 
   const markDone = useCallback((step) => {
     setState((s) => (s.demo.done.includes(step) ? s : { ...s, demo: { ...s.demo, done: [...s.demo.done, step] } }))
+  }, [])
+
+  const setDemoFlag = useCallback((flag, value = true) => {
+    setState((s) => ({ ...s, demo: { ...s.demo, [flag]: typeof value === 'function' ? value(s.demo[flag]) : value } }))
   }, [])
 
   const setIntent = useCallback((intent) => setState((s) => ({ ...s, intent })), [])
@@ -212,49 +292,75 @@ export function DataProvider({ children }) {
       try {
         const { client } = await api.clients.create(data)
         setState((s) => ({ ...s, clients: [client, ...s.clients] }))
+        setDemoFlag('lastClientId', client.id)
         return client
       } catch (e) { /* fall through */ }
     }
     const id = 'cl-' + Math.random().toString(36).slice(2, 8)
     const rec = { id, company: data.company, industry: data.industry || 'General', city: data.city || 'Addis Ababa', contactPerson: data.contactPerson, contactRole: data.role || 'Contact', phone: data.phone, email: data.email, status: 'active', stage: data.stage || 'lead', totalValue: 0, logo: (data.company || '').replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase() || 'CO' }
     patch('clients', (a) => [rec, ...a])
+    setDemoFlag('lastClientId', rec.id)
     logActivity(`New client profile created: ${data.company}`, 'crm')
     return rec
-  }, [backendOnline, patch, logActivity])
+  }, [backendOnline, patch, logActivity, setDemoFlag])
 
   const addEvent = useCallback(async (data) => {
     if (backendOnline) {
       try {
         const { event } = await api.events.create(data)
         setState((s) => ({ ...s, events: [event, ...s.events] }))
+        setDemoFlag('lastEventId', event.id)
         return event
       } catch (e) { /* fall through */ }
     }
     const id = 'ev-' + Math.random().toString(36).slice(2, 8)
     const rec = { id, name: data.name, clientId: data.clientId, venueId: data.venueId, category: data.category, date: data.date, time: data.time || '09:00', status: 'upcoming', pmId: data.pmId || 'st2', budget: Number(data.budget) || 0, spent: 0, stage: 4, progress: 36, team: [data.pmId || 'st2'], allocations: [] }
     patch('events', (a) => [rec, ...a])
+    setDemoFlag('lastEventId', rec.id)
     logActivity(`Event created: ${data.name}`, 'event')
     return rec
-  }, [backendOnline, patch, logActivity])
+  }, [backendOnline, patch, logActivity, setDemoFlag])
 
   const setEventTeam = useCallback(async (eventId, memberIds) => {
     if (backendOnline) { try { await api.events.setTeam(eventId, memberIds) } catch (e) {} }
     patchBy('events', eventId, (e) => ({ ...e, team: memberIds }))
+    setDemoFlag('teamAssigned', true)
+    const eventName = state.events.find((e) => e.id === eventId)?.name || 'this event'
+    memberIds.forEach((id) => addNotification({ text: `You were assigned to the team for "${eventName}"`, type: 'task', userId: id }))
     logActivity(`Team updated on event (${memberIds.length} members)`, 'event')
-  }, [backendOnline, patchBy, logActivity])
+  }, [backendOnline, patchBy, logActivity, setDemoFlag, state.events, addNotification])
 
   const setEventBudget = useCallback(async (eventId, budget) => {
     if (backendOnline) { try { await api.events.setBudget(eventId, budget) } catch (e) {} }
     patchBy('events', eventId, (e) => ({ ...e, budget: Number(budget) || 0 }))
+    setDemoFlag('budgetSet', true)
+    addNotification({ text: `Budget updated on "${state.events.find((x) => x.id === eventId)?.name || 'event'}" to ETB ${fmt(Number(budget) || 0)}`, type: 'budget' })
     logActivity(`Budget set to ETB ${Number(budget) || 0}`, 'finance')
-  }, [backendOnline, patchBy, logActivity])
+  }, [backendOnline, patchBy, logActivity, setDemoFlag, state.events, addNotification])
+
+  const allocateResources = useCallback(async (eventId, items) => {
+    if (backendOnline) {
+      try { for (const it of items) await api.resources.allocate(it.resourceId, eventId, it.qty) } catch (e) { /* fall through */ }
+    }
+    const map = {}
+    items.forEach((it) => { map[it.resourceId] = (map[it.resourceId] || 0) + (Number(it.qty) || 0) })
+    Object.entries(map).forEach(([resourceId, qty]) => {
+      patchBy('resources', resourceId, (r) => ({ ...r, allocated: (r.allocated || 0) + qty }))
+      patchBy('events', eventId, (e) => {
+        const existing = (e.allocations || []).find((a) => a.resourceId === resourceId)
+        const allocations = existing
+          ? e.allocations.map((a) => (a.resourceId === resourceId ? { ...a, qty: a.qty + qty } : a))
+          : [...(e.allocations || []), { resourceId, qty }]
+        return { ...e, allocations }
+      })
+    })
+    setDemoFlag('allocated', true)
+    logActivity(`Resources allocated to event (${items.length} items)`, 'inventory')
+  }, [backendOnline, patchBy, logActivity, setDemoFlag])
 
   const allocateResource = useCallback(async (resourceId, eventId, qty) => {
-    if (backendOnline) { try { await api.resources.allocate(resourceId, eventId, qty) } catch (e) {} }
-    patchBy('resources', resourceId, (r) => ({ ...r, allocated: (r.allocated || 0) + Number(qty) || 0 }))
-    patchBy('events', eventId, (e) => ({ ...e, allocations: [...(e.allocations || []), { resourceId, qty: Number(qty) || 1 }] }))
-    logActivity(`Resource allocated to event (${qty}x)`, 'inventory')
-  }, [backendOnline, patchBy, logActivity])
+    await allocateResources(eventId, [{ resourceId, qty: Number(qty) || 1 }])
+  }, [allocateResources])
 
   const addTask = useCallback(async (data) => {
     if (backendOnline) {
@@ -269,21 +375,25 @@ export function DataProvider({ children }) {
 
   const registerAttendee = useCallback(async (data) => {
     if (backendOnline) {
-      try { const { registration } = await api.registrations.create(data); setState((s) => ({ ...s, registrations: [registration, ...s.registrations] })); return registration } catch (e) {}
+      try { const { registration } = await api.registrations.create(data); setState((s) => ({ ...s, registrations: [registration, ...s.registrations] })); setDemoFlag('lastRegId', registration.id); return registration } catch (e) {}
     }
     const rec = { id: 'rg-' + Math.random().toString(36).slice(2, 8), qr: 'AE-REG-' + Math.random().toString(36).slice(2, 6).toUpperCase(), checkedIn: false, ...data }
     patch('registrations', (a) => [rec, ...a])
+    setDemoFlag('lastRegId', rec.id)
     logActivity(`Registration added: ${data.name} (${data.type})`, 'registration')
     return rec
-  }, [backendOnline, patch, logActivity])
+  }, [backendOnline, patch, logActivity, setDemoFlag])
 
   const viewQr = useCallback(() => { setState((s) => ({ ...s, demo: { ...s.demo, qrViewed: true } })) }, [])
 
-  const checkIn = useCallback(async (qr) => {
+  const checkIn = useCallback(async (value) => {
+    const parsed = decodeTicket(value)
+    const code = parsed ? parsed.code : String(value || '').trim()
     if (backendOnline) {
       try {
-        const { registration } = await api.registrations.checkIn(qr)
+        const { registration } = await api.registrations.checkIn(code)
         patchBy('registrations', registration.id, (r) => ({ ...r, checkedIn: true }))
+        setDemoFlag('lastCheckinId', registration.id)
         logActivity(`QR check-in recorded for ${registration.name}`, 'checkin')
         return { ok: true, reg: registration }
       } catch (e) {
@@ -291,22 +401,24 @@ export function DataProvider({ children }) {
         if (e.message.includes('duplicate')) return { ok: false, reason: 'duplicate' }
       }
     }
-    const existing = state.registrations.find((r) => r.qr === qr)
+    const existing = state.registrations.find((r) => (r.qr && r.qr === code) || (r.id && r.id === code))
     if (!existing) return { ok: false, reason: 'not-found' }
     if (existing.checkedIn) return { ok: false, reason: 'duplicate', reg: existing }
     patchBy('registrations', existing.id, (r) => ({ ...r, checkedIn: true }))
+    setDemoFlag('lastCheckinId', existing.id)
     logActivity(`QR check-in recorded for ${existing.name}`, 'checkin')
     return { ok: true, reg: existing }
-  }, [backendOnline, state.registrations, patchBy, logActivity])
+  }, [backendOnline, state.registrations, patchBy, logActivity, setDemoFlag])
 
   const recordExpense = useCallback(async (data) => {
     if (backendOnline) {
-      try { const { expense } = await api.finance.recordExpense(data); setState((s) => ({ ...s, expenses: [expense, ...s.expenses] })); if (data.eventId) patchBy('events', data.eventId, (e) => ({ ...e, spent: (e.spent || 0) + Number(data.amount) || 0 })); return } catch (e) {}
+      try { const { expense } = await api.finance.recordExpense(data); setState((s) => ({ ...s, expenses: [expense, ...s.expenses] })); if (data.eventId) patchBy('events', data.eventId, (e) => ({ ...e, spent: (e.spent || 0) + Number(data.amount) || 0 })); setDemoFlag('financeAction', (n) => (n || 0) + 1); return } catch (e) {}
     }
     patch('expenses', (a) => [{ id: 'ex-' + Math.random().toString(36).slice(2, 8), ...data }, ...a])
     if (data.eventId) patchBy('events', data.eventId, (e) => ({ ...e, spent: (e.spent || 0) + Number(data.amount) || 0 }))
+    setDemoFlag('financeAction', (n) => (n || 0) + 1)
     logActivity(`Expense recorded: ${data.category} ${data.amount}`, 'finance')
-  }, [backendOnline, patch, patchBy, logActivity])
+  }, [backendOnline, patch, patchBy, logActivity, setDemoFlag])
 
   const recordPayment = useCallback(async (invoiceId, amount) => {
     if (backendOnline) { try { await api.finance.recordPayment(invoiceId, amount) } catch (e) {} }
@@ -315,8 +427,9 @@ export function DataProvider({ children }) {
       const status = paid >= inv.amount ? 'paid' : paid > 0 ? 'partial' : 'outstanding'
       return { ...inv, paid, status }
     })
+    setDemoFlag('financeAction', (n) => (n || 0) + 1)
     logActivity(`Payment of ${amount} recorded`, 'finance')
-  }, [backendOnline, patchBy, logActivity])
+  }, [backendOnline, patchBy, logActivity, setDemoFlag])
 
   const addInvoice = useCallback(async (data) => {
     if (backendOnline) {
@@ -402,9 +515,115 @@ export function DataProvider({ children }) {
     return rec
   }, [backendOnline, patch, logActivity])
 
-  // ─── RBAC ────────────────────────────────────────────────────
+  // ─── EVENT SUPPLIERS & CHECKLISTS ──────────────────────────
+
+  const setEventSuppliers = useCallback(async (eventId, vendorIds) => {
+    if (backendOnline) { try { await api.modules.setEventSuppliers?.(eventId, vendorIds) } catch (e) {} }
+    setState((s) => ({
+      ...s,
+      eventSuppliers: [
+        ...s.eventSuppliers.filter((x) => x.eventId !== eventId),
+        ...vendorIds.map((vendorId) => ({ eventId, vendorId })),
+      ],
+    }))
+    logActivity(`Suppliers updated on event (${vendorIds.length} vendors)`, 'vendor')
+  }, [backendOnline, logActivity])
+
+  const toggleChecklist = useCallback(async (eventId, itemId) => {
+    if (backendOnline) { try { await api.modules.toggleChecklist?.(eventId, itemId) } catch (e) {} }
+    patchBy('eventChecklists', itemId, (c) => ({ ...c, done: !c.done }))
+    logActivity('Checklist item updated', 'event')
+  }, [backendOnline, patchBy, logActivity])
+
+  const addChecklistItem = useCallback(async (eventId, label) => {
+    const id = 'ec-' + Math.random().toString(36).slice(2, 8)
+    if (backendOnline) { try { await api.modules.addChecklist?.(eventId, label) } catch (e) {} }
+    patch('eventChecklists', (a) => [{ id, eventId, label, done: false }, ...a])
+    logActivity(`Checklist item added: ${label}`, 'event')
+    return id
+  }, [backendOnline, patch, logActivity])
+
+  // ─── CRM CONTRACTS & DOCUMENTS ─────────────────────────────
+
+  const addContract = useCallback(async (data) => {
+    const rec = { id: 'ct-' + Math.random().toString(36).slice(2, 8), ref: 'CTR-2026-' + String(1000 + Math.floor(Math.random() * 9000)), status: 'draft', ...data, value: Number(data.value) || 0 }
+    if (backendOnline) { try { const { contract } = await api.modules.createContract?.(data); return contract } catch (e) {} }
+    patch('contracts', (a) => [rec, ...a])
+    const clientName = state.clients.find((c) => c.id === rec.clientId)?.company || 'client'
+    logActivity(`Contract ${rec.ref} drafted for ${clientName}`, 'crm')
+    return rec
+  }, [backendOnline, patch, logActivity, state.clients])
+
+  const updateContractStatus = useCallback((id, status) => {
+    patchBy('contracts', id, { status })
+    logActivity(`Contract moved to ${status}`, 'crm')
+  }, [patchBy, logActivity])
+
+  const addClientDoc = useCallback(async (clientId, name, ext = 'PDF', size = '—') => {
+    const rec = { id: 'cd-' + Math.random().toString(36).slice(2, 8), clientId, name, ext, size }
+    patch('clientDocs', (a) => [rec, ...a])
+    const clientName = state.clients.find((c) => c.id === clientId)?.company || 'client'
+    logActivity(`Document attached to ${clientName}: ${name}`, 'crm')
+    return rec
+  }, [patch, logActivity, state.clients])
+
+  // ─── FINANCE PURCHASE REQUESTS ─────────────────────────────
+
+  const addPurchaseRequest = useCallback(async (data) => {
+    const rec = { id: 'pr-' + Math.random().toString(36).slice(2, 8), date: todayISO(), status: 'pending', ...data, amount: Number(data.amount) || 0 }
+    if (backendOnline) { try { const { pr } = await api.finance.createPurchaseRequest?.(data); return pr } catch (e) {} }
+    patch('purchaseRequests', (a) => [rec, ...a])
+    logActivity(`Purchase request submitted: ${data.item}`, 'finance')
+    return rec
+  }, [backendOnline, patch, logActivity])
+
+  const setPurchaseRequestStatus = useCallback((id, status) => {
+    patchBy('purchaseRequests', id, { status })
+    logActivity(`Purchase request ${status}`, 'finance')
+  }, [patchBy, logActivity])
+
+  // ─── RESOURCE MAINTENANCE ──────────────────────────────────
+
+  const scheduleMaintenance = useCallback(async (resourceId, date, task) => {
+    const rec = { id: 'mt-' + Math.random().toString(36).slice(2, 8), resourceId, date, task, status: 'scheduled' }
+    if (backendOnline) { try { await api.resources.scheduleMaintenance?.(resourceId, date, task) } catch (e) {} }
+    patch('maintenance', (a) => [rec, ...a])
+    patchBy('resources', resourceId, (r) => ({ ...r, status: 'maintenance', maintenance: (r.maintenance || 0) + 1 }))
+    const name = state.resources.find((r) => r.id === resourceId)?.name || 'asset'
+    logActivity(`Maintenance scheduled: ${name}`, 'inventory')
+    return rec
+  }, [backendOnline, patch, patchBy, logActivity, state.resources])
+
+  const completeMaintenance = useCallback((id) => {
+    patchBy('maintenance', id, { status: 'done' })
+    logActivity('Maintenance completed', 'inventory')
+  }, [patchBy, logActivity])
 
   const unreadNotifications = useMemo(() => state.notifications.length, [state.notifications])
+
+  // ─── APPROVALS & CALENDAR (offline workflows) ────────────────
+
+  const setApprovalStatus = useCallback((id, status, note = '') => {
+    const existing = state.approvals.find((a) => a.id === id)
+    patchBy('approvals', id, (a) => ({ ...a, status, reviewNote: note || a.reviewNote, reviewedBy: state.currentUserId || 'st1' }))
+    logActivity(`Approval "${existing?.entityName || 'request'}" ${status}`, 'approvals')
+  }, [patchBy, logActivity, state.approvals, state.currentUserId])
+
+  const addApprovalRequest = useCallback((data) => {
+    const rec = { id: 'ap-' + Math.random().toString(36).slice(2, 8), status: 'pending', createdAt: todayISO(), ...data, amount: Number(data.amount) || 0, submittedBy: state.currentUserId || 'st1' }
+    patch('approvals', (a) => [rec, ...a])
+    logActivity(`Approval request submitted: ${rec.entityName}`, 'approvals')
+    return rec
+  }, [patch, logActivity, state.currentUserId])
+
+  const addCalendarEvent = useCallback((data) => {
+    const rec = { id: 'ce-' + Math.random().toString(36).slice(2, 8), ...data }
+    patch('calendarEvents', (a) => [rec, ...a])
+    logActivity(`Calendar event created: ${rec.title}`, 'workflow')
+    return rec
+  }, [patch, logActivity])
+
+  // ─── RBAC ────────────────────────────────────────────────────
 
   const rbac = useMemo(() => {
     if (state.currentUser?.userRoles) {
@@ -442,9 +661,15 @@ export function DataProvider({ children }) {
     addClient, addEvent, addTask, updateTask, registerAttendee, checkIn,
     recordExpense, recordPayment, addInvoice,
     addVenue, addResource, addVendor, addStaffMember, addSpeaker, addExhibitor, addSponsor, addCampaign, addCoupon,
-    setEventTeam, setEventBudget, allocateResource, viewQr,
+    setEventTeam, setEventBudget, allocateResource, allocateResources, viewQr,
+    setEventSuppliers, toggleChecklist, addChecklistItem,
+    addContract, updateContractStatus, addClientDoc,
+    addPurchaseRequest, setPurchaseRequestStatus,
+    scheduleMaintenance, completeMaintenance,
+    setApprovalStatus, addApprovalRequest, addCalendarEvent,
     markDone, setIntent, clearIntent, setDemoOpen, markVisitedReports,
-    login, logout, refreshData,
+    intent: state.intent,
+    login, loginClient, logout, refreshData,
     unreadNotifications, rbac,
     loading, backendOnline,
   }

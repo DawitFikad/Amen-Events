@@ -3,6 +3,7 @@ import { BadgeDollarSign, Plus, FileText, CheckCircle2, Megaphone } from 'lucide
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, Toast, Th, Td, Modal, Field } from '../components/ui'
 import { fmt } from '../store/data'
+import { textRequired, nameOnly, numberPositive, optional, validate } from '../store/validation'
 
 const packages = [
   { id: 'pkg1', name: 'Platinum', price: 500000, perks: ['Keynote mention', 'Main stage branding', 'Logo on all tickets', 'VIP lounge access', 'Press coverage'] },
@@ -10,27 +11,42 @@ const packages = [
   { id: 'pkg3', name: 'Silver', price: 180000, perks: ['Booth B-tier', 'Logo on screens', '1 VIP pass'] },
 ]
 
-const deliverables = [
-  { id: 'dv1', sponsorId: 'spn1', item: 'Main stage branding installed', status: 'done', date: '2026-08-16' },
-  { id: 'dv2', sponsorId: 'spn1', item: 'Logo on printed tickets', status: 'in-progress', date: '2026-08-20' },
-  { id: 'dv3', sponsorId: 'spn2', item: 'VIP lounge setup', status: 'pending', date: '2026-08-17' },
-  { id: 'dv4', sponsorId: 'spn2', item: 'Opening announcement script', status: 'done', date: '2026-08-12' },
-]
-
 export default function Sponsorship() {
-  const { state, addSponsor } = useData()
+  const { state, patch, addSponsor, logActivity } = useData()
   const [view, setView] = useState('overview')
   const [toast, setToast] = useState(null)
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({})
+  const [allocLoc, setAllocLoc] = useState(null)
+  const [allocSponsor, setAllocSponsor] = useState('')
+  const [errors, setErrors] = useState({})
+
+  const branding = state.brandingLocations
+  const deliverables = state.sponsorDeliverables
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
 
+  const sponsorSchema = {
+    name: [textRequired('Sponsor name', { min: 2, max: 100 })],
+    amount: [optional(numberPositive('Amount'))],
+    deliverables: [optional(textRequired('Key deliverable', { min: 3, max: 120 }))],
+  }
+
   const submit = () => {
-    if (!form.name) { show('Sponsor name is required', 'warn'); return }
+    const res = validate(form, sponsorSchema)
+    if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
     addSponsor(form)
     show(`${form.name} added as ${form.package || 'Silver'} sponsor`)
-    setOpen(false); setForm({})
+    setOpen(false); setForm({}); setErrors({})
+  }
+
+  const allocate = () => {
+    const sponsor = state.sponsors.find((s) => s.id === allocSponsor)
+    if (!sponsor) { show('Select a sponsor to allocate', 'warn'); return }
+    patch('brandingLocations', (b) => b.map((x) => (x.loc === allocLoc ? { loc: x.loc, val: sponsor.amount, by: `${sponsor.package} · ${sponsor.name}` } : x)))
+    logActivity(`Branding allocated: ${allocLoc} → ${sponsor.name}`, 'sponsorship')
+    setAllocLoc(null); setAllocSponsor('')
+    show(`Branding allocated to ${allocLoc}`)
   }
 
   const total = state.sponsors.reduce((a, s) => a + s.amount, 0)
@@ -42,7 +58,7 @@ export default function Sponsorship() {
         title="Sponsorship Management"
         subtitle="Packages, agreements, deliverables and branding locations."
         icon={BadgeDollarSign}
-        actions={<button className="btn-primary" onClick={() => setOpen(true)}><Plus size={15} /> Add Sponsor</button>}
+        actions={<button className="btn-primary" onClick={() => { setOpen(true); setErrors({}) }}><Plus size={15} /> Add Sponsor</button>}
       />
 
       <div className="mb-5 grid grid-cols-3 gap-4">
@@ -119,13 +135,13 @@ export default function Sponsorship() {
 
       {view === 'branding' && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {[['Main Stage', 400000, 'Platinum · Sheba Bank'], ['VIP Lounge', 0, 'Gold · Ethio Air'], ['Ticket Backs', 0, 'Platinum'], ['Registration Desk', 0, 'Silver']].map(([loc, val, by]) => (
+          {branding.map(({ loc, val, by }) => (
             <div key={loc} className="card p-5">
               <p className="text-sm font-bold text-brand-950">{loc}</p>
               <p className="mt-1 text-xs text-ink/45">{by}</p>
               <div className="mt-3 flex items-center justify-between">
                 <span className="text-lg font-black text-brand-800">{val ? fmt(val) : '—'}</span>
-                <button className="btn-outline !py-1 text-xs" onClick={() => show(`Branding allocated to ${loc}`)}>Allocate</button>
+                <button className="btn-outline !py-1 text-xs" onClick={() => { setAllocLoc(loc); setAllocSponsor('') }}>{val ? 'Reallocate' : 'Allocate'}</button>
               </div>
             </div>
           ))}
@@ -134,15 +150,29 @@ export default function Sponsorship() {
 
       <Modal open={open} onClose={() => setOpen(false)} title="Add Sponsor">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Sponsor Name *" className="col-span-2"><input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Coca-Cola Sabco" /></Field>
+          <Field label="Sponsor Name *" className="col-span-2"><input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Coca-Cola Sabco" />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
           <Field label="Package"><select className="input" value={form.package || 'Silver'} onChange={(e) => setForm({ ...form, package: e.target.value })}><option>Platinum</option><option>Gold</option><option>Silver</option></select></Field>
-          <Field label="Amount (ETB)"><input type="number" className="input" value={form.amount || ''} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="180000" /></Field>
+          <Field label="Amount (ETB)"><input type="number" className="input" value={form.amount || ''} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="180000" />{errors.amount && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.amount}</p>}</Field>
           <Field label="Status"><select className="input" value={form.status || 'pending'} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="active">Active</option><option value="pending">Pending</option></select></Field>
-          <Field label="Key Deliverable"><input className="input" value={form.deliverables || ''} onChange={(e) => setForm({ ...form, deliverables: e.target.value })} placeholder="e.g. Main stage branding" /></Field>
+          <Field label="Key Deliverable"><input className="input" value={form.deliverables || ''} onChange={(e) => setForm({ ...form, deliverables: e.target.value })} placeholder="e.g. Main stage branding" />{errors.deliverables && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.deliverables}</p>}</Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button className="btn-outline" onClick={() => setOpen(false)}>Cancel</button>
           <button className="btn-primary" onClick={submit}>Add Sponsor</button>
+        </div>
+      </Modal>
+
+      {/* Allocate branding modal */}
+      <Modal open={!!allocLoc} onClose={() => setAllocLoc(null)} title={`Allocate Branding — ${allocLoc}`} width="max-w-md">
+        <Field label="Sponsor">
+          <select className="input" value={allocSponsor} onChange={(e) => setAllocSponsor(e.target.value)}>
+            <option value="">Select sponsor…</option>
+            {state.sponsors.map((s) => <option key={s.id} value={s.id}>{s.name} — {s.package} ({fmt(s.amount)})</option>)}
+          </select>
+        </Field>
+        <div className="mt-5 flex justify-end gap-2">
+          <button className="btn-outline" onClick={() => setAllocLoc(null)}>Cancel</button>
+          <button className="btn-primary" onClick={allocate}>Allocate</button>
         </div>
       </Modal>
 

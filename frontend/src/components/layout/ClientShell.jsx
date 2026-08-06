@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Menu, X, Bell, Search } from 'lucide-react'
 import ClientSidebar from './ClientSidebar'
+import { BackButton } from '../ui'
 import { useData } from '../../store/DataContext'
 import { useNavigate } from 'react-router-dom'
 
@@ -27,6 +28,7 @@ export default function ClientShell() {
       <div className={`${collapsed ? 'lg:pl-[72px]' : 'lg:pl-64'} transition-all duration-300`}>
         {/* Topbar */}
         <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-brand-100 bg-white/90 px-4 backdrop-blur lg:px-6">
+          <BackButton fallback="/erp/portal" />
           <button
             onClick={() => setMobileNav(true)}
             className="flex h-9 w-9 items-center justify-center rounded-lg border border-brand-100 text-brand-700 lg:hidden"

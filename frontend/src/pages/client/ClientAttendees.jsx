@@ -4,6 +4,7 @@ import { Search, Users, CheckCircle2, Clock, Crown, Download, ArrowRight } from 
 import { useData } from '../../store/DataContext'
 import { Badge, Th, Td } from '../../components/ui'
 import { fmt } from '../../store/data'
+import { downloadCSV } from '../../store/exportUtils'
 
 export default function ClientAttendees() {
   const { state } = useData()
@@ -69,7 +70,9 @@ export default function ClientAttendees() {
           <option value="all">All Events</option>
           {myEvents.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
         </select>
-        <button className="btn-outline text-xs"><Download size={14} /> Export</button>
+        <button className="btn-outline text-xs" onClick={() => {
+          downloadCSV('client-attendees.csv', ['Attendee', 'Email', 'Event', 'Type', 'Amount', 'Checked In'], allRegistrations.map((r) => [r.name, r.email, myEvents.find((e) => e.id === r.eventId)?.name, r.type, r.amount, r.checkedIn ? 'Yes' : 'No']))
+        }}><Download size={14} /> Export</button>
       </div>
 
       {/* Table */}

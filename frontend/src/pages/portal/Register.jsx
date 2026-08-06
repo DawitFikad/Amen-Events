@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { User, Mail, Phone, Lock, ArrowRight, CheckCircle2 } from 'lucide-react'
 import { useAttendee } from '../../store/AttendeeContext'
+import { nameOnly, emailValid, phoneValid, optional, validate, clearError } from '../../store/validation'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
@@ -12,24 +13,23 @@ export default function PortalRegister() {
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', password: '', confirm: '' })
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [errors, setErrors] = useState({})
 
   const redirect = searchParams.get('redirect') || '/'
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    const res = validate(form, {
+      firstName: [nameOnly('First name')],
+      lastName: [nameOnly('Last name')],
+      email: [emailValid('Email')],
+      phone: [optional(phoneValid('Phone'))],
+      password: [(v) => (String(v || '').length < 6 ? 'Password must be at least 6 characters' : '')],
+    })
+    if (res.ok && form.password !== form.confirm) { res.errors.confirm = 'Passwords do not match'; res.ok = false; res.first = 'Passwords do not match' }
+    if (!res.ok) { setErrors(res.errors); setError(res.first); return }
+    setErrors({})
     setError(null)
-    if (!form.firstName || !form.lastName || !form.email || !form.password) {
-      setError('All fields are required')
-      return
-    }
-    if (form.password !== form.confirm) {
-      setError('Passwords do not match')
-      return
-    }
-    if (form.password.length < 6) {
-      setError('Password must be at least 6 characters')
-      return
-    }
 
     setLoading(true)
     try {
@@ -66,28 +66,34 @@ export default function PortalRegister() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label">First Name</label>
-              <input className="input" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} placeholder="First name" required />
+              <input className="input" value={form.firstName} onChange={(e) => { setForm({ ...form, firstName: e.target.value }); setErrors(clearError(errors, 'firstName')) }} placeholder="First name" required />
+              {errors.firstName && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.firstName}</p>}
             </div>
             <div>
               <label className="label">Last Name</label>
-              <input className="input" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} placeholder="Last name" required />
+              <input className="input" value={form.lastName} onChange={(e) => { setForm({ ...form, lastName: e.target.value }); setErrors(clearError(errors, 'lastName')) }} placeholder="Last name" required />
+              {errors.lastName && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.lastName}</p>}
             </div>
           </div>
           <div>
             <label className="label">Email</label>
-            <input className="input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@example.com" required />
+            <input className="input" type="email" value={form.email} onChange={(e) => { setForm({ ...form, email: e.target.value }); setErrors(clearError(errors, 'email')) }} placeholder="you@example.com" required />
+            {errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}
           </div>
           <div>
             <label className="label">Phone</label>
-            <input className="input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+251 9XX XXX XXX" />
+            <input className="input" value={form.phone} onChange={(e) => { setForm({ ...form, phone: e.target.value }); setErrors(clearError(errors, 'phone')) }} placeholder="+251 9XX XXX XXX" />
+            {errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}
           </div>
           <div>
             <label className="label">Password</label>
-            <input className="input" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Min 6 characters" required />
+            <input className="input" type="password" value={form.password} onChange={(e) => { setForm({ ...form, password: e.target.value }); setErrors(clearError(errors, 'password')) }} placeholder="Min 6 characters" required />
+            {errors.password && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.password}</p>}
           </div>
           <div>
             <label className="label">Confirm Password</label>
-            <input className="input" type="password" value={form.confirm} onChange={(e) => setForm({ ...form, confirm: e.target.value })} placeholder="Re-enter password" required />
+            <input className="input" type="password" value={form.confirm} onChange={(e) => { setForm({ ...form, confirm: e.target.value }); setErrors(clearError(errors, 'confirm')) }} placeholder="Re-enter password" required />
+            {errors.confirm && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.confirm}</p>}
           </div>
 
           <button type="submit" disabled={loading} className="btn-primary w-full">

@@ -1,15 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { QrCode, ScanLine, Users, CheckCircle2, XCircle, AlertTriangle, RefreshCw, WifiOff } from 'lucide-react'
+import { QrCode, ScanLine, Users, CheckCircle2, XCircle, AlertTriangle, RefreshCw, WifiOff, Upload, Image as ImageIcon } from 'lucide-react'
+import jsQR from 'jsqr'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Toast } from '../components/ui'
+import { decodeTicket } from '../store/ticket'
 
 export default function CheckIn() {
-  const { state, checkIn, intent, clearIntent } = useData()
+  const { state, checkIn, intent, clearIntent, logActivity, addNotification } = useData()
   const [result, setResult] = useState(null)
   const [toast, setToast] = useState(null)
   const [entered, setEntered] = useState('')
   const [scanned, setScanned] = useState('')
+  const [offline, setOffline] = useState(false)
+  const [queue, setQueue] = useState([])
   const inputRef = useRef(null)
+  const uploadRef = useRef(null)
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2400) }
 
@@ -18,24 +23,74 @@ export default function CheckIn() {
   const checkedIn = regs.filter((r) => r.checkedIn)
   const pct = regs.length ? Math.round((checkedIn.length / regs.length) * 100) : 0
 
-  const doCheck = (code) => {
-    if (!code) return
-    const res = checkInRef.current(code.trim())
+  const offlineRef = useRef(false)
+  const queueRef = useRef([])
+  offlineRef.current = offline
+
+  const flushQueue = async () => {
+    const items = queueRef.current
+    if (!items.length) { show('Nothing to sync', 'warn'); return }
+    let ok = 0, dup = 0
+    for (const it of items) {
+      const res = await checkInRef.current(it.code)
+      if (res && res.ok) ok++
+      else if (res && res.reason === 'duplicate') dup++
+    }
+    queueRef.current = []
+    setQueue([])
+    if (ok) { logActivity(`${ok} offline check-ins synced`, 'checkin'); addNotification(`${ok} offline check-in(s) synced to the entry log`, 'checkin') }
+    show(ok ? `${ok} offline scan(s) synced${dup ? `, ${dup} duplicate(s) skipped` : ''}` : 'Nothing to sync', ok ? 'success' : 'warn')
+  }
+
+  const doCheck = async (value) => {
+    if (!value) return
+    const parsed = decodeTicket(value)
+    const code = parsed ? parsed.code : String(value).trim()
+    setScanned(code)
+    setEntered('')
+
+    // Match by unique ticket id OR the QR code so a typed/imported reference works.
+    const reg = regsRef.current.find((r) => (r.qr && r.qr === code) || (r.id && r.id === code))
+    if (!reg) {
+      // A valid QR payload carries the attendee's full details even if not yet in
+      // this event's local list — surface them instead of a blank "not found".
+      if (parsed && parsed.payload) {
+        const p = parsed.payload
+        setResult({ ok: false, payload: p })
+        show(`Ticket found for ${p.name || 'attendee'} — not on this event's roll`, 'warn')
+      } else {
+        setResult({ ok: false })
+        show('QR code not found — no matching ticket', 'error')
+      }
+      return
+    }
+    if (reg.checkedIn) {
+      setResult({ ok: false, dup: true, name: reg.name, type: reg.type, email: reg.email })
+      show('Already checked in — duplicate detected', 'warn')
+      return
+    }
+    if (offlineRef.current) {
+      queueRef.current = [...queueRef.current, { code, name: reg.name, type: reg.type, email: reg.email, phone: reg.phone }]
+      setQueue(queueRef.current)
+      setResult({ ok: true, queued: true, name: reg.name, type: reg.type, email: reg.email, phone: reg.phone })
+      show('Saved offline — will sync when back online', 'success')
+      return
+    }
+    const res = await checkInRef.current(code)
     if (res.ok) {
-      setResult({ ok: true, name: res.reg.name, type: res.reg.type })
+      setResult({ ok: true, name: res.reg.name, type: res.reg.type, email: res.reg.email, phone: res.reg.phone, amount: res.reg.amount, paid: res.reg.paid })
       show(`Welcome, ${res.reg.name}! Checked in`)
     } else if (res.reason === 'duplicate') {
-      setResult({ ok: false, dup: true, name: res.reg.name })
+      setResult({ ok: false, dup: true, name: res.reg.name, type: res.reg.type })
       show('Already checked in — duplicate detected', 'warn')
     } else {
       setResult({ ok: false })
-      show('QR code not found', 'error')
+      show('QR ticket not found — no matching ticket', 'error')
     }
-    setScanned(code)
-    setEntered('')
   }
 
-  // Simulated scanner loop when "Scan mode" active
+  // Simulated scanner — one guest per scan. Entering scan mode does NOT bulk
+  // check everyone in; each scan validates exactly one ticket.
   const [scanning, setScanning] = useState(false)
   const scanningRef = useRef(false)
   const checkInRef = useRef(checkIn)
@@ -45,27 +100,75 @@ export default function CheckIn() {
   regsRef.current = regs
 
   const simulateScan = () => {
-    if (!scanningRef.current) return
-    const pool = regsRef.current.filter((r) => !r.checkedIn)
-    if (pool.length === 0) { setScanning(false); show('All guests checked in!', 'success'); return }
+    const queued = queueRef.current.map((q) => q.code)
+    const pool = regsRef.current.filter((r) => !r.checkedIn && !queued.includes(r.qr))
+    if (pool.length === 0) { show('All guests are checked in already', 'warn'); return }
     const pick = pool[Math.floor(Math.random() * pool.length)]
     doCheck(pick.qr)
-    setTimeout(simulateScan, 1400)
   }
   const toggleScan = () => {
     const next = !scanningRef.current
     scanningRef.current = next
     setScanning(next)
-    if (next) setTimeout(simulateScan, 300)
+    if (next) show('Scanner active — scan one ticket at a time', 'success')
   }
 
-  // Demo intent: auto-start the live scanner
+  // Demo intent: run a single demo scan (idempotent under StrictMode)
   useEffect(() => {
-    if (intent === 'checkin') {
-      if (!scanning) toggleScan()
-      clearIntent()
-    }
+    if (intent !== 'checkin') return
+    clearIntent()
+    if (scanningRef.current) return
+    scanningRef.current = true
+    setScanning(true)
+    setTimeout(simulateScan, 300)
   }, [intent])
+
+  const toggleOffline = () => {
+    const next = !offline
+    setOffline(next)
+    offlineRef.current = next
+    logActivity(`Offline sync mode ${next ? 'enabled' : 'disabled'}`, 'checkin')
+    if (next) {
+      addNotification('Offline sync enabled — scans queue locally until reconnection', 'checkin')
+      show('Offline mode active — scans saved locally and synced when back online', 'success')
+    } else {
+      show('Back online — syncing queued scans…', 'success')
+      setTimeout(flushQueue, 300)
+    }
+  }
+
+  // Decode a QR ticket from an uploaded image and check the guest in
+  const decodeFromImage = (file) => {
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const img = new Image()
+      img.onload = () => {
+        try {
+          const scale = Math.min(1, 700 / Math.max(img.width, img.height))
+          const canvas = document.createElement('canvas')
+          canvas.width = Math.max(1, Math.floor(img.width * scale))
+          canvas.height = Math.max(1, Math.floor(img.height * scale))
+          const ctx = canvas.getContext('2d', { willReadFrequently: true })
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+          const data = ctx.getImageData(0, 0, canvas.width, canvas.height)
+          const code = jsQR(data.data, data.width, data.height, { inversionAttempts: 'dontInvert' })
+          if (code && code.data) {
+            doCheck(code.data)
+            addNotification(`QR image decoded: ${code.data}`, 'checkin')
+          } else {
+            setResult({ ok: false, decodeError: true })
+            show('No QR code found in image — try a clearer photo', 'error')
+          }
+        } catch (e) {
+          show('Could not read this image', 'error')
+        }
+      }
+      img.onerror = () => show('Could not load image file', 'error')
+      img.src = reader.result
+    }
+    reader.readAsDataURL(file)
+  }
 
   return (
     <div>
@@ -75,7 +178,7 @@ export default function CheckIn() {
         icon={QrCode}
         actions={
           <>
-            <button className="btn-outline" onClick={() => show('Offline sync enabled', 'info')}><WifiOff size={15} /> Offline Sync</button>
+            <button className={`btn-outline ${offline ? '!border-gold-500 !bg-gold-50 !text-gold-800' : ''}`} onClick={toggleOffline}><WifiOff size={15} /> {offline ? 'Offline Mode Active' : 'Offline Sync'}</button>
             <button className={`btn-primary ${scanning ? '!bg-red-500 hover:!bg-red-600' : ''}`} onClick={toggleScan}>
               <ScanLine size={15} /> {scanning ? 'Stop Scanner' : 'Start Scanner'}
             </button>
@@ -139,6 +242,17 @@ export default function CheckIn() {
                 />
               </div>
               <button onClick={() => doCheck(entered)} className="btn-gold !px-3"><RefreshCw size={15} /> Validate</button>
+              {scanning && (
+                <button onClick={simulateScan} className="btn-outline !bg-white/10 !border-white/25 !text-white hover:!bg-white/20 !px-3" title="Simulate scanning one ticket"><ScanLine size={15} /> Scan One</button>
+              )}
+              <input
+                ref={uploadRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => { decodeFromImage(e.target.files?.[0]); e.target.value = '' }}
+              />
+              <button onClick={() => uploadRef.current?.click()} className="btn-outline !bg-white/10 !border-white/25 !text-white hover:!bg-white/20 !px-3" title="Upload a QR ticket image"><Upload size={15} /> Upload QR</button>
             </div>
           </div>
 
@@ -148,12 +262,32 @@ export default function CheckIn() {
               <div className="flex items-center gap-3 rounded-xl border border-dashed border-brand-200 p-4 text-sm text-ink/45">
                 <ScanLine size={18} className="text-brand-500" /> Waiting for a ticket to scan…
               </div>
+            ) : result.ok && result.queued ? (
+              <div className="flex items-center gap-3 rounded-xl border border-gold-300 bg-gold-50 p-4">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gold-500 text-white"><WifiOff size={20} /></span>
+                <div>
+                  <p className="font-bold text-gold-800">{result.name}</p>
+                  <p className="text-xs text-gold-700">{result.type} ticket · Saved offline — {result.email ? `${result.email} · ` : ''}queued for sync</p>
+                </div>
+              </div>
             ) : result.ok ? (
               <div className="flex items-center gap-3 rounded-xl border border-brand-300 bg-brand-50 p-4">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-600 text-white"><CheckCircle2 size={20} /></span>
                 <div>
                   <p className="font-bold text-brand-950">{result.name}</p>
-                  <p className="text-xs text-brand-700">{result.type} ticket · Access granted</p>
+                  <p className="text-xs text-brand-700">{result.type} ticket · Access granted{result.email ? ` · ${result.email}` : ''}</p>
+                  <p className="text-xs text-brand-700">{result.amount != null ? `ETB ${result.amount.toLocaleString()} · ${result.paid ? 'Paid' : 'Unpaid'}` : 'Instant validation OK'}</p>
+                </div>
+              </div>
+            ) : result.payload ? (
+              <div className="flex items-center gap-3 rounded-xl border border-gold-300 bg-gold-50 p-4">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gold-500 text-white"><AlertTriangle size={20} /></span>
+                <div className="min-w-0">
+                  <p className="font-bold text-gold-800">{result.payload.name || 'Attendee'}</p>
+                  <p className="text-xs text-gold-700">
+                    {[result.payload.type, result.payload.event, result.payload.email, result.payload.phone, result.payload.amount != null ? `ETB ${Number(result.payload.amount).toLocaleString()}` : ''].filter(Boolean).join(' · ')}
+                  </p>
+                  <p className="text-[11px] font-semibold text-gold-700">Valid QR — not on this event's entry list</p>
                 </div>
               </div>
             ) : result.dup ? (
@@ -175,9 +309,16 @@ export default function CheckIn() {
             )}
           </div>
 
+          {queue.length > 0 && (
+            <div className="mt-3 flex items-center justify-between rounded-xl border border-gold-300 bg-gold-50 px-3 py-2.5 text-xs">
+              <span className="font-bold text-gold-800"><WifiOff size={13} className="mr-1 inline" />{queue.length} offline scan{queue.length !== 1 ? 's' : ''} pending sync</span>
+              <button onClick={flushQueue} className="btn-outline !py-1 text-xs"><RefreshCw size={12} /> Sync Now</button>
+            </div>
+          )}
+
           <div className="mt-4 rounded-xl bg-brand-50/70 p-3 text-xs text-ink/55">
             <p className="mb-1 flex items-center gap-1.5 font-bold text-brand-800"><Users size={13} /> Demo hint</p>
-            Use the "Start Scanner" button to simulate live QR scans — real tickets get checked in automatically.
+            Tickets embed the attendee's full details in the QR. Press "Start Scanner" then "Scan One" to validate one ticket at a time, type a ticket code, upload a ticket image, or enable "Offline Sync" to queue scans and sync them later.
           </div>
         </div>
 

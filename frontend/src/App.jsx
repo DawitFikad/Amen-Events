@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, lazy, Suspense } from 'react'
 import { Routes, Route, Outlet, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import Sidebar from './components/layout/Sidebar'
 import Topbar from './components/layout/Topbar'
@@ -6,60 +6,73 @@ import DemoWizard from './components/DemoWizard'
 import { Modal, Field, Toast } from './components/ui'
 import { DataProvider, useData } from './store/DataContext'
 
-import Dashboard from './pages/Dashboard'
-import Login from './pages/Login'
-import CRM from './pages/CRM'
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Login = lazy(() => import('./pages/Login'))
+const ClientLogin = lazy(() => import('./pages/ClientLogin'))
+const CRM = lazy(() => import('./pages/CRM'))
+const Notifications = lazy(() => import('./pages/Notifications'))
 
 // Portal imports
 import { AttendeeProvider } from './store/AttendeeContext'
 import PortalLayout from './components/portal/PortalLayout'
-import PortalLanding from './pages/portal/Landing'
-import PortalEventList from './pages/portal/EventList'
-import PortalEventDetail from './pages/portal/EventDetail'
-import PortalRegister from './pages/portal/Register'
-import PortalLogin from './pages/portal/Login'
-import PortalCheckout from './pages/portal/Checkout'
-import PortalPaymentSuccess from './pages/portal/PaymentSuccess'
-import PortalPaymentFailed from './pages/portal/PaymentFailed'
-import PortalMyTickets from './pages/portal/MyTickets'
-import PortalMyEvents from './pages/portal/MyEvents'
-import PortalProfile from './pages/portal/Profile'
-import PortalNotifications from './pages/portal/Notifications'
-import PortalAbout from './pages/portal/About'
-import PortalContact from './pages/portal/Contact'
-import Events from './pages/Events'
-import Projects from './pages/Projects'
-import Venues from './pages/Venues'
-import Resources from './pages/Resources'
-import Vendors from './pages/Vendors'
-import Staff from './pages/Staff'
-import Finance from './pages/Finance'
-import Ticketing from './pages/Ticketing'
-import CheckIn from './pages/CheckIn'
-import Speakers from './pages/Speakers'
-import Exhibition from './pages/Exhibition'
-import Sponsorship from './pages/Sponsorship'
-import Marketing from './pages/Marketing'
-import Reports from './pages/Reports'
-import Admin from './pages/Admin'
-import Profile from './pages/Profile'
+const PortalLanding = lazy(() => import('./pages/portal/Landing'))
+const PortalEventList = lazy(() => import('./pages/portal/EventList'))
+const PortalEventDetail = lazy(() => import('./pages/portal/EventDetail'))
+const PortalRegister = lazy(() => import('./pages/portal/Register'))
+const PortalLogin = lazy(() => import('./pages/portal/Login'))
+const PortalCheckout = lazy(() => import('./pages/portal/Checkout'))
+const PortalPaymentSuccess = lazy(() => import('./pages/portal/PaymentSuccess'))
+const PortalPaymentFailed = lazy(() => import('./pages/portal/PaymentFailed'))
+const PortalMyTickets = lazy(() => import('./pages/portal/MyTickets'))
+const PortalMyEvents = lazy(() => import('./pages/portal/MyEvents'))
+const PortalProfile = lazy(() => import('./pages/portal/Profile'))
+const PortalNotifications = lazy(() => import('./pages/portal/Notifications'))
+const PortalAbout = lazy(() => import('./pages/portal/About'))
+const PortalContact = lazy(() => import('./pages/portal/Contact'))
+const Events = lazy(() => import('./pages/Events'))
+const Projects = lazy(() => import('./pages/Projects'))
+const Venues = lazy(() => import('./pages/Venues'))
+const Resources = lazy(() => import('./pages/Resources'))
+const Vendors = lazy(() => import('./pages/Vendors'))
+const Staff = lazy(() => import('./pages/Staff'))
+const Finance = lazy(() => import('./pages/Finance'))
+const Ticketing = lazy(() => import('./pages/Ticketing'))
+const CheckIn = lazy(() => import('./pages/CheckIn'))
+const Speakers = lazy(() => import('./pages/Speakers'))
+const Exhibition = lazy(() => import('./pages/Exhibition'))
+const Sponsorship = lazy(() => import('./pages/Sponsorship'))
+const Marketing = lazy(() => import('./pages/Marketing'))
+const Reports = lazy(() => import('./pages/Reports'))
+const Admin = lazy(() => import('./pages/Admin'))
+const Profile = lazy(() => import('./pages/Profile'))
 import ClientShell from './components/layout/ClientShell'
-import ClientDashboard from './pages/client/ClientDashboard'
-import ClientEvents from './pages/client/ClientEvents'
-import ClientBrowseEvents from './pages/client/ClientBrowseEvents'
-import ClientEventDetail from './pages/client/ClientEventDetail'
-import ClientTimeline from './pages/client/ClientTimeline'
-import ClientAttendees from './pages/client/ClientAttendees'
-import ClientTickets from './pages/client/ClientTickets'
-import ClientInvoices from './pages/client/ClientInvoices'
-import ClientDocuments from './pages/client/ClientDocuments'
-import ClientNotifications from './pages/client/ClientNotifications'
-import ClientMessages from './pages/client/ClientMessages'
-import ClientProfile from './pages/client/ClientProfile'
-import ClientSupport from './pages/client/ClientSupport'
-import WorkflowPage from './pages/WorkflowPage'
-import Approvals from './pages/Approvals'
-import CalendarPage from './pages/CalendarPage'
+const ClientDashboard = lazy(() => import('./pages/client/ClientDashboard'))
+const ClientEvents = lazy(() => import('./pages/client/ClientEvents'))
+const ClientBrowseEvents = lazy(() => import('./pages/client/ClientBrowseEvents'))
+const ClientEventDetail = lazy(() => import('./pages/client/ClientEventDetail'))
+const ClientTimeline = lazy(() => import('./pages/client/ClientTimeline'))
+const ClientAttendees = lazy(() => import('./pages/client/ClientAttendees'))
+const ClientTickets = lazy(() => import('./pages/client/ClientTickets'))
+const ClientInvoices = lazy(() => import('./pages/client/ClientInvoices'))
+const ClientDocuments = lazy(() => import('./pages/client/ClientDocuments'))
+const ClientNotifications = lazy(() => import('./pages/client/ClientNotifications'))
+const ClientMessages = lazy(() => import('./pages/client/ClientMessages'))
+const ClientProfile = lazy(() => import('./pages/client/ClientProfile'))
+const ClientSupport = lazy(() => import('./pages/client/ClientSupport'))
+const WorkflowPage = lazy(() => import('./pages/WorkflowPage'))
+const Approvals = lazy(() => import('./pages/Approvals'))
+const CalendarPage = lazy(() => import('./pages/CalendarPage'))
+
+function RouteFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[#f3f7f3]">
+      <div className="flex flex-col items-center gap-3">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-200 border-t-brand-700" />
+        <p className="text-sm font-medium text-brand-700">Loading…</p>
+      </div>
+    </div>
+  )
+}
 
 function QuickAdd({ onMenuClick }) {
   const [open, setOpen] = useState(false)
@@ -197,7 +210,7 @@ function Shell() {
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} mobileNav={mobileNav} setMobileNav={setMobileNav} />
       <div className={`${collapsed ? 'lg:pl-[72px]' : 'lg:pl-64'} transition-all duration-300`}>
         <QuickAdd onMenuClick={() => setMobileNav(true)} />
-        <main key={location.pathname} className="mx-auto max-w-[1400px] px-5 py-6 animate-page-enter">
+        <main key={location.pathname} className="mx-auto max-w-[1400px] overflow-x-hidden px-5 py-6 animate-page-enter">
           <Outlet />
           <PoweredFooter />
         </main>
@@ -207,7 +220,7 @@ function Shell() {
   )
 }
 
-function RequireAuth({ children }) {
+function RequireAuth({ children, loginTo = '/login' }) {
   const { state, loading } = useData()
   const location = useLocation()
   if (loading) {
@@ -220,7 +233,13 @@ function RequireAuth({ children }) {
       </div>
     )
   }
-  if (!state.currentUserId) return <Navigate to="/login" replace state={{ from: location }} />
+  if (!state.currentUserId) return <Navigate to={loginTo} replace state={{ from: location }} />
+  return children
+}
+
+function RequireStaff({ children }) {
+  const { rbac } = useData()
+  if (rbac?.roleKey === 'client') return <Navigate to="/erp/portal" replace />
   return children
 }
 
@@ -241,7 +260,7 @@ function RequirePermission({ module, children }) {
 
 function RequireClient({ children }) {
   const { rbac } = useData()
-  if (!rbac) return <Navigate to="/login" replace />
+  if (!rbac?.roleKey) return <Navigate to="/client-login" replace />
   if (rbac.roleKey !== 'client') return <Navigate to="/erp/dashboard" replace />
   return children
 }
@@ -254,8 +273,10 @@ function HomeRedirect() {
 export default function App() {
   return (
     <DataProvider>
+      <Suspense fallback={<RouteFallback />}>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/client-login" element={<ClientLogin />} />
         {/* Public Portal — attendee-facing, separate from ERP */}
         <Route element={<AttendeeProvider><PortalLayout /></AttendeeProvider>}>
           <Route path="/" element={<PortalLanding />} />
@@ -273,8 +294,8 @@ export default function App() {
           <Route path="/about" element={<PortalAbout />} />
           <Route path="/contact" element={<PortalContact />} />
         </Route>
-        {/* Client Portal — separate layout, still requires auth */}
-        <Route path="/erp/portal" element={<RequireAuth><RequireClient><ClientShell /></RequireClient></RequireAuth>}>
+        {/* Client Portal — separate layout & login, still requires auth */}
+        <Route path="/erp/portal" element={<RequireAuth loginTo="/client-login"><RequireClient><ClientShell /></RequireClient></RequireAuth>}>
           <Route index element={<ClientDashboard />} />
           <Route path="/erp/portal/browse" element={<ClientBrowseEvents />} />
           <Route path="/erp/portal/events" element={<ClientEvents />} />
@@ -292,7 +313,7 @@ export default function App() {
           <Route path="/erp/portal/support" element={<ClientSupport />} />
         </Route>
         {/* ERP — staff only */}
-        <Route path="/erp" element={<RequireAuth><Shell /></RequireAuth>}>
+        <Route path="/erp" element={<RequireAuth><RequireStaff><Shell /></RequireStaff></RequireAuth>}>
           <Route index element={<HomeRedirect />} />
           <Route path="/erp/workflow" element={<RequirePermission module="events"><WorkflowPage /></RequirePermission>} />
           <Route path="/erp/approvals" element={<RequirePermission module="finance"><Approvals /></RequirePermission>} />
@@ -313,11 +334,13 @@ export default function App() {
           <Route path="/erp/sponsorship" element={<RequirePermission module="sponsorship"><Sponsorship /></RequirePermission>} />
           <Route path="/erp/marketing" element={<RequirePermission module="marketing"><Marketing /></RequirePermission>} />
           <Route path="/erp/reports" element={<RequirePermission module="reports"><Reports /></RequirePermission>} />
+          <Route path="/erp/notifications" element={<Notifications />} />
           <Route path="/erp/admin" element={<RequirePermission module="admin"><Admin /></RequirePermission>} />
           <Route path="/erp/profile" element={<Profile />} />
           <Route path="*" element={<Navigate to="/erp" replace />} />
         </Route>
       </Routes>
+      </Suspense>
     </DataProvider>
   )
 }

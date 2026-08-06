@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { Calendar, MapPin, Users, Mic, ArrowLeft, Ticket, CheckCircle2, Star, Heart, Share2, Clock, Map } from 'lucide-react'
 import { useAttendee } from '../../store/AttendeeContext'
+import { portalEventFallback } from '../../store/portalFallback'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
@@ -38,11 +39,16 @@ export default function PortalEventDetail() {
     fetch(`${API_URL}/portal/events/${id}`)
       .then((r) => r.json())
       .then((data) => {
-        if (data.error) setError(data.error)
+        if (data.error) { const fb = portalEventFallback(id); if (fb) { setEvent(fb); setReviews(fb.reviews || []) } else setError(data.error) }
         else { setEvent(data.event); setReviews(data.event.reviews || []) }
         setLoading(false)
       })
-      .catch(() => { setError('Failed to load'); setLoading(false) })
+      .catch(() => {
+        const fb = portalEventFallback(id)
+        if (fb) { setEvent(fb); setReviews(fb.reviews || []) }
+        else setError('Failed to load')
+        setLoading(false)
+      })
   }, [id])
 
   const handleBuy = () => {

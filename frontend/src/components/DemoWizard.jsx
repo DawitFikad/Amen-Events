@@ -23,7 +23,7 @@ const steps = [
 ]
 
 export default function DemoWizard() {
-  const { state, markDone, setIntent, setDemoOpen, clearIntent } = useData()
+  const { state, rbac, markDone, setIntent, setDemoOpen, clearIntent } = useData()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -31,6 +31,20 @@ export default function DemoWizard() {
   const lastEvent = events.find((e) => e.id === demo.lastEventId)
   const lastClient = clients.find((c) => c.id === demo.lastClientId)
   const lastReg = registrations.find((r) => r.id === demo.lastRegId)
+
+  // Only surface workflow steps within the signed-in role's permissions, so a
+  // manager doesn't see finance/reports/CRM steps they cannot access.
+  const stepModuleMap = {
+    '/erp/dashboard': 'dashboard', '/erp/crm': 'crm', '/erp/admin/events': 'events',
+    '/erp/ticketing': 'ticketing', '/erp/checkin': 'checkin',
+    '/erp/finance': 'finance', '/erp/reports': 'reports',
+  }
+  const visibleSteps = steps.filter((s) => {
+    if (!rbac || rbac.roleKey === 'admin') return true
+    const mod = stepModuleMap[s.route]
+    return !mod || rbac.canAccess(mod)
+  })
+
   const done = [...demo.done]
 
   // Auto-detect completion per step (idempotent)
@@ -48,9 +62,12 @@ export default function DemoWizard() {
   if (lastEvent && lastEvent.status === 'completed') done.push(11)
 
   const uniqueDone = [...new Set(done)].sort((a, b) => a - b)
-  const current = steps.findIndex((_, i) => !uniqueDone.includes(i))
-  const progress = Math.round((uniqueDone.length / steps.length) * 100)
-  const allDone = current === -1
+  const visibleIdx = steps.map((s, i) => (visibleSteps.includes(s) ? i : -1)).filter((i) => i >= 0)
+  const current = visibleIdx.find((i) => !uniqueDone.includes(i))
+  const currentVisible = current === undefined ? -1 : visibleIdx.indexOf(current)
+  const doneVisible = visibleIdx.filter((i) => uniqueDone.includes(i)).length
+  const progress = Math.round((doneVisible / Math.max(1, visibleIdx.length)) * 100)
+  const allDone = current === undefined
 
   // Keep the provider's done list in sync (fire-and-forget style, idempotent)
   useEffect(() => {
@@ -87,7 +104,7 @@ export default function DemoWizard() {
           <Sparkles size={16} />
         </span>
         <span className="text-sm font-bold">Demo Mode</span>
-        <span className="rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-bold">{uniqueDone.length}/{steps.length}</span>
+        <span className="rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-bold">{doneVisible}/{visibleIdx.length}</span>
       </button>
 
       {/* Drawer */}
@@ -109,7 +126,7 @@ export default function DemoWizard() {
               </div>
               <div className="mt-4">
                 <div className="mb-1.5 flex items-center justify-between text-xs">
-                  <span className="font-semibold text-brand-200">{allDone ? 'Workflow complete!' : `Step ${current + 1} of ${steps.length}`}</span>
+                  <span className="font-semibold text-brand-200">{allDone ? 'Workflow complete!' : `Step ${currentVisible + 1} of ${visibleIdx.length}`}</span>
                   <span className="font-black text-gold-300">{progress}%</span>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-white/10">
@@ -143,6 +160,7 @@ export default function DemoWizard() {
               <p className="mb-2 px-1 text-[11px] font-bold uppercase tracking-wider text-ink/40">Workflow steps</p>
               <div className="space-y-1">
                 {steps.map((s, i) => {
+                  if (!visibleSteps.includes(s)) return null
                   const isDone = uniqueDone.includes(i)
                   const isCurrent = i === current
                   const isLocked = i > current
@@ -158,7 +176,7 @@ export default function DemoWizard() {
                       }`}
                     >
                       <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-black ${isDone ? chip(true) : isCurrent ? 'bg-gold-400 text-brand-950' : isLocked ? 'bg-ink/5 text-ink/30' : 'bg-brand-50 text-ink/40'}`}>
-                        {isDone ? <CircleCheck size={14} /> : i + 1}
+                        {isDone ? <CircleCheck size={14} /> : currentVisible < 0 ? i + 1 : visibleIdx.indexOf(i) + 1}
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className={`text-[13px] font-bold ${isDone ? 'text-brand-800' : isCurrent ? 'text-brand-950' : isLocked ? 'text-ink/40' : 'text-ink/60'}`}>{s.title}</p>

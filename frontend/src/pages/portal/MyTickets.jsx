@@ -1,13 +1,26 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { QrCode, Calendar, MapPin, Ticket, Download, Share2, CheckCircle2, Clock, X } from 'lucide-react'
+import { QRCodeCanvas } from 'qrcode.react'
 import { useAttendee } from '../../store/AttendeeContext'
+import { ticketPayload, encodeTicket } from '../../store/ticket'
 
 export default function MyTickets() {
-  const { authFetch, isAuthenticated } = useAttendee()
+  const { authFetch, isAuthenticated, attendee } = useAttendee()
   const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
+  const qrCanvasRef = useRef(null)
+
+  const downloadQr = () => {
+    const canvas = qrCanvasRef.current
+    if (!canvas || !selected) return
+    const safeName = (attendee?.name || 'attendee').replace(/[^\w\u00C0-\u024F]+/g, '_').slice(0, 40)
+    const a = document.createElement('a')
+    a.href = canvas.toDataURL('image/png')
+    a.download = `${selected.qr || 'TICKET'}-${safeName}.png`
+    a.click()
+  }
 
   useEffect(() => {
     if (!isAuthenticated) { setLoading(false); return }
@@ -16,6 +29,14 @@ export default function MyTickets() {
       setLoading(false)
     })
   }, [isAuthenticated])
+
+  const qrValue = selected
+    ? encodeTicket(ticketPayload(
+        { id: selected.id, qr: selected.qr, name: attendee?.name || '', email: attendee?.email || '', type: selected.type, amount: selected.amount, paid: selected.paid, checkedIn: selected.checkedIn, eventId: selected.event?.id || selected.event?._id },
+        selected.event,
+        selected.event?.venue
+      ))
+    : ''
 
   if (!isAuthenticated) {
     return <NotAuthed />
@@ -52,19 +73,23 @@ export default function MyTickets() {
             <button onClick={() => setSelected(null)} className="ml-auto block text-gray-400 hover:text-gray-600"><X size={20} /></button>
             <h3 className="text-lg font-bold text-gray-900">{selected.event?.name}</h3>
             <div className="mt-5 rounded-2xl border-2 border-portal-200 bg-portal-50/50 p-6">
-              <div className="mx-auto flex h-32 w-32 items-center justify-center rounded-2xl bg-white" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}>
-                <QrCode size={64} className="text-portal-600" />
+              <div className="mx-auto flex h-32 w-32 items-center justify-center rounded-2xl bg-white p-2" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}>
+                <QRCodeCanvas ref={qrCanvasRef} value={qrValue} size={112} level="M" includeMargin={false} fgColor="#1b4332" bgColor="#ffffff" />
               </div>
-              <p className="mt-4 text-2xl font-bold tracking-wider text-gray-900">{selected.qr}</p>
-              <p className="mt-1 text-xs text-gray-400">Present this code at the entrance</p>
+              <p className="mt-4 text-lg font-bold tracking-wider text-gray-900">{selected.qr}</p>
+              <p className="mt-1 text-xs text-gray-400">QR embeds your full ticket details — present at the entrance</p>
             </div>
-            <div className="mt-5 space-y-2 text-left text-sm">
+            <div className="mt-4 space-y-2 text-left text-sm">
+              <div className="flex justify-between py-1"><span className="text-gray-400">Attendee</span><span className="font-semibold text-gray-900">{attendee?.name || '—'}</span></div>
+              <div className="flex justify-between py-1"><span className="text-gray-400">Email</span><span className="font-semibold text-gray-900">{attendee?.email || '—'}</span></div>
               <div className="flex justify-between py-1.5"><span className="text-gray-400">Type</span><span className="font-semibold text-gray-900">{selected.type}</span></div>
+              <div className="flex justify-between py-1.5"><span className="text-gray-400">Amount</span><span className="font-semibold text-gray-900">ETB {(selected.amount || 0).toLocaleString()}</span></div>
               <div className="flex justify-between py-1.5"><span className="text-gray-400">Date</span><span className="font-semibold text-gray-900">{selected.event?.date ? new Date(selected.event.date).toLocaleDateString() : 'TBA'}</span></div>
               <div className="flex justify-between py-1.5"><span className="text-gray-400">Venue</span><span className="font-semibold text-gray-900">{selected.event?.venue?.name || 'TBA'}</span></div>
-              <div className="flex justify-between py-1.5"><span className="text-gray-400">Status</span><span className="font-semibold text-gray-900">{selected.checkedIn ? 'Checked In' : 'Valid'}</span></div>
+              <div className="flex justify-between py-1.5"><span className="text-gray-400">Status</span><span className="font-semibold text-gray-900">{selected.checkedIn ? 'Checked In' : selected.paid ? 'Valid' : 'Pending'}</span></div>
             </div>
             <div className="mt-5 flex gap-2.5">
+              <button onClick={downloadQr} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-portal-500 py-3 text-sm font-bold text-white transition hover:bg-portal-600"><Download size={16} /> Download</button>
               <button onClick={() => window.print()} className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"><Download size={16} /> Print</button>
               <button onClick={() => navigator.share?.({ text: `My ticket: ${selected.qr}` }).catch(() => {})} className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"><Share2 size={16} /> Share</button>
             </div>

@@ -3,6 +3,7 @@ import { Wallet, Download, FileText, CheckCircle2, AlertCircle, CreditCard, Shie
 import { useData } from '../../store/DataContext'
 import { Badge, Th, Td, Toast } from '../../components/ui'
 import { fmt, fmtCompact } from '../../store/data'
+import { exportPDF } from '../../store/exportUtils'
 
 export default function ClientInvoices() {
   const { state, patchBy } = useData()
@@ -128,7 +129,10 @@ export default function ClientInvoices() {
                             <CreditCard size={12} className="inline" /> Pay Now
                           </button>
                         )}
-                        <button className="flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-900">
+                        <button className="flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-900" onClick={() => exportPDF(`Invoice ${inv.ref}`, [
+                          { title: 'Invoice', text: `${inv.ref} — ${evt?.name || 'Event'}` },
+                          { title: 'Amounts', rows: { headers: ['Description', 'Amount (ETB)'], rows: [['Total invoiced', inv.amount], ['Paid', inv.paid || 0], ['Outstanding', remaining]] } },
+                        ])}>
                           <Download size={13} /> PDF
                         </button>
                       </div>

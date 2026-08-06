@@ -25,6 +25,23 @@ export const clientsSeed = [
   { id: 'cl7', company: 'Sof Omer Hotel', industry: 'Hospitality', city: 'Hawassa', contactPerson: 'Daniel Haile', role: 'Sales Director', phone: '+251 917 888 666', email: 'events@sofomer.com', status: 'active', stage: 'negotiation', totalValue: 520000, logo: 'SO' },
 ]
 
+// ----------------------------- CONTRACTS -----------------------------
+export const contractsSeed = [
+  { id: 'ct1', clientId: 'cl1', eventId: 'ev1', ref: 'CTR-2026-0041', value: 1850000, startDate: '2026-06-10', endDate: '2026-09-30', status: 'signed', notes: 'Full-service conference production with AV and catering.' },
+  { id: 'ct2', clientId: 'cl5', eventId: 'ev3', ref: 'CTR-2026-0055', value: 2400000, startDate: '2026-07-01', endDate: '2026-08-15', status: 'signed', notes: 'Leadership retreat — resort buyout, transport and meals.' },
+  { id: 'ct3', clientId: 'cl7', eventId: 'ev5', ref: 'CTR-2026-0039', value: 520000, startDate: '2026-05-20', endDate: '2026-07-20', status: 'closed', notes: 'Hospitality gala — completed, final invoice settled.' },
+  { id: 'ct4', clientId: 'cl3', eventId: 'ev4', ref: 'CTR-2026-0061', value: 980000, startDate: '2026-08-01', endDate: '2026-10-15', status: 'draft', notes: 'Expo agreement awaiting legal sign-off.' },
+]
+
+// ----------------------------- CLIENT DOCUMENTS -----------------------------
+export const clientDocsSeed = [
+  { id: 'cd1', clientId: 'cl1', name: 'Signed Contract · Contract_2026.pdf', ext: 'PDF', size: '2.4 MB' },
+  { id: 'cd2', clientId: 'cl1', name: 'Requirements Brief · brief.pdf', ext: 'PDF', size: '980 KB' },
+  { id: 'cd3', clientId: 'cl5', name: 'Retreat Requirements · brief.pdf', ext: 'PDF', size: '1.1 MB' },
+  { id: 'cd4', clientId: 'cl3', name: 'Expo Booth Specs · booths.xlsx', ext: 'XLSX', size: '640 KB' },
+  { id: 'cd5', clientId: 'cl1', name: 'Brand Guidelines · brand.zip', ext: 'ZIP', size: '4.2 MB' },
+]
+
 // ----------------------------- VENUES -----------------------------
 export const venuesSeed = [
   { id: 'vn1', name: 'Millennium Hall', city: 'Addis Ababa', halls: 4, capacity: 5000, price: 850000, contact: '+251 911 100 001', equipment: ['Stage', 'Sound', 'Lighting', 'VIP Lounge'], status: 'available', color: 'bg-brand-700', abbr: 'MH' },
@@ -46,6 +63,13 @@ export const resourcesSeed = [
   { id: 'rc7', name: '4x4 Utility Truck', category: 'Vehicles', qty: 3, allocated: 3, maintenance: 0, status: 'in-use', location: 'Fleet', code: 'A-VH-07' },
   { id: 'rc8', name: 'Diesel Generators 150kVA', category: 'Generators', qty: 2, allocated: 1, maintenance: 0, status: 'available', location: 'Yard', code: 'A-GN-08' },
   { id: 'rc9', name: 'Branding Banners / Standees', category: 'Branding', qty: 50, allocated: 22, maintenance: 0, status: 'available', location: 'Store A', code: 'A-BR-09' },
+]
+
+// ----------------------------- MAINTENANCE -----------------------------
+export const maintenanceSeed = [
+  { id: 'mt1', resourceId: 'rc3', task: 'Replace blown moving-head lamps & tension test', date: '2026-08-10', status: 'pending' },
+  { id: 'mt2', resourceId: 'rc6', task: 'Re-wrap flower arch frames', date: '2026-08-14', status: 'scheduled' },
+  { id: 'mt3', resourceId: 'rc2', task: 'Speaker firmware update & cable audit', date: '2026-07-28', status: 'done' },
 ]
 
 // ----------------------------- VENDORS -----------------------------
@@ -70,16 +94,48 @@ export const eventsSeed = [
   { id: 'ev6', name: 'Koka University Graduation Day', clientId: 'cl6', venueId: 'vn5', category: 'Ceremony', date: '2026-07-05', time: '09:00', status: 'completed', pmId: 'st5', budget: 0, spent: 0, stage: 30, attendees: 1200, progress: 30 },
 ]
 
+// ----------------------------- EVENT SUPPLIERS -----------------------------
+export const eventSuppliersSeed = [
+  { eventId: 'ev1', vendorId: 'vd1' },
+  { eventId: 'ev1', vendorId: 'vd3' },
+  { eventId: 'ev1', vendorId: 'vd4' },
+  { eventId: 'ev3', vendorId: 'vd1' },
+  { eventId: 'ev3', vendorId: 'vd5' },
+  { eventId: 'ev3', vendorId: 'vd8' },
+  { eventId: 'ev4', vendorId: 'vd7' },
+  { eventId: 'ev4', vendorId: 'vd6' },
+  { eventId: 'ev5', vendorId: 'vd1' },
+  { eventId: 'ev5', vendorId: 'vd2' },
+  { eventId: 'ev5', vendorId: 'vd6' },
+]
+
+// ----------------------------- EVENT CHECKLISTS -----------------------------
+export const eventChecklistsSeed = [
+  { id: 'ec1', eventId: 'ev1', label: 'Venue contract signed', done: true },
+  { id: 'ec2', eventId: 'ev1', label: 'Catering tasting completed', done: true },
+  { id: 'ec3', eventId: 'ev1', label: 'Speaker confirmations', done: true },
+  { id: 'ec4', eventId: 'ev1', label: 'AV & staging plan', done: false },
+  { id: 'ec5', eventId: 'ev1', label: 'Security briefing', done: false },
+  { id: 'ec6', eventId: 'ev1', label: 'VIP seating layout', done: false },
+  { id: 'ec7', eventId: 'ev3', label: 'Retreat itinerary final', done: true },
+  { id: 'ec8', eventId: 'ev3', label: 'Transport booked', done: true },
+  { id: 'ec9', eventId: 'ev3', label: 'Accommodation allocated', done: true },
+  { id: 'ec10', eventId: 'ev3', label: 'Day 2 breakout rooms', done: false },
+  { id: 'ec11', eventId: 'ev4', label: 'Booth floor plan', done: true },
+  { id: 'ec12', eventId: 'ev4', label: 'Exhibitor kits sent', done: false },
+  { id: 'ec13', eventId: 'ev4', label: 'Branding production', done: false },
+]
+
 // ----------------------------- TASKS -----------------------------
 export const tasksSeed = [
-  { id: 'tk1', title: 'Confirm final speaker lineup', eventId: 'ev1', assigneeId: 'st2', priority: 'high', status: 'todo', due: '2026-08-05', comments: 3 },
-  { id: 'tk2', title: 'Book catering tasting session', eventId: 'ev1', assigneeId: 'st5', priority: 'medium', status: 'in-progress', due: '2026-08-07', comments: 1 },
-  { id: 'tk3', title: 'Finalize seating layout', eventId: 'ev1', assigneeId: 'st3', priority: 'high', status: 'in-progress', due: '2026-08-09', comments: 2 },
-  { id: 'tk4', title: 'Ship exhibition banners', eventId: 'ev4', assigneeId: 'st5', priority: 'medium', status: 'todo', due: '2026-08-20', comments: 0 },
-  { id: 'tk5', title: 'Approve lighting rig plan', eventId: 'ev3', assigneeId: 'st2', priority: 'high', status: 'review', due: '2026-07-30', comments: 4 },
-  { id: 'tk6', title: 'Process VIP invitations', eventId: 'ev1', assigneeId: 'st7', priority: 'low', status: 'done', due: '2026-08-01', comments: 1 },
-  { id: 'tk7', title: 'Contract signing with venue', eventId: 'ev4', assigneeId: 'st6', priority: 'medium', status: 'done', due: '2026-08-02', comments: 0 },
-  { id: 'tk8', title: 'Sound check and stage test', eventId: 'ev2', assigneeId: 'st8', priority: 'high', status: 'todo', due: '2026-08-22', comments: 0 },
+  { id: 'tk1', title: 'Confirm final speaker lineup', eventId: 'ev1', assigneeId: 'st2', priority: 'high', status: 'todo', due: '2026-08-05', comments: 3, progress: 0 },
+  { id: 'tk2', title: 'Book catering tasting session', eventId: 'ev1', assigneeId: 'st5', priority: 'medium', status: 'in-progress', due: '2026-08-07', comments: 1, progress: 40 },
+  { id: 'tk3', title: 'Finalize seating layout', eventId: 'ev1', assigneeId: 'st3', priority: 'high', status: 'in-progress', due: '2026-08-09', comments: 2, progress: 55 },
+  { id: 'tk4', title: 'Ship exhibition banners', eventId: 'ev4', assigneeId: 'st5', priority: 'medium', status: 'todo', due: '2026-08-20', comments: 0, progress: 0 },
+  { id: 'tk5', title: 'Approve lighting rig plan', eventId: 'ev3', assigneeId: 'st2', priority: 'high', status: 'review', due: '2026-07-30', comments: 4, progress: 80 },
+  { id: 'tk6', title: 'Process VIP invitations', eventId: 'ev1', assigneeId: 'st7', priority: 'low', status: 'done', due: '2026-08-01', comments: 1, progress: 100 },
+  { id: 'tk7', title: 'Contract signing with venue', eventId: 'ev4', assigneeId: 'st6', priority: 'medium', status: 'done', due: '2026-08-02', comments: 0, progress: 100 },
+  { id: 'tk8', title: 'Sound check and stage test', eventId: 'ev2', assigneeId: 'st8', priority: 'high', status: 'todo', due: '2026-08-22', comments: 0, progress: 0 },
 ]
 
 // ----------------------------- SPEAKERS -----------------------------
@@ -120,6 +176,14 @@ export const expensesSeed = [
   { id: 'ex3', eventId: 'ev1', category: 'Technical', amount: 145000, date: '2026-08-02', vendorId: 'vd4' },
   { id: 'ex4', eventId: 'ev3', category: 'Retreat Package', amount: 1240000, date: '2026-07-25', vendorId: 'vd5' },
   { id: 'ex5', eventId: 'ev5', category: 'Catering', amount: 180000, date: '2026-07-10', vendorId: 'vd1' },
+]
+
+// ----------------------------- PURCHASE REQUESTS -----------------------------
+export const purchaseRequestsSeed = [
+  { id: 'pr1', eventId: 'ev1', item: 'Extra moving head lights (12)', category: 'Technical', amount: 86000, requestedBy: 'st8', date: '2026-08-04', status: 'pending' },
+  { id: 'pr2', eventId: 'ev3', item: 'Diesel top-up for generators', category: 'Logistics', amount: 45000, requestedBy: 'st5', date: '2026-08-02', status: 'approved' },
+  { id: 'pr3', eventId: 'ev4', item: 'Sponsor gift bags (300)', category: 'Marketing', amount: 120000, requestedBy: 'st7', date: '2026-08-05', status: 'rejected' },
+  { id: 'pr4', eventId: 'ev1', item: 'Aisle signage & standees', category: 'Branding', amount: 64000, requestedBy: 'st5', date: '2026-08-06', status: 'pending' },
 ]
 
 // ----------------------------- REGISTRATIONS -----------------------------
@@ -163,6 +227,85 @@ export const couponsSeed = [
   { id: 'cp2', code: 'VIPFRIEND', type: 'Referral', value: '10%', usage: 38, max: 200, status: 'active' },
   { id: 'cp3', code: 'EARLYBIRD', type: 'Discount', value: '15%', usage: 500, max: 500, status: 'expired' },
 ]
+
+// ----------------------------- SPEAKER & CONFERENCE (M12) -----------------------------
+export const sessionsSeed = [
+  { id: 'ag1', time: '09:00', session: 'Registration & Welcome Coffee', venue: 'Main Foyer', type: 'networking' },
+  { id: 'ag2', time: '10:00', session: 'Keynote: The Future of Digital Banking', venue: 'Grand Hall', type: 'keynote', speakerId: 'sp1' },
+  { id: 'ag3', time: '11:30', session: 'Panel: RegTech & Compliance', venue: 'Grand Hall', type: 'panel', speakerIds: ['sp2', 'sp3'] },
+  { id: 'ag4', time: '13:30', session: 'Workshop: AI in Finance', venue: 'Breakout A', type: 'workshop', speakerId: 'sp3' },
+  { id: 'ag5', time: '15:30', session: 'Closing Fireside Chat', venue: 'Grand Hall', type: 'fireside', speakerId: 'sp1' },
+]
+
+export const sessionAttendanceSeed = [
+  { id: 'sa1', sessionId: 'ag2', session: 'Keynote', registered: 640, attended: 590 },
+  { id: 'sa2', sessionId: 'ag3', session: 'Panel: RegTech', registered: 520, attended: 470 },
+  { id: 'sa3', sessionId: 'ag4', session: 'AI Workshop', registered: 220, attended: 205 },
+]
+
+export const certificateHoldersSeed = [
+  { id: 'cf1', name: 'Meseret Lemma', session: 'Keynote session', issued: false },
+  { id: 'cf2', name: 'Tigist Fikru', session: 'Panel: RegTech', issued: false },
+  { id: 'cf3', name: 'Beza Tadesse', session: 'AI in Finance workshop', issued: false },
+  { id: 'cf4', name: 'Nahom Girma', session: 'Fireside chat', issued: false },
+]
+
+// ----------------------------- EXHIBITION (M13) -----------------------------
+export const exhibitionBoothsSeed = [
+  { booth: 'A1', company: 'InnovPay', status: 'confirmed', tier: 'gold', x: 1, y: 1 },
+  { booth: 'A2', company: null, status: 'free', tier: null, x: 2, y: 1 },
+  { booth: 'A3', company: null, status: 'free', tier: null, x: 3, y: 1 },
+  { booth: 'A4', company: 'PayCore', status: 'pending', tier: 'silver', x: 4, y: 1 },
+  { booth: 'B1', company: null, status: 'free', tier: null, x: 1, y: 2 },
+  { booth: 'B2', company: null, status: 'free', tier: null, x: 2, y: 2 },
+  { booth: 'B3', company: 'SavaTech', status: 'confirmed', tier: 'standard', x: 3, y: 2 },
+  { booth: 'B4', company: null, status: 'free', tier: null, x: 4, y: 2 },
+  { booth: 'C1', company: null, status: 'free', tier: null, x: 1, y: 3 },
+  { booth: 'C2', company: 'Mulu Hub', status: 'registering', tier: 'standard', x: 2, y: 3 },
+  { booth: 'C3', company: null, status: 'free', tier: null, x: 3, y: 3 },
+  { booth: 'C4', company: null, status: 'free', tier: null, x: 4, y: 3 },
+]
+
+export const visitorsSeed = [
+  { id: 'vs1', name: 'Samuel Tekle', company: 'Savvy Startups', checkin: '10:02', scanned: true },
+  { id: 'vs2', name: 'Hanna Mamo', company: 'Mulu Hub', checkin: '10:14', scanned: true },
+  { id: 'vs3', name: 'Yared Teshome', company: 'Addis Innovation', checkin: '10:31', scanned: true },
+  { id: 'vs4', name: 'Bethel Alemu', company: 'Sof Omer', checkin: '—', scanned: false },
+]
+
+// ----------------------------- SPONSORSHIP (M14) -----------------------------
+export const brandingLocationsSeed = [
+  { loc: 'Main Stage', val: 400000, by: 'Platinum · Sheba Bank' },
+  { loc: 'VIP Lounge', val: 0, by: 'Gold · Ethio Air' },
+  { loc: 'Ticket Backs', val: 0, by: 'Platinum' },
+  { loc: 'Registration Desk', val: 0, by: 'Silver' },
+]
+
+export const sponsorDeliverablesSeed = [
+  { id: 'dv1', sponsorId: 'spn1', item: 'Main stage branding installed', status: 'done', date: '2026-08-16' },
+  { id: 'dv2', sponsorId: 'spn1', item: 'Logo on printed tickets', status: 'in-progress', date: '2026-08-20' },
+  { id: 'dv3', sponsorId: 'spn2', item: 'VIP lounge setup', status: 'pending', date: '2026-08-17' },
+  { id: 'dv4', sponsorId: 'spn2', item: 'Opening announcement script', status: 'done', date: '2026-08-12' },
+]
+
+// ----------------------------- APPROVALS (offline workflows) -----------------------------
+export const approvalsSeed = [
+  { id: 'ap1', type: 'purchase_request', entityName: 'Extra moving head lights (12)', amount: 86000, status: 'pending', submittedBy: 'st8', createdAt: '2026-08-04', note: 'Borrowed inventory insufficient for the main stage.' },
+  { id: 'ap2', type: 'budget', entityName: 'Zemen Pharma Launch — budget increase', amount: 120000, status: 'pending', submittedBy: 'st3', createdAt: '2026-08-05', note: 'Catering and décor exceed the original estimate.' },
+  { id: 'ap3', type: 'contract', entityName: 'CTR-2026-0061 — Walia Telecom Expo', amount: 980000, status: 'pending', submittedBy: 'st2', createdAt: '2026-08-03', note: 'Expo agreement awaiting legal sign-off.' },
+  { id: 'ap4', type: 'sponsorship', entityName: 'Dashen Brewery — Silver package', amount: 180000, status: 'revision_requested', submittedBy: 'st7', createdAt: '2026-08-02', note: 'Sponsor asked to swap beverage corner placement.' },
+  { id: 'ap5', type: 'vendor_payment', entityName: 'Abyssinia Bank — second tranche', amount: 720000, status: 'approved', submittedBy: 'st4', createdAt: '2026-07-29', reviewNote: 'Matches milestone 2 of the retreat contract.' },
+]
+
+// ----------------------------- CALENDAR MEETINGS (offline) -----------------------------
+export function calendarEventsSeed() {
+  return [
+    { id: 'ce1', title: 'Client kickoff — EthFinTech', type: 'meeting', date: todayISO(0), time: '10:00', location: 'Office HQ', notes: '' },
+    { id: 'ce2', title: 'Catering tasting', type: 'meeting', date: todayISO(1), time: '15:00', location: 'Gourmet Addis', notes: '' },
+    { id: 'ce3', title: 'Sponsor pitch review', type: 'meeting', date: todayISO(2), time: '11:30', location: 'Meeting Room B', notes: '' },
+    { id: 'ce4', title: 'AV & staging walkthrough', type: 'task', date: todayISO(3), time: '09:00', location: 'Millennium Hall', notes: '' },
+  ]
+}
 
 export const revenueTrend = [
   { m: 'Feb', v: 820 }, { m: 'Mar', v: 960 }, { m: 'Apr', v: 1100 }, { m: 'May', v: 980 },

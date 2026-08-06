@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Menu, Bell, Search, Plus, ChevronDown, LogOut, UserRound, CheckCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useData } from '../../store/DataContext'
-import { Avatar } from '../ui'
+import { Avatar, BackButton } from '../ui'
 import api from '../../store/api'
 import GlobalSearch from '../GlobalSearch'
 
@@ -25,7 +25,8 @@ export default function Topbar({ onQuickAdd, onMenuClick }) {
     }
   }, [backendOnline])
 
-  const allNotifs = backendOnline && apiNotifs.length > 0 ? apiNotifs : state.notifications
+  const allNotifs = (backendOnline && apiNotifs.length > 0 ? apiNotifs : state.notifications)
+    .filter((n) => !n.userId || n.userId === state.currentUserId)
   const unread = backendOnline ? allNotifs.filter((n) => !n.read).length : allNotifs.length
 
   const markAllRead = async () => {
@@ -50,6 +51,7 @@ export default function Topbar({ onQuickAdd, onMenuClick }) {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-brand-100 bg-white/85 px-5 backdrop-blur">
       <div className="flex items-center gap-3 flex-1 min-w-0">
+        <BackButton fallback="/erp/dashboard" className="hidden sm:inline-flex" />
         <button
           onClick={onMenuClick}
           className="lg:hidden flex h-9 w-9 items-center justify-center rounded-lg text-ink/55 hover:bg-brand-50 hover:text-brand-800"
@@ -86,11 +88,16 @@ export default function Topbar({ onQuickAdd, onMenuClick }) {
               <div className="absolute right-0 top-11 z-20 w-80 rounded-xl border border-brand-100 bg-white p-2 shadow-pop">
                 <div className="flex items-center justify-between px-2 py-1.5">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-ink/40">Notifications</p>
-                  {unread > 0 && (
-                    <button onClick={markAllRead} className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-700 hover:text-brand-900">
-                      <CheckCheck size={12} /> Mark all read
+                  <div className="flex items-center gap-2">
+                    {unread > 0 && (
+                      <button onClick={markAllRead} className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-700 hover:text-brand-900">
+                        <CheckCheck size={12} /> Mark all read
+                      </button>
+                    )}
+                    <button onClick={() => { setShowBell(false); navigate('/erp/notifications') }} className="text-[11px] font-semibold text-brand-700 hover:text-brand-900 hover:underline">
+                      View all
                     </button>
-                  )}
+                  </div>
                 </div>
                 <div className="max-h-80 space-y-0.5 overflow-y-auto">
                   {allNotifs.length === 0 ? (

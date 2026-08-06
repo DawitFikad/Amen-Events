@@ -3,6 +3,7 @@ import { UserCircle, Lock, History, Shield, Save, CheckCircle2, XCircle, MapPin,
 import { useData } from '../store/DataContext'
 import api from '../store/api'
 import { PageHeader, Avatar, Badge, Toast, Th, Td } from '../components/ui'
+import { nameOnly, phoneValid, optional, validate } from '../store/validation'
 
 export default function Profile() {
   const { state, rbac, backendOnline } = useData()
@@ -51,7 +52,8 @@ export default function Profile() {
   ]
 
   const saveProfile = async () => {
-    if (!form.name.trim()) { show('Name is required', 'error'); return }
+    const res = validate(form, { name: [nameOnly('Name')], phone: [optional(phoneValid('Phone number'))] })
+    if (!res.ok) { show(res.first, 'error'); return }
     setSaving(true)
     try {
       if (backendOnline) {

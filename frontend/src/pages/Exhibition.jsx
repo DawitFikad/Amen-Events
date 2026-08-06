@@ -3,21 +3,7 @@ import { Building2, Plus, LayoutGrid, Users, QrCode, CheckCircle2, XCircle } fro
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, Toast, Th, Td, EmptyState, Modal, Field } from '../components/ui'
 import { fmt } from '../store/data'
-
-const boothGrid = [
-  { booth: 'A1', company: 'InnovPay', status: 'confirmed', tier: 'gold', x: 1, y: 1 },
-  { booth: 'A2', company: null, status: 'free', tier: null, x: 2, y: 1 },
-  { booth: 'A3', company: null, status: 'free', tier: null, x: 3, y: 1 },
-  { booth: 'A4', company: 'PayCore', status: 'pending', tier: 'silver', x: 4, y: 1 },
-  { booth: 'B1', company: null, status: 'free', tier: null, x: 1, y: 2 },
-  { booth: 'B2', company: null, status: 'free', tier: null, x: 2, y: 2 },
-  { booth: 'B3', company: 'SavaTech', status: 'confirmed', tier: 'standard', x: 3, y: 2 },
-  { booth: 'B4', company: null, status: 'free', tier: null, x: 4, y: 2 },
-  { booth: 'C1', company: null, status: 'free', tier: null, x: 1, y: 3 },
-  { booth: 'C2', company: 'Mulu Hub', status: 'registering', tier: 'standard', x: 2, y: 3 },
-  { booth: 'C3', company: null, status: 'free', tier: null, x: 3, y: 3 },
-  { booth: 'C4', company: null, status: 'free', tier: null, x: 4, y: 3 },
-]
+import { textRequired, nameOnly, numberPositive, optional, validate } from '../store/validation'
 
 const tierStyle = {
   gold: 'border-gold-400 bg-gold-50',
@@ -25,29 +11,48 @@ const tierStyle = {
   standard: 'border-brand-200 bg-white',
 }
 
-const visitors = [
-  { id: 'vs1', name: 'Samuel Tekle', company: 'Savvy Startups', checkin: '10:02', scanned: true },
-  { id: 'vs2', name: 'Hanna Mamo', company: 'Mulu Hub', checkin: '10:14', scanned: true },
-  { id: 'vs3', name: 'Yared Teshome', company: 'Addis Innovation', checkin: '10:31', scanned: true },
-  { id: 'vs4', name: 'Bethel Alemu', company: 'Sof Omer', checkin: '—', scanned: false },
-]
-
 export default function Exhibition() {
-  const { state, addExhibitor } = useData()
+  const { state, patch, addExhibitor, logActivity } = useData()
   const [view, setView] = useState('floor')
   const [toast, setToast] = useState(null)
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({})
+  const [visitorOpen, setVisitorOpen] = useState(false)
+  const [visitorForm, setVisitorForm] = useState({})
+  const [errors, setErrors] = useState({})
+
+  const booths = state.exhibitionBooths
+  const visitors = state.visitors
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
 
-  const freeBooths = boothGrid.filter((b) => b.status === 'free').map((b) => b.booth)
+  const freeBooths = booths.filter((b) => b.status === 'free').map((b) => b.booth)
+
+  const exhibitorSchema = {
+    company: [textRequired('Company name', { min: 2, max: 100 })],
+    paid: [optional(numberPositive('Initial payment'))],
+  }
 
   const submit = () => {
-    if (!form.company) { show('Company name is required', 'warn'); return }
+    const res = validate(form, exhibitorSchema)
+    if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
     addExhibitor(form)
+    if (form.booth) {
+      patch('exhibitionBooths', (bs) => bs.map((b) => (b.booth === form.booth ? { ...b, company: form.company, status: form.status || 'registering', tier: form.size === 'Premium' ? 'gold' : 'standard' } : b)))
+    }
+    logActivity(`${form.company} registered as exhibitor (booth ${form.booth || 'TBD'})`, 'exhibition')
     show(`${form.company} registered (booth ${form.booth || 'TBD'})`)
-    setOpen(false); setForm({})
+    setOpen(false); setForm({}); setErrors({})
+  }
+
+  const registerVisitor = () => {
+    const res = validate(visitorForm, { name: [nameOnly('Full name')], company: [optional(textRequired('Company', { min: 2, max: 80 }))] })
+    if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
+    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    patch('visitors', (vs) => [{ id: 'vs' + (vs.length + 1), name: visitorForm.name, company: visitorForm.company || '—', checkin: now, scanned: true }, ...vs])
+    logActivity(`${visitorForm.name} registered at the exhibition entrance`, 'exhibition')
+    setVisitorOpen(false); setVisitorForm({}); setErrors({})
+    show(`${visitorForm.name} checked in`)
   }
 
   const revenue = state.exhibitors.reduce((a, e) => a + e.paid, 0)
@@ -59,11 +64,11 @@ export default function Exhibition() {
         title="Exhibition Management"
         subtitle="Exhibitors, booths, floor plan and visitor registration."
         icon={Building2}
-        actions={<button className="btn-primary" onClick={() => setOpen(true)}><Plus size={15} /> Register Exhibitor</button>}
+        actions={<button className="btn-primary" onClick={() => { setOpen(true); setErrors({}) }}><Plus size={15} /> Register Exhibitor</button>}
       />
 
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[['Exhibitors', state.exhibitors.length, 'companies'], ['Booths Booked', boothGrid.filter((b) => b.status !== 'free').length, 'of ' + boothGrid.length], ['Booth Revenue', fmt(revenue), 'collected'], ['Expected', fmt(expected), 'target']].map(([l, v, s]) => (
+        {[['Exhibitors', state.exhibitors.length, 'companies'], ['Booths Booked', booths.filter((b) => b.status !== 'free').length, 'of ' + booths.length], ['Booth Revenue', fmt(revenue), 'collected'], ['Expected', fmt(expected), 'target']].map(([l, v, s]) => (
           <div key={l} className="card p-4"><p className="text-[13px] font-semibold text-ink/55">{l}</p><p className="mt-1 text-xl font-black text-brand-950">{v}</p><p className="text-xs text-ink/40">{s}</p></div>
         ))}
       </div>
@@ -89,10 +94,13 @@ export default function Exhibition() {
             <span className="rounded-t-3xl bg-brand-100 px-8 py-1.5 text-xs font-bold uppercase tracking-widest text-brand-700">Main Stage</span>
           </div>
           <div className="grid grid-cols-4 gap-2.5">
-            {boothGrid.map((b) => (
+            {booths.map((b) => (
               <button
                 key={b.booth}
-                onClick={() => show(b.status === 'free' ? `Booth ${b.booth} reserved` : `Booth ${b.booth} — ${b.company}`)}
+                onClick={() => {
+                  if (b.status === 'free') { setErrors({}); setForm({ booth: b.booth }); setOpen(true); return }
+                  show(`Booth ${b.booth} — ${b.company}`)
+                }}
                 className={`aspect-square rounded-xl border-2 p-2 text-left transition hover:scale-[1.02] ${b.status === 'free' ? 'border-dashed border-brand-200 bg-transparent hover:border-brand-400' : tierStyle[b.tier]}`}
               >
                 <div className="flex items-center justify-between">
@@ -135,7 +143,7 @@ export default function Exhibition() {
         <div className="card overflow-hidden">
           <div className="flex items-center justify-between border-b border-brand-100 p-4">
             <span className="text-sm text-ink/55">{visitors.filter((v) => v.scanned).length} scanned today</span>
-            <button className="btn-primary !py-1.5 text-xs" onClick={() => show('Visitor registration opened')}><QrCode size={14} /> Register Visitor</button>
+            <button className="btn-primary !py-1.5 text-xs" onClick={() => { setErrors({}); setVisitorOpen(true) }}><QrCode size={14} /> Register Visitor</button>
           </div>
           <table className="w-full">
             <thead className="bg-brand-50/50"><tr><Th>Name</Th><Th>Company</Th><Th>Check-in</Th><Th>Status</Th></tr></thead>
@@ -155,16 +163,28 @@ export default function Exhibition() {
 
       <Modal open={open} onClose={() => setOpen(false)} title="Register Exhibitor">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Company *" className="col-span-2"><input className="input" value={form.company || ''} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="e.g. AddisTech Solutions" /></Field>
+          <Field label="Company *" className="col-span-2"><input className="input" value={form.company || ''} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="e.g. AddisTech Solutions" />{errors.company && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.company}</p>}</Field>
           <Field label="Booth"><select className="input" value={form.booth || ''} onChange={(e) => setForm({ ...form, booth: e.target.value })}><option value="">Auto-allocate…</option>{freeBooths.map((b) => <option key={b} value={b}>{b}</option>)}</select></Field>
           <Field label="Booth Size"><select className="input" value={form.size || 'Standard'} onChange={(e) => setForm({ ...form, size: e.target.value })}><option>Premium</option><option>Standard</option></select></Field>
           <Field label="Package"><select className="input" value={form.package || 'Exhibitor'} onChange={(e) => setForm({ ...form, package: e.target.value })}><option>Platinum Sponsor</option><option>Gold Sponsor</option><option>Silver Sponsor</option><option>Exhibitor</option></select></Field>
-          <Field label="Initial Payment (ETB)"><input type="number" className="input" value={form.paid || 0} onChange={(e) => setForm({ ...form, paid: e.target.value })} /></Field>
+          <Field label="Initial Payment (ETB)"><input type="number" className="input" value={form.paid || 0} onChange={(e) => setForm({ ...form, paid: e.target.value })} />{errors.paid && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.paid}</p>}</Field>
           <Field label="Status"><select className="input" value={form.status || 'registering'} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="confirmed">Confirmed</option><option value="pending">Pending</option><option value="registering">Registering</option></select></Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button className="btn-outline" onClick={() => setOpen(false)}>Cancel</button>
           <button className="btn-primary" onClick={submit}>Register Exhibitor</button>
+        </div>
+      </Modal>
+
+      {/* Register visitor modal */}
+      <Modal open={visitorOpen} onClose={() => setVisitorOpen(false)} title="Register Visitor" width="max-w-md">
+        <div className="space-y-3">
+          <Field label="Full Name *"><input className="input" value={visitorForm.name || ''} onChange={(e) => setVisitorForm({ ...visitorForm, name: e.target.value })} placeholder="e.g. Lidia Tesfaye" />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
+          <Field label="Company"><input className="input" value={visitorForm.company || ''} onChange={(e) => setVisitorForm({ ...visitorForm, company: e.target.value })} placeholder="e.g. AddisTech" />{errors.company && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.company}</p>}</Field>
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <button className="btn-outline" onClick={() => setVisitorOpen(false)}>Cancel</button>
+          <button className="btn-primary" onClick={registerVisitor}><QrCode size={14} /> Check-in Visitor</button>
         </div>
       </Modal>
 

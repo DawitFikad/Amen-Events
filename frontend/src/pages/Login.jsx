@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   ShieldCheck, CalendarCheck2, BarChart3, QrCode, Users, Wallet,
   Megaphone, Building2, ArrowRight, Lock, Mail, Sparkles, Eye, EyeOff, KeyRound,
@@ -16,7 +16,6 @@ const roles = [
   { key: 'operations', label: 'Operations', userId: 'st5', name: 'Sara Ahmed', title: 'Logistics Lead', icon: Building2, desc: 'Venue, resources & vendors' },
   { key: 'finance', label: 'Finance', userId: 'st4', name: 'Yonas Girma', title: 'Finance Officer', icon: Wallet, desc: 'Budgets, expenses & payments' },
   { key: 'marketing', label: 'Marketing', userId: 'st7', name: 'Liya Kebede', title: 'Marketing Lead', icon: Megaphone, desc: 'Campaigns, sponsors & tickets' },
-  { key: 'client', label: 'Client Portal', userId: 'portal1', name: 'Dr. Meron Ayele', title: 'Events Director', icon: Building2, desc: 'Client portal — view own events & invoices' },
 ]
 
 const roleEmails = {
@@ -25,7 +24,6 @@ const roleEmails = {
   operations: 'sara@amen.et',
   finance: 'yonas@amen.et',
   marketing: 'liya@amen.et',
-  client: 'meron@ethfintech.com',
 }
 
 const bottomFeatures = [
@@ -44,9 +42,9 @@ const securityBadges = [
 export default function Login() {
   const { login, backendOnline } = useData()
   const navigate = useNavigate()
-  const [role, setRole] = useState('manager')
-  const [email, setEmail] = useState(roleEmails.manager)
-  const [password, setPassword] = useState('demo@amen')
+  const [role, setRole] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [busy, setBusy] = useState(false)
   const [toast, setToast] = useState(null)
@@ -69,6 +67,8 @@ export default function Login() {
     e.preventDefault()
     if (!email.trim()) { show('Please enter your work email'); return }
     if (!password) { show('Please enter your password'); return }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())) { show('Please enter a valid email address'); return }
+    if (password.length < 6) { show('Password must be at least 6 characters'); return }
     setBusy(true)
     try {
       await login(email.trim().toLowerCase(), password)
@@ -81,6 +81,7 @@ export default function Login() {
 
   const submitForgot = async () => {
     if (!forgotEmail.trim()) { show('Please enter your email', 'error'); return }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(forgotEmail.trim())) { show('Please enter a valid email address', 'error'); return }
     setForgotBusy(true)
     try {
       const res = await api.auth.forgotPassword(forgotEmail.trim().toLowerCase())
@@ -184,10 +185,10 @@ export default function Login() {
         <div className="relative z-10 p-10">
           <div className="animate-slide-in-left flex items-center gap-3">
             <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-white/10 ring-1 ring-white/20 backdrop-blur-md">
-              <img src={logo} alt="Amen Events" className="h-full w-full object-fill" />
+              <img src={logo} alt="Amen Events" className="h-full w-full object-cover" />
             </span>
             <div>
-              <p className="text-xl font-bold tracking-tight text-white">AMEN EVENT</p>
+              <p className="text-xl font-bold tracking-tight text-white">Amen Events</p>
               <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[#39D353]/70">Organizing Excellence</p>
             </div>
           </div>
@@ -259,10 +260,10 @@ export default function Login() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-white/15 ring-1 ring-white/25 backdrop-blur-sm">
-                      <img src={logo} alt="Amen" className="h-full w-full object-fill" />
+                      <img src={logo} alt="Amen" className="h-full w-full object-cover" />
                     </span>
                     <div>
-                      <p className="text-sm font-bold text-white">AMEN EVENT</p>
+                      <p className="text-sm font-bold text-white">Amen Events</p>
                       <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[#39D353]/70">VIP Access Pass</p>
                     </div>
                   </div>
@@ -467,10 +468,10 @@ export default function Login() {
           {/* Mobile brand */}
           <div className="mb-6 flex items-center gap-3 lg:hidden">
             <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-brand-700 ring-1 ring-brand-100">
-              <img src={logo} alt="Amen Events" className="h-full w-full object-fill" />
+              <img src={logo} alt="Amen Events" className="h-full w-full object-cover" />
             </span>
             <div>
-              <p className="text-lg font-bold tracking-tight text-brand-950">AMEN EVENT</p>
+              <p className="text-lg font-bold tracking-tight text-brand-950">Amen Events</p>
               <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-brand-500">Organizing Excellence</p>
             </div>
           </div>
@@ -488,7 +489,8 @@ export default function Login() {
           </p>
 
           {/* Role selection cards — premium */}
-          <div className="mt-5 grid grid-cols-3 gap-2">
+          <p className="mt-5 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-ink/40">Select your role</p>
+          <div className="grid grid-cols-3 gap-2">
             {roles.map((r) => (
               <button
                 key={r.key}
@@ -520,6 +522,11 @@ export default function Login() {
               </button>
             ))}
           </div>
+          {!role && (
+            <p className="mt-2.5 rounded-xl bg-gold-50 px-3 py-2 text-[11px] font-medium text-gold-800 ring-1 ring-gold-200">
+              Pick your role to auto-fill its demo account — or type any staff email below.
+            </p>
+          )}
 
           {/* Login form */}
           <form onSubmit={submit} className="mt-5">
@@ -584,7 +591,14 @@ export default function Login() {
             </button>
           </form>
 
+          {/* Client portal link — separate surface from staff ERP */}
+          <p className="mt-3 text-center text-xs text-ink/45">
+            Looking for the client dashboard?{' '}
+            <Link to="/client-login" className="font-semibold text-brand-700 hover:text-brand-900 hover:underline">Client Portal sign-in →</Link>
+          </p>
+
           {/* User preview card */}
+          {selectedRole && (
           <div key={role} className="animate-fade-in mt-4 flex items-center gap-3 rounded-2xl border border-gray-100/80 bg-gray-50/40 p-3 backdrop-blur-sm">
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-brand-700 to-brand-900 text-[11px] font-black text-white shadow-sm">
               {selectedRole?.name?.split(' ').map(p => p[0]).slice(0, 2).join('') || '?'}
@@ -597,6 +611,7 @@ export default function Login() {
               {selectedRole?.label}
             </span>
           </div>
+          )}
 
           {/* Security badges */}
           <div className="mt-4 grid grid-cols-3 gap-2">
@@ -617,7 +632,7 @@ export default function Login() {
           {/* Footer */}
           <div className="mt-3 border-t border-gray-50 pt-3 text-center">
             <p className="text-[10px] text-ink/30">
-              © 2025 Amen Event Organizer · Powered by <span className="font-semibold text-ink/40">Gravity Technologies PLC</span>
+              © 2025 Amen Events · Powered by <span className="font-semibold text-ink/40">Gravity Technologies PLC</span>
             </p>
           </div>
         </div>

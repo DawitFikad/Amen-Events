@@ -31,6 +31,20 @@ export default {
           800: '#714f24',
           900: '#5d4121',
         },
+        // Public portal brand — same forest green family as `brand`
+        portal: {
+          50: '#f0f7f0',
+          100: '#dcebdc',
+          200: '#bad9ba',
+          300: '#8fc48f',
+          400: '#57a857',
+          500: '#228B22',
+          600: '#1c721c',
+          700: '#165916',
+          800: '#114511',
+          900: '#0c320c',
+          950: '#062106',
+        },
         ink: '#122c12',
       },
       fontFamily: {
