@@ -4,6 +4,20 @@
 
 export const TICKET_SCHEMA = 1
 
+// Human-readable, event-scoped ticket code prefix, e.g. ev3 -> "EV3",
+// ev-7f3a -> "EV7F3A". Used to build unique per-event attendee ids + QR.
+export function eventTicketCode(eventId) {
+  if (!eventId) return 'EV1'
+  const m = String(eventId).match(/(\d+)/)
+  if (m) return 'EV' + m[1]
+  return 'EV' + String(eventId).replace(/[^A-Za-z0-9]/g, '').slice(-4).toUpperCase()
+}
+
+// Builds a unique, event-scoped ticket id for a new registration: AE-{EVENT}-{SEQ}.
+export function buildTicketCode(eventId, seq) {
+  return `AE-${eventTicketCode(eventId)}-${String(Math.max(1, Number(seq) || 1)).padStart(4, '0')}`
+}
+
 export function ticketPayload(reg, event, venue) {
   if (!reg) return null
   const e = event || {}

@@ -15,7 +15,7 @@ import {
   approvalsSeed, calendarEventsSeed,
   fmt, todayISO,
 } from './data'
-import { decodeTicket } from './ticket'
+import { decodeTicket, eventTicketCode, buildTicketCode } from './ticket'
 
 const DataContext = createContext(null)
 
@@ -377,18 +377,28 @@ export function DataProvider({ children }) {
     if (backendOnline) {
       try { const { registration } = await api.registrations.create(data); setState((s) => ({ ...s, registrations: [registration, ...s.registrations] })); setDemoFlag('lastRegId', registration.id); return registration } catch (e) {}
     }
-    const rec = { id: 'rg-' + Math.random().toString(36).slice(2, 8), qr: 'AE-REG-' + Math.random().toString(36).slice(2, 6).toUpperCase(), checkedIn: false, ...data }
+    // Unique, event-scoped attendee id: AE-{EVENT}-{SEQ} per event so the same
+    // person registering for another event gets a fresh, distinct ticket.
+    const seq = state.registrations.filter((r) => r.eventId === data.eventId).length + 1
+    const rec = { id: 'rg-' + Math.random().toString(36).slice(2, 8), qr: buildTicketCode(data.eventId, seq), checkedIn: false, ...data }
     patch('registrations', (a) => [rec, ...a])
     setDemoFlag('lastRegId', rec.id)
-    logActivity(`Registration added: ${data.name} (${data.type})`, 'registration')
+    logActivity(`Registration added: ${data.name} (${data.type}) for ${state.events.find((e) => e.id === data.eventId)?.name || 'event'}`, 'registration')
     return rec
-  }, [backendOnline, patch, logActivity, setDemoFlag])
+  }, [backendOnline, patch, logActivity, setDemoFlag, state.registrations, state.events])
 
   const viewQr = useCallback(() => { setState((s) => ({ ...s, demo: { ...s.demo, qrViewed: true } })) }, [])
 
-  const checkIn = useCallback(async (value) => {
+  const checkIn = useCallback(async (value, eventId) => {
     const parsed = decodeTicket(value)
     const code = parsed ? parsed.code : String(value || '').trim()
+    const ci = (s) => String(s || '').trim().toLowerCase()
+    // Match the ticket within ONE event's entry roll only — by ticket code,
+    // internal id, attendee name, or email — so typing a name also works.
+    const matchIn = (list, v) => {
+      const c = ci(v)
+      return list.find((r) => (r.qr && ci(r.qr) === c) || (r.id && ci(r.id) === c) || (r.name && ci(r.name) === c) || (r.email && ci(r.email) === c))
+    }
     if (backendOnline) {
       try {
         const { registration } = await api.registrations.checkIn(code)
@@ -401,8 +411,15 @@ export function DataProvider({ children }) {
         if (e.message.includes('duplicate')) return { ok: false, reason: 'duplicate' }
       }
     }
-    const existing = state.registrations.find((r) => (r.qr && r.qr === code) || (r.id && r.id === code))
-    if (!existing) return { ok: false, reason: 'not-found' }
+    const eventRegs = eventId ? state.registrations.filter((r) => r.eventId === eventId) : state.registrations
+    const existing = matchIn(eventRegs, code)
+    if (!existing) {
+      // If the ticket exists under a different event, say so clearly instead of
+      // silently rejecting it (handles an attendee registered for another event).
+      const other = eventId ? matchIn(state.registrations.filter((r) => r.eventId !== eventId), code) : null
+      if (other) return { ok: false, reason: 'wrong-event', reg: other }
+      return { ok: false, reason: 'not-found' }
+    }
     if (existing.checkedIn) return { ok: false, reason: 'duplicate', reg: existing }
     patchBy('registrations', existing.id, (r) => ({ ...r, checkedIn: true }))
     setDemoFlag('lastCheckinId', existing.id)

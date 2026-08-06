@@ -5,7 +5,7 @@ import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, SearchBox, Toast, EmptyState, Th, Td, Segmented, Modal, Field } from '../components/ui'
 import { fmt } from '../store/data'
 import { downloadCSV } from '../store/exportUtils'
-import { ticketPayload, encodeTicket } from '../store/ticket'
+import { ticketPayload, encodeTicket, eventTicketCode } from '../store/ticket'
 import { nameOnly, emailValid, phoneValid, optional, validate } from '../store/validation'
 
 const ticketTypes = [
@@ -41,8 +41,10 @@ export default function Ticketing() {
   const downloadQr = () => {
     const canvas = qrCanvasRef.current
     if (!canvas) return
+    const safeEvent = (activeEvent?.name || 'event').replace(/[^\w\u00C0-\u024F]+/g, '_').slice(0, 30)
     const safeName = (qrView?.name || 'attendee').replace(/[^\w\u00C0-\u024F]+/g, '_').slice(0, 40)
-    const fname = `${qrView?.qr || 'TICKET'}-${safeName}.png`
+    const code = qrView?.qr || `AE-${eventTicketCode(activeEvent?.id)}-XXXX`
+    const fname = `${safeEvent}-${safeName}-${code}.png`
     const a = document.createElement('a')
     a.href = canvas.toDataURL('image/png')
     a.download = fname
@@ -71,14 +73,14 @@ export default function Ticketing() {
   const activeVenue = activeEvent ? state.venues.find((v) => v.id === activeEvent.venueId) : null
   const qrPayload = qrView ? encodeTicket(ticketPayload(qrView, activeEvent, activeVenue)) : null
 
-  const submit = () => {
+  const submit = async () => {
     const res = validate(form, {
       name: [nameOnly('Full name')],
       email: [optional(emailValid('Email'))],
       phone: [optional(phoneValid('Phone number'))],
     })
     if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
-    const rec = registerAttendee({ ...form, eventId: activeEvent.id, amount: ticketTypes.find((t) => t.name === form.type)?.price || 6000, paid: true })
+    const rec = await registerAttendee({ ...form, eventId: activeEvent.id, amount: ticketTypes.find((t) => t.name === form.type)?.price || 6000, paid: true })
     show('Attendee registered')
     setQrView(rec)
     setOpen(false); setForm({}); setErrors({})

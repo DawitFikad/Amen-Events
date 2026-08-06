@@ -16,9 +16,10 @@ export default function MyTickets() {
     const canvas = qrCanvasRef.current
     if (!canvas || !selected) return
     const safeName = (attendee?.name || 'attendee').replace(/[^\w\u00C0-\u024F]+/g, '_').slice(0, 40)
+    const safeEvent = (selected?.event?.name || 'event').replace(/[^\w\u00C0-\u024F]+/g, '_').slice(0, 30)
     const a = document.createElement('a')
     a.href = canvas.toDataURL('image/png')
-    a.download = `${selected.qr || 'TICKET'}-${safeName}.png`
+    a.download = `${safeEvent}-${safeName}-${selected?.qr || 'TICKET'}.png`
     a.click()
   }
 

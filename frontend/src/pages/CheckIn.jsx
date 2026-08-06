@@ -32,7 +32,7 @@ export default function CheckIn() {
     if (!items.length) { show('Nothing to sync', 'warn'); return }
     let ok = 0, dup = 0
     for (const it of items) {
-      const res = await checkInRef.current(it.code)
+      const res = await checkInRef.current(it.code, activeEvent.id)
       if (res && res.ok) ok++
       else if (res && res.reason === 'duplicate') dup++
     }
@@ -49,8 +49,21 @@ export default function CheckIn() {
     setScanned(code)
     setEntered('')
 
-    // Match by unique ticket id OR the QR code so a typed/imported reference works.
-    const reg = regsRef.current.find((r) => (r.qr && r.qr === code) || (r.id && r.id === code))
+    // Ticket from a DIFFERENT event's check-in screen should be clearly rejected,
+    // not silently matched against this event.
+    if (parsed?.payload?.eventId && parsed.payload.eventId !== activeEvent.id) {
+      const p = parsed.payload
+      setResult({ ok: false, payload: p, wrongEvent: true })
+      show(`This ticket belongs to "${p.event || 'another event'}", not ${activeEvent.name}`, 'error')
+      return
+    }
+
+    // Match by unique ticket code, attendee id, attendee name, or email — scoped
+    // to this event's entry roll, so typing a name or code both work.
+    const c = String(code).trim().toLowerCase()
+    const reg = regsRef.current.find((r) =>
+      (r.qr && r.qr.toLowerCase() === c) || (r.id && r.id.toLowerCase() === c) ||
+      (r.name && r.name.toLowerCase() === c) || (r.email && r.email.toLowerCase() === c))
     if (!reg) {
       // A valid QR payload carries the attendee's full details even if not yet in
       // this event's local list — surface them instead of a blank "not found".
@@ -60,7 +73,7 @@ export default function CheckIn() {
         show(`Ticket found for ${p.name || 'attendee'} — not on this event's roll`, 'warn')
       } else {
         setResult({ ok: false })
-        show('QR code not found — no matching ticket', 'error')
+        show('Ticket not found — check the code or attendee name', 'error')
       }
       return
     }
@@ -70,22 +83,25 @@ export default function CheckIn() {
       return
     }
     if (offlineRef.current) {
-      queueRef.current = [...queueRef.current, { code, name: reg.name, type: reg.type, email: reg.email, phone: reg.phone }]
+      queueRef.current = [...queueRef.current, { code: reg.qr, eventId: activeEvent.id, name: reg.name, type: reg.type, email: reg.email, phone: reg.phone }]
       setQueue(queueRef.current)
       setResult({ ok: true, queued: true, name: reg.name, type: reg.type, email: reg.email, phone: reg.phone })
       show('Saved offline — will sync when back online', 'success')
       return
     }
-    const res = await checkInRef.current(code)
+    const res = await checkInRef.current(reg.qr, activeEvent.id)
     if (res.ok) {
       setResult({ ok: true, name: res.reg.name, type: res.reg.type, email: res.reg.email, phone: res.reg.phone, amount: res.reg.amount, paid: res.reg.paid })
       show(`Welcome, ${res.reg.name}! Checked in`)
     } else if (res.reason === 'duplicate') {
       setResult({ ok: false, dup: true, name: res.reg.name, type: res.reg.type })
       show('Already checked in — duplicate detected', 'warn')
+    } else if (res.reason === 'wrong-event') {
+      setResult({ ok: false, payload: { name: res.reg?.name, event: res.reg && regsRef.current.length ? undefined : undefined }, wrongEvent: true })
+      show(`This ticket belongs to another event — check-in is for "${activeEvent.name}"`, 'error')
     } else {
       setResult({ ok: false })
-      show('QR ticket not found — no matching ticket', 'error')
+      show('Ticket not found — check the code or attendee name', 'error')
     }
   }
 
@@ -235,7 +251,7 @@ export default function CheckIn() {
                 <input
                   ref={inputRef}
                   className="w-full rounded-lg bg-white/10 px-3 py-2 text-sm font-mono text-white placeholder-white/30 outline-none focus:ring-2 focus:ring-gold-400/50"
-                  placeholder="Scan QR or type code…"
+                  placeholder="Type ticket code, name, email or Scan QR…"
                   value={entered}
                   onChange={(e) => setEntered(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && doCheck(entered)}
@@ -279,6 +295,14 @@ export default function CheckIn() {
                   <p className="text-xs text-brand-700">{result.amount != null ? `ETB ${result.amount.toLocaleString()} · ${result.paid ? 'Paid' : 'Unpaid'}` : 'Instant validation OK'}</p>
                 </div>
               </div>
+            ) : result.wrongEvent ? (
+              <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500 text-white"><XCircle size={20} /></span>
+                <div className="min-w-0">
+                  <p className="font-bold text-red-700">{result.payload?.name || 'Ticket'} — another event</p>
+                  <p className="text-xs text-red-600">This ticket is for a different event. The check-in gate is for "{activeEvent.name}".</p>
+                </div>
+              </div>
             ) : result.payload ? (
               <div className="flex items-center gap-3 rounded-xl border border-gold-300 bg-gold-50 p-4">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gold-500 text-white"><AlertTriangle size={20} /></span>
@@ -318,7 +342,7 @@ export default function CheckIn() {
 
           <div className="mt-4 rounded-xl bg-brand-50/70 p-3 text-xs text-ink/55">
             <p className="mb-1 flex items-center gap-1.5 font-bold text-brand-800"><Users size={13} /> Demo hint</p>
-            Tickets embed the attendee's full details in the QR. Press "Start Scanner" then "Scan One" to validate one ticket at a time, type a ticket code, upload a ticket image, or enable "Offline Sync" to queue scans and sync them later.
+            Tickets embed the attendee's full details in the QR and are unique per event. Scan a QR image (Upload), type the attendee's ticket code, name or email (Enter / Validate), use "Start Scanner" then "Scan One" to simulate live scans, or enable "Offline Sync" to queue scans and sync them later. Tickets for another event are clearly rejected.
           </div>
         </div>
 

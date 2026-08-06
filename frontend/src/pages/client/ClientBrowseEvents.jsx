@@ -56,7 +56,7 @@ export default function ClientBrowseEvents() {
     const ticket = TICKET_TYPES.find((t) => t.id === selectedTicket)
     const total = ticket.price * qty
 
-    setTimeout(() => {
+    setTimeout(async () => {
       const reg = {
         eventId: selectedEvent.id,
         name: client?.contactPerson || 'Client User',
@@ -67,7 +67,7 @@ export default function ClientBrowseEvents() {
         paid: true,
         clientId,
       }
-      const result = registerAttendee(reg)
+      const result = await registerAttendee(reg)
       const ticketCode = result?.qr || `AE-${selectedEvent.id.toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
       setPurchasedTicket({ ...ticket, event: selectedEvent, qty, total, code: ticketCode })
       setCheckoutStep('success')
