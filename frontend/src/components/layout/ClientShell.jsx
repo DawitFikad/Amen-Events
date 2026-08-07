@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import { Menu, X, Bell, Search } from 'lucide-react'
 import ClientSidebar from './ClientSidebar'
 import { BackButton } from '../ui'
+import LiveKpiBar from '../LiveKpiBar'
 import { useData } from '../../store/DataContext'
 import { useNavigate } from 'react-router-dom'
 
@@ -81,6 +82,7 @@ export default function ClientShell() {
 
         {/* Content */}
         <main className="p-4 lg:p-6">
+          {/* KPI OFF */}
           <Outlet />
         </main>
       </div>

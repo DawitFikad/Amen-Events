@@ -3,6 +3,7 @@ import { Routes, Route, Outlet, Navigate, useNavigate, useLocation } from 'react
 import Sidebar from './components/layout/Sidebar'
 import Topbar from './components/layout/Topbar'
 import DemoWizard from './components/DemoWizard'
+import LiveKpiBar from './components/LiveKpiBar'
 import { Modal, Field, Toast } from './components/ui'
 import { DataProvider, useData } from './store/DataContext'
 
@@ -211,6 +212,7 @@ function Shell() {
       <div className={`${collapsed ? 'lg:pl-[72px]' : 'lg:pl-64'} transition-all duration-300`}>
         <QuickAdd onMenuClick={() => setMobileNav(true)} />
         <main key={location.pathname} className="mx-auto max-w-[1400px] overflow-x-hidden px-5 py-6 animate-page-enter">
+          {/* KPI OFF */}
           <Outlet />
           <PoweredFooter />
         </main>
