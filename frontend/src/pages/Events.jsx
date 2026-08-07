@@ -312,6 +312,33 @@ export default function Events() {
         </div>
       </Modal>
 
+      {!active && (
+        <Modal open={tlOpen} onClose={() => setTlOpen(false)} title="Project Timeline" width="max-w-2xl">
+          <div className="max-h-[60vh] space-y-6 overflow-y-auto pr-1">
+            {state.events.map((e) => {
+              const entries = tlMap[e.id] || []
+              if (!entries.length) return null
+              return (
+                <div key={e.id}>
+                  <p className="mb-2 text-sm font-bold text-brand-950">{e.name}</p>
+                  <div className="relative ml-2 space-y-3 border-l-2 border-brand-100 pl-5">
+                    {entries.map((t, i) => (
+                      <div key={i} className="relative">
+                        <span className={`absolute -left-[26px] top-1 h-2.5 w-2.5 rounded-full ${timelineDot[t.type] || 'bg-brand-500'} ring-2 ring-white`} />
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-ink/40">{t.at}</p>
+                        <p className="text-[13px] font-semibold text-brand-950">{t.title}</p>
+                        <p className="text-[11px] text-ink/45">by {t.by}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+            {!state.events.some((e) => (tlMap[e.id] || []).length) && <p className="py-8 text-center text-sm text-ink/40">No timeline entries recorded yet.</p>}
+          </div>
+        </Modal>
+      )}
+
       <Toast toast={toast} />
     </div>
   )

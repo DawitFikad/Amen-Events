@@ -221,7 +221,7 @@ export function DataProvider({ children }) {
   const patchBy = useCallback((key, id, updater) => {
     setState((s) => ({
       ...s,
-      [key]: s[key].map((it) => (it.id === id ? (typeof updater === 'function' ? updater(it) : updater) : it)),
+      [key]: s[key].map((it) => (it.id === id ? (typeof updater === 'function' ? updater(it) : { ...it, ...updater }) : it)),
     }))
   }, [])
 
