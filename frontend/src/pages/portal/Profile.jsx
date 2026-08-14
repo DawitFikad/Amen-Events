@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { User, Ticket, Heart, Bell, Lock, Trash2, Check, ArrowRight, Settings, Calendar } from 'lucide-react'
+import { User, Ticket, Heart, Bell, Lock, Trash2, Check, ArrowRight, Settings, Calendar, Camera } from 'lucide-react'
 import { useAttendee } from '../../store/AttendeeContext'
 import { nameOnly, emailValid, phoneValid, textRequired, optional, validate, clearError } from '../../store/validation'
 
@@ -16,6 +16,7 @@ export default function Profile() {
     email: attendee?.email || '',
     phone: attendee?.phone || '',
     city: attendee?.city || '',
+    avatar: attendee?.avatar || '',
   })
   const [pwd, setPwd] = useState({ current: '', next: '', confirm: '' })
   const [prefs, setPrefs] = useState({ emailNotif: true, smsNotif: false, eventReminders: true, newsletter: true })
@@ -43,10 +44,19 @@ export default function Profile() {
     setErrors({})
     setSaving(true)
     setError(null)
-    const data = await authFetch('/portal/me', { method: 'PATCH', body: JSON.stringify(form) })
+    const data = await authFetch('/portal/auth/profile', { method: 'PUT', body: JSON.stringify({ firstName: form.firstName, lastName: form.lastName, phone: form.phone, avatar: form.avatar }) })
     setSaving(false)
     if (data.error) setError(data.error)
     else { setSaved(true); setTimeout(() => setSaved(false), 2000) }
+  }
+
+  const onAvatar = (file) => {
+    if (!file) return
+    if (!file.type.startsWith('image/')) { setError('Please select an image file'); return }
+    if (file.size > 5 * 1024 * 1024) { setError('Photo must be under 5MB'); return }
+    const reader = new FileReader()
+    reader.onload = () => { setForm((f) => ({ ...f, avatar: reader.result })); setError(null) }
+    reader.readAsDataURL(file)
   }
 
   const handlePwdChange = async () => {
@@ -77,8 +87,8 @@ export default function Profile() {
     <div className="mx-auto max-w-4xl px-5 py-8 sm:px-8">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-portal-600 text-xl font-bold text-white">
-          {attendee?.firstName?.[0] || 'U'}{attendee?.lastName?.[0] || ''}
+        <span className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-portal-600 text-xl font-bold text-white">
+          {form.avatar ? <img src={form.avatar} alt="avatar" className="h-full w-full object-cover" /> : (attendee?.firstName?.[0] || 'U') + (attendee?.lastName?.[0] || '')}
         </span>
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">{attendee?.firstName} {attendee?.lastName}</h1>
@@ -125,6 +135,15 @@ export default function Profile() {
 
         {tab === 'info' && (
           <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-portal-100 text-lg font-bold text-portal-700">
+                {form.avatar ? <img src={form.avatar} alt="avatar" className="h-full w-full object-cover" /> : (form.firstName?.[0] || 'U') + (form.lastName?.[0] || '')}
+              </span>
+              <div className="flex items-center gap-2">
+                <label className="cursor-pointer rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-600 transition hover:border-portal-400 hover:text-portal-600"><Camera size={14} className="mr-1.5 inline" /> Upload photo<input type="file" accept="image/*" className="hidden" onChange={(e) => onAvatar(e.target.files?.[0])} /></label>
+                {form.avatar && <button type="button" className="rounded-xl px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50" onClick={() => setForm((f) => ({ ...f, avatar: '' }))}>Remove</button>}
+              </div>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div><label className="mb-1.5 block text-xs font-semibold text-gray-600">First Name</label><input className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-portal-400 focus:ring-2 focus:ring-portal-500/15" value={form.firstName} onChange={(e) => { setForm({ ...form, firstName: e.target.value }); setErrors(clearError(errors, 'firstName')) }} />{errors.firstName && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.firstName}</p>}</div>
               <div><label className="mb-1.5 block text-xs font-semibold text-gray-600">Last Name</label><input className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-portal-400 focus:ring-2 focus:ring-portal-500/15" value={form.lastName} onChange={(e) => { setForm({ ...form, lastName: e.target.value }); setErrors(clearError(errors, 'lastName')) }} />{errors.lastName && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.lastName}</p>}</div>

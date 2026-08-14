@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { QrCode, ScanLine, Users, CheckCircle2, XCircle, AlertTriangle, RefreshCw, WifiOff, Upload, Image as ImageIcon } from 'lucide-react'
+import { QrCode, ScanLine, Users, CheckCircle2, XCircle, AlertTriangle, RefreshCw, WifiOff, Upload, Image as ImageIcon, Download, X, Ticket as TicketIcon } from 'lucide-react'
 import jsQR from 'jsqr'
+import { QRCodeCanvas } from 'qrcode.react'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Toast } from '../components/ui'
-import { decodeTicket } from '../store/ticket'
+import { decodeTicket, ticketPayload, encodeTicket } from '../store/ticket'
+import { fmt } from '../store/data'
 
 export default function CheckIn() {
   const { state, checkIn, intent, clearIntent, logActivity, addNotification } = useData()
@@ -13,10 +15,23 @@ export default function CheckIn() {
   const [scanned, setScanned] = useState('')
   const [offline, setOffline] = useState(false)
   const [queue, setQueue] = useState([])
+  const [ticketView, setTicketView] = useState(null)
   const inputRef = useRef(null)
   const uploadRef = useRef(null)
+  const qrCanvasRef = useRef(null)
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2400) }
+
+  const downloadQr = () => {
+    const canvas = qrCanvasRef.current
+    if (!canvas || !ticketView) return
+    const safeName = (ticketView.name || 'attendee').replace(/[^\w\u00C0-\u024F]+/g, '_').slice(0, 40)
+    const a = document.createElement('a')
+    a.href = canvas.toDataURL('image/png')
+    a.download = `${ticketView.qr || 'ticket'}-${safeName}.png`
+    a.click()
+    show(`Ticket QR saved as ${a.download}`)
+  }
 
   const activeEvent = state.events.find((e) => e.status === 'ongoing') || state.events[0]
   const regs = state.registrations.filter((r) => r.eventId === activeEvent.id)
@@ -85,14 +100,16 @@ export default function CheckIn() {
     if (offlineRef.current) {
       queueRef.current = [...queueRef.current, { code: reg.qr, eventId: activeEvent.id, name: reg.name, type: reg.type, email: reg.email, phone: reg.phone }]
       setQueue(queueRef.current)
-      setResult({ ok: true, queued: true, name: reg.name, type: reg.type, email: reg.email, phone: reg.phone })
+      setResult({ ok: true, queued: true, full: reg, name: reg.name, type: reg.type, email: reg.email, phone: reg.phone })
       show('Saved offline — will sync when back online', 'success')
       return
     }
     const res = await checkInRef.current(reg.qr, activeEvent.id)
     if (res.ok) {
-      setResult({ ok: true, name: res.reg.name, type: res.reg.type, email: res.reg.email, phone: res.reg.phone, amount: res.reg.amount, paid: res.reg.paid })
-      show(`Welcome, ${res.reg.name}! Checked in`)
+      const full = res.reg || reg
+      setResult({ ok: true, full, name: full.name, type: full.type, email: full.email, phone: full.phone, amount: full.amount, paid: full.paid, paymentMethod: full.paymentMethod })
+      setTicketView({ ...full, event: activeEvent, venue: activeEvent ? state.venues.find((v) => v.id === activeEvent.venueId) : null })
+      show(`Welcome, ${full.name}! Checked in`)
     } else if (res.reason === 'duplicate') {
       setResult({ ok: false, dup: true, name: res.reg.name, type: res.reg.type })
       show('Already checked in — duplicate detected', 'warn')
@@ -111,9 +128,66 @@ export default function CheckIn() {
   const scanningRef = useRef(false)
   const checkInRef = useRef(checkIn)
   const regsRef = useRef(regs)
+  const videoRef = useRef(null)
+  const streamRef = useRef(null)
+  const rafRef = useRef(null)
+  const lastScanRef = useRef('')
+  const [cameraOn, setCameraOn] = useState(false)
+  const cameraOnRef = useRef(false)
   scanningRef.current = scanning
   checkInRef.current = checkIn
   regsRef.current = regs
+  cameraOnRef.current = cameraOn
+
+  const stopCamera = () => {
+    cameraOnRef.current = false
+    setCameraOn(false)
+    scanningRef.current = false
+    setScanning(false)
+    if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null }
+    if (streamRef.current) { streamRef.current.getTracks().forEach((t) => t.stop()); streamRef.current = null }
+  }
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } } })
+      streamRef.current = stream
+      cameraOnRef.current = true
+      setCameraOn(true)
+      scanningRef.current = true
+      setScanning(true)
+      show('Camera active — point at a QR ticket to check in', 'success')
+      scanLoop()
+    } catch (e) {
+      // No camera / permission denied → fall back to simulated manual scanner
+      cameraOnRef.current = false
+      setCameraOn(false)
+      scanningRef.current = true
+      setScanning(true)
+      show('Camera unavailable — using simulated scanner', 'warn')
+    }
+  }
+
+  // Continuously decode QR codes from the live camera feed
+  const scanLoop = () => {
+    const video = videoRef.current
+    if (!video || !cameraOnRef.current) return
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      const canvas = document.createElement('canvas')
+      canvas.width = video.videoWidth || 320
+      canvas.height = video.videoHeight || 240
+      const ctx = canvas.getContext('2d', { willReadFrequently: true })
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height)
+      const code = jsQR(data.data, data.width, data.height, { inversionAttempts: 'dontInvert' })
+      if (code && code.data && code.data !== lastScanRef.current) {
+        lastScanRef.current = code.data
+        doCheck(code.data)
+        setTimeout(() => { lastScanRef.current = '' }, 1600)
+      }
+    }
+    rafRef.current = requestAnimationFrame(scanLoop)
+  }
 
   const simulateScan = () => {
     const queued = queueRef.current.map((q) => q.code)
@@ -123,21 +197,23 @@ export default function CheckIn() {
     doCheck(pick.qr)
   }
   const toggleScan = () => {
-    const next = !scanningRef.current
-    scanningRef.current = next
-    setScanning(next)
-    if (next) show('Scanner active — scan one ticket at a time', 'success')
+    if (scanningRef.current) { stopCamera(); show('Scanner stopped', 'warn'); return }
+    startCamera()
   }
 
   // Demo intent: run a single demo scan (idempotent under StrictMode)
   useEffect(() => {
     if (intent !== 'checkin') return
     clearIntent()
-    if (scanningRef.current) return
-    scanningRef.current = true
-    setScanning(true)
+    if (scanningRef.current) { setTimeout(simulateScan, 300); return }
     setTimeout(simulateScan, 300)
   }, [intent])
+
+  // Cleanup camera on unmount
+  useEffect(() => () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop())
+  }, [])
 
   const toggleOffline = () => {
     const next = !offline
@@ -234,17 +310,33 @@ export default function CheckIn() {
             {scanning && <span className="flex items-center gap-1.5 text-xs font-bold text-brand-700"><span className="relative flex h-2 w-2"><span className="absolute h-2 w-2 animate-ping rounded-full bg-brand-500 opacity-75" /><span className="h-2 w-2 rounded-full bg-brand-600" /></span> Scanning…</span>}
           </div>
 
-          {/* Simulated camera view */}
+          {/* Camera / simulated view */}
           <div className="relative overflow-hidden rounded-2xl bg-brand-950">
-            <div className="flex h-56 items-center justify-center">
-              <div className="relative flex h-36 w-36 items-center justify-center">
-                <span className="absolute h-full w-full rounded-2xl border-2 border-gold-400/70" />
-                <span className="absolute -left-1 -top-1 h-6 w-6 rounded-tl-2xl border-l-4 border-t-4 border-gold-400" />
-                <span className="absolute -right-1 -top-1 h-6 w-6 rounded-tr-2xl border-r-4 border-t-4 border-gold-400" />
-                <span className="absolute -bottom-1 -left-1 h-6 w-6 rounded-bl-2xl border-b-4 border-l-4 border-gold-400" />
-                <span className="absolute -bottom-1 -right-1 h-6 w-6 rounded-br-2xl border-b-4 border-r-4 border-gold-400" />
-                <QrCode size={52} className="text-white/25" />
-              </div>
+            <div className="relative flex h-56 items-center justify-center">
+              {cameraOn ? (
+                <>
+                  <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 h-full w-full object-cover" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="relative flex h-40 w-40 items-center justify-center rounded-2xl">
+                      <span className="absolute -left-1 -top-1 h-7 w-7 rounded-tl-2xl border-l-4 border-t-4 border-gold-400" />
+                      <span className="absolute -right-1 -top-1 h-7 w-7 rounded-tr-2xl border-r-4 border-t-4 border-gold-400" />
+                      <span className="absolute -bottom-1 -left-1 h-7 w-7 rounded-bl-2xl border-b-4 border-l-4 border-gold-400" />
+                      <span className="absolute -bottom-1 -right-1 h-7 w-7 rounded-br-2xl border-b-4 border-r-4 border-gold-400" />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex h-36 w-36 items-center justify-center">
+                  <div className="relative flex h-36 w-36 items-center justify-center">
+                    <span className="absolute h-full w-full rounded-2xl border-2 border-gold-400/70" />
+                    <span className="absolute -left-1 -top-1 h-6 w-6 rounded-tl-2xl border-l-4 border-t-4 border-gold-400" />
+                    <span className="absolute -right-1 -top-1 h-6 w-6 rounded-tr-2xl border-r-4 border-t-4 border-gold-400" />
+                    <span className="absolute -bottom-1 -left-1 h-6 w-6 rounded-bl-2xl border-b-4 border-l-4 border-gold-400" />
+                    <span className="absolute -bottom-1 -right-1 h-6 w-6 rounded-br-2xl border-b-4 border-r-4 border-gold-400" />
+                    <QrCode size={52} className="text-white/25" />
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-2 border-t border-white/10 bg-black/40 px-4 py-3">
               <div className="relative flex-1">
@@ -258,7 +350,7 @@ export default function CheckIn() {
                 />
               </div>
               <button onClick={() => doCheck(entered)} className="btn-gold !px-3"><RefreshCw size={15} /> Validate</button>
-              {scanning && (
+              {scanning && !cameraOn && (
                 <button onClick={simulateScan} className="btn-outline !bg-white/10 !border-white/25 !text-white hover:!bg-white/20 !px-3" title="Simulate scanning one ticket"><ScanLine size={15} /> Scan One</button>
               )}
               <input
@@ -281,18 +373,20 @@ export default function CheckIn() {
             ) : result.ok && result.queued ? (
               <div className="flex items-center gap-3 rounded-xl border border-gold-300 bg-gold-50 p-4">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gold-500 text-white"><WifiOff size={20} /></span>
-                <div>
+                <div className="min-w-0 flex-1">
                   <p className="font-bold text-gold-800">{result.name}</p>
                   <p className="text-xs text-gold-700">{result.type} ticket · Saved offline — {result.email ? `${result.email} · ` : ''}queued for sync</p>
+                  <button onClick={() => setTicketView({ ...result.full, event: activeEvent, venue: activeEvent ? state.venues.find((v) => v.id === activeEvent.venueId) : null })} className="btn-outline !py-1 mt-2 text-xs"><TicketIcon size={12} /> View Full Ticket</button>
                 </div>
               </div>
             ) : result.ok ? (
               <div className="flex items-center gap-3 rounded-xl border border-brand-300 bg-brand-50 p-4">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-600 text-white"><CheckCircle2 size={20} /></span>
-                <div>
+                <div className="min-w-0 flex-1">
                   <p className="font-bold text-brand-950">{result.name}</p>
                   <p className="text-xs text-brand-700">{result.type} ticket · Access granted{result.email ? ` · ${result.email}` : ''}</p>
-                  <p className="text-xs text-brand-700">{result.amount != null ? `ETB ${result.amount.toLocaleString()} · ${result.paid ? 'Paid' : 'Unpaid'}` : 'Instant validation OK'}</p>
+                  <p className="text-xs text-brand-700">{result.amount != null ? `ETB ${result.amount.toLocaleString()} · ${result.paymentMethod || 'Cash'} · ${result.paid ? 'Paid' : 'Unpaid'}` : 'Instant validation OK'}</p>
+                  <button onClick={() => setTicketView(result.full || result)} className="btn-outline !py-1 mt-2 text-xs"><TicketIcon size={12} /> View Full Ticket</button>
                 </div>
               </div>
             ) : result.wrongEvent ? (
@@ -342,7 +436,7 @@ export default function CheckIn() {
 
           <div className="mt-4 rounded-xl bg-brand-50/70 p-3 text-xs text-ink/55">
             <p className="mb-1 flex items-center gap-1.5 font-bold text-brand-800"><Users size={13} /> Demo hint</p>
-            Tickets embed the attendee's full details in the QR and are unique per event. Scan a QR image (Upload), type the attendee's ticket code, name or email (Enter / Validate), use "Start Scanner" then "Scan One" to simulate live scans, or enable "Offline Sync" to queue scans and sync them later. Tickets for another event are clearly rejected.
+            Tickets embed the attendee's full details in the QR and are unique per event. "Start Scanner" opens your live camera for real QR detection (falls back to a simulated scanner if no camera is available), you can upload a QR image (Upload), or type the attendee's ticket code, name or email (Enter / Validate). Enable "Offline Sync" to queue scans and sync them later. Tickets for another event are clearly rejected.
           </div>
         </div>
 
@@ -360,14 +454,92 @@ export default function CheckIn() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-brand-950">{r.name}</p>
-                  <p className="text-[11px] text-ink/40">{r.type} · {r.qr}</p>
+                  <p className="truncate text-[11px] text-ink/40">{r.type} · {r.qr}{r.paymentMethod ? ` · ${r.paymentMethod}` : ''}</p>
                 </div>
-                <Badge status={r.checkedIn ? 'active' : 'todo'} label={r.checkedIn ? 'In' : 'Out'} />
+                <Badge status={r.checkedIn ? 'active' : 'todo'} label={r.checkedIn ? (r.checkedInAt ? `In ${r.checkedInAt}` : 'In') : 'Out'} />
               </div>
             ))}
           </div>
         </div>
       </div>
+
+      {/* Full ticket detail modal */}
+      {ticketView && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-brand-950/60" onClick={() => setTicketView(null)} />
+          <div className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-pop">
+            <button onClick={() => setTicketView(null)} className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"><X size={15} /></button>
+            <div className="bg-brand-900 px-6 py-4 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-brand-300">Validated Entry Ticket</p>
+                  <p className="font-bold">{ticketView.event?.name || activeEvent?.name || 'Event'}</p>
+                </div>
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gold-400 font-black text-brand-950">
+                  {(ticketView.name || 'A').split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()}
+                </span>
+              </div>
+            </div>
+            <div className="border-b border-dashed border-brand-200 px-6 py-5 text-center">
+              <div className="mx-auto mb-3 flex h-44 w-44 items-center justify-center rounded-2xl border-2 border-brand-100 bg-white p-3">
+                <QRCodeCanvas
+                  ref={qrCanvasRef}
+                  value={encodeTicket(ticketPayload(ticketView, ticketView.event, ticketView.venue)) || ticketView.qr}
+                  size={152}
+                  level="M"
+                  includeMargin={false}
+                  fgColor="#082408"
+                  bgColor="#ffffff"
+                />
+              </div>
+              <p className="font-mono text-sm font-bold tracking-widest text-brand-900">{ticketView.qr}</p>
+              <p className="mt-1 text-xs text-ink/45">Unique ticket code — cannot be re-used after entry</p>
+            </div>
+            <div className="px-6 py-4">
+              <div className="mb-3 flex items-center justify-between rounded-xl bg-brand-50 px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-white"><CheckCircle2 size={16} /></span>
+                  <div>
+                    <p className="text-sm font-bold text-brand-950">Checked in</p>
+                    <p className="text-[11px] text-ink/45">{ticketView.checkedInAt || 'Just now'}</p>
+                  </div>
+                </div>
+                <Badge status={ticketView.type === 'VIP' ? 'pending' : 'done'} label={ticketView.type} />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-brand-950">{ticketView.name}</p>
+                  {ticketView.email && <p className="text-xs text-ink/45">{ticketView.email}</p>}
+                  {ticketView.phone && <p className="text-xs text-ink/45">{ticketView.phone}</p>}
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-brand-50/60 p-3 text-sm">
+                {[
+                  ['Event', ticketView.event?.name || '—'],
+                  ['Category', ticketView.event?.category || '—'],
+                  ['Date & Time', ticketView.event ? `${ticketView.event.date} · ${ticketView.event.time}` : '—'],
+                  ['Venue', ticketView.venue?.name || '—'],
+                  ['Ticket Type', ticketView.type || '—'],
+                  ['Amount', fmt(ticketView.amount)],
+                  ['Payment Method', ticketView.paymentMethod || 'Cash'],
+                  ['Payment', ticketView.paid ? 'Paid' : 'Unpaid'],
+                  ['Ticket Code', ticketView.qr || '—'],
+                  ['Entry Time', ticketView.checkedInAt || '—'],
+                ].map(([k, val]) => (
+                  <div key={k} className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-semibold text-ink/45">{k}</span>
+                    <span className="truncate text-xs font-bold text-brand-950">{val}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button className="btn-primary flex-1" onClick={downloadQr}><Download size={15} /> Download QR</button>
+                <button className="btn-outline" onClick={() => setTicketView(null)}>Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Toast toast={toast} />
     </div>

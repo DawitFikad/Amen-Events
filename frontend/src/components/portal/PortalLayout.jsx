@@ -168,7 +168,7 @@ export default function PortalLayout() {
                 </span>
                 <span className="font-bold text-gray-900">Amen Events</span>
               </div>
-              <p className="mt-4 text-sm leading-relaxed text-gray-500">Ethiopia's premier event platform. Discover, register, and attend extraordinary events.</p>
+              <p className="mt-4 text-sm leading-relaxed text-gray-500">Event registration and check-in for organizers and attendees across Ethiopia.</p>
             </div>
             <div>
               <p className="text-sm font-bold text-gray-900">Explore</p>

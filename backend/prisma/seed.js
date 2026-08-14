@@ -61,15 +61,20 @@ const ROLE_MATRIX = {
   },
 }
 
+function mockAvatar(initials, c1 = '#188A2E', c2 = '#0B3B16') {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs><rect width="96" height="96" rx="16" fill="url(#g)"/><circle cx="48" cy="38" r="16" fill="rgba(255,255,255,0.92)"/><path d="M22 86c4-20 15-32 26-32s22 12 26 32z" fill="rgba(255,255,255,0.92)"/><text x="48" y="91" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="800" fill="#041C0B" text-anchor="middle">${initials}</text></svg>`
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
+}
+
 const STAFF = [
-  { id: 'st1', name: 'Hana Tadesse', role: 'admin', jobTitle: 'Director', dept: 'Management', phone: '+251 911 220 445', email: 'hana@amen.et', color: 'bg-brand-700', initials: 'HT', type: 'Employee' },
-  { id: 'st2', name: 'Dawit Mengistu', role: 'manager', jobTitle: 'Project Manager', dept: 'Operations', phone: '+251 912 778 301', email: 'dawit@amen.et', color: 'bg-gold-500', initials: 'DM', type: 'Employee' },
-  { id: 'st3', name: 'Selam Bekele', role: 'manager', jobTitle: 'Event Coordinator', dept: 'Operations', phone: '+251 913 554 209', email: 'selam@amen.et', color: 'bg-brand-500', initials: 'SB', type: 'Employee' },
-  { id: 'st4', name: 'Yonas Girma', role: 'finance', jobTitle: 'Finance Officer', dept: 'Finance', phone: '+251 914 339 876', email: 'yonas@amen.et', color: 'bg-ink', initials: 'YG', type: 'Employee' },
-  { id: 'st5', name: 'Sara Ahmed', role: 'operations', jobTitle: 'Logistics Lead', dept: 'Operations', phone: '+251 915 662 118', email: 'sara@amen.et', color: 'bg-brand-400', initials: 'SA', type: 'Employee' },
-  { id: 'st6', name: 'Mekonnen Assefa', role: 'operations', jobTitle: 'Vendor Liaison', dept: 'Procurement', phone: '+251 916 998 540', email: 'meki@amen.et', color: 'bg-gold-400', initials: 'MA', type: 'Freelancer' },
-  { id: 'st7', name: 'Liya Kebede', role: 'marketing', jobTitle: 'Marketing Lead', dept: 'Marketing', phone: '+251 917 445 772', email: 'liya@amen.et', color: 'bg-brand-600', initials: 'LK', type: 'Employee' },
-  { id: 'st8', name: 'Bereket Tesfaye', role: 'operations', jobTitle: 'Technician', dept: 'Technical', phone: '+251 918 229 650', email: 'bereket@amen.et', color: 'bg-brand-300', initials: 'BT', type: 'Employee' },
+  { id: 'st1', name: 'Hana Tadesse', role: 'admin', jobTitle: 'Director', dept: 'Management', phone: '+251 911 220 445', email: 'hana@amen.et', color: 'bg-brand-700', initials: 'HT', type: 'Employee', avatar: mockAvatar('HT', '#188A2E', '#0B3B16') },
+  { id: 'st2', name: 'Dawit Mengistu', role: 'manager', jobTitle: 'Project Manager', dept: 'Operations', phone: '+251 912 778 301', email: 'dawit@amen.et', color: 'bg-gold-500', initials: 'DM', type: 'Employee', avatar: mockAvatar('DM', '#D9A441', '#8A5E1C') },
+  { id: 'st3', name: 'Selam Bekele', role: 'manager', jobTitle: 'Event Coordinator', dept: 'Operations', phone: '+251 913 554 209', email: 'selam@amen.et', color: 'bg-brand-500', initials: 'SB', type: 'Employee', avatar: mockAvatar('SB', '#0D9488', '#0B3B16') },
+  { id: 'st4', name: 'Yonas Girma', role: 'finance', jobTitle: 'Finance Officer', dept: 'Finance', phone: '+251 914 339 876', email: 'yonas@amen.et', color: 'bg-ink', initials: 'YG', type: 'Employee', avatar: mockAvatar('YG', '#10B981', '#065F46') },
+  { id: 'st5', name: 'Sara Ahmed', role: 'operations', jobTitle: 'Logistics Lead', dept: 'Operations', phone: '+251 915 662 118', email: 'sara@amen.et', color: 'bg-brand-400', initials: 'SA', type: 'Employee', avatar: mockAvatar('SA', '#F59E0B', '#92400E') },
+  { id: 'st6', name: 'Mekonnen Assefa', role: 'operations', jobTitle: 'Vendor Liaison', dept: 'Procurement', phone: '+251 916 998 540', email: 'meki@amen.et', color: 'bg-gold-400', initials: 'MA', type: 'Freelancer', avatar: mockAvatar('MA', '#0F172A', '#334155') },
+  { id: 'st7', name: 'Liya Kebede', role: 'marketing', jobTitle: 'Marketing Lead', dept: 'Marketing', phone: '+251 917 445 772', email: 'liya@amen.et', color: 'bg-brand-600', initials: 'LK', type: 'Employee', avatar: mockAvatar('LK', '#0284C7', '#0C4A6E') },
+  { id: 'st8', name: 'Bereket Tesfaye', role: 'operations', jobTitle: 'Technician', dept: 'Technical', phone: '+251 918 229 650', email: 'bereket@amen.et', color: 'bg-brand-300', initials: 'BT', type: 'Employee', avatar: mockAvatar('BT', '#E11D48', '#7F1D1D') },
 ]
 
 async function main() {
@@ -140,6 +145,7 @@ async function main() {
         jobTitle: s.jobTitle,
         type: s.type,
         status: 'active',
+        avatar: s.avatar || '',
       },
     })
     userMap[s.id] = user
@@ -166,13 +172,13 @@ async function main() {
   // 4. Seed clients
   const clientMap = {}
   const clientsData = [
-    { company: 'ETH FINTECH Group', industry: 'Financial Services', city: 'Addis Ababa', contactPerson: 'Dr. Meron Ayele', contactRole: 'Events Director', phone: '+251 911 222 000', email: 'meron@ethfintech.com', status: 'active', stage: 'contract', totalValue: 1850000, logo: 'EF' },
-    { company: 'Zemen Pharmaceuticals', industry: 'Healthcare', city: 'Addis Ababa', contactPerson: 'Rahel Getahun', contactRole: 'Marketing Manager', phone: '+251 912 333 111', email: 'rahel@zemenpharma.com', status: 'active', stage: 'opportunity', totalValue: 640000, logo: 'ZP' },
-    { company: 'Walia Telecom', industry: 'Telecommunications', city: 'Addis Ababa', contactPerson: 'Kebede Abebe', contactRole: 'Head of Brand', phone: '+251 913 444 222', email: 'kebede@walia.co.et', status: 'active', stage: 'quotation', totalValue: 980000, logo: 'WT' },
-    { company: 'Sheba Construction', industry: 'Construction', city: 'Addis Ababa', contactPerson: 'Ashenafi Wolde', contactRole: 'Admin Director', phone: '+251 914 555 333', email: 'ashenafi@sheba.et', status: 'inactive', stage: 'lead', totalValue: 0, logo: 'SC' },
-    { company: 'Abyssinia Bank', industry: 'Banking', city: 'Addis Ababa', contactPerson: 'Selamawit Desta', contactRole: 'PR Manager', phone: '+251 915 666 444', email: 'selamawit@abysbank.com', status: 'active', stage: 'contract', totalValue: 2400000, logo: 'AB' },
-    { company: 'Koka University', industry: 'Education', city: 'Adama', contactPerson: 'Prof. Taddese Kassa', contactRole: 'Vice President', phone: '+251 916 777 555', email: 'consult@kokau.edu', status: 'active', stage: 'lead', totalValue: 0, logo: 'KU' },
-    { company: 'Sof Omer Hotel', industry: 'Hospitality', city: 'Hawassa', contactPerson: 'Daniel Haile', contactRole: 'Sales Director', phone: '+251 917 888 666', email: 'events@sofomer.com', status: 'active', stage: 'negotiation', totalValue: 520000, logo: 'SO' },
+    { company: 'ETH FINTECH Group', industry: 'Financial Services', city: 'Addis Ababa', address: 'Bole Road, Churchill Tower 8th Floor, Addis Ababa', website: 'https://ethfintech.com', taxId: 'ET-ETH-2023-48912', contactPerson: 'Dr. Meron Ayele', contactRole: 'Events Director', phone: '+251 911 222 000', email: 'meron@ethfintech.com', status: 'active', stage: 'contract', totalValue: 1850000, logo: 'EF' },
+    { company: 'Zemen Pharmaceuticals', industry: 'Healthcare', city: 'Addis Ababa', address: 'Kazanchis, Zemen HQ, Addis Ababa', website: 'https://zemenpharma.com', taxId: 'ET-ZPH-2019-77821', contactPerson: 'Rahel Getahun', contactRole: 'Marketing Manager', phone: '+251 912 333 111', email: 'rahel@zemenpharma.com', status: 'active', stage: 'opportunity', totalValue: 640000, logo: 'ZP' },
+    { company: 'Walia Telecom', industry: 'Telecommunications', city: 'Addis Ababa', address: 'Megenagna, Walia Campus, Addis Ababa', website: 'https://walia.co.et', taxId: 'ET-WTC-2016-11304', contactPerson: 'Kebede Abebe', contactRole: 'Head of Brand', phone: '+251 913 444 222', email: 'kebede@walia.co.et', status: 'active', stage: 'quotation', totalValue: 980000, logo: 'WT' },
+    { company: 'Sheba Construction', industry: 'Construction', city: 'Addis Ababa', address: 'Cazanchise, Sheba Tower, Addis Ababa', website: 'https://sheba.et', taxId: 'ET-SCC-2011-90455', contactPerson: 'Ashenafi Wolde', contactRole: 'Admin Director', phone: '+251 914 555 333', email: 'ashenafi@sheba.et', status: 'inactive', stage: 'lead', totalValue: 0, logo: 'SC' },
+    { company: 'Abyssinia Bank', industry: 'Banking', city: 'Addis Ababa', address: 'Meklit Building 26, Addis Ababa', website: 'https://abysbank.com', taxId: 'ET-ABS-1998-33210', contactPerson: 'Selamawit Desta', contactRole: 'PR Manager', phone: '+251 915 666 444', email: 'selamawit@abysbank.com', status: 'active', stage: 'contract', totalValue: 2400000, logo: 'AB' },
+    { company: 'Koka University', industry: 'Education', city: 'Adama', address: 'Main Campus, Adama Town', website: 'https://kokau.edu', taxId: 'ET-KUU-2010-22187', contactPerson: 'Prof. Taddese Kassa', contactRole: 'Vice President', phone: '+251 916 777 555', email: 'consult@kokau.edu', status: 'active', stage: 'lead', totalValue: 0, logo: 'KU' },
+    { company: 'Sof Omer Hotel', industry: 'Hospitality', city: 'Hawassa', address: 'Lake Shore Road, Hawassa', website: 'https://sofomer.com', taxId: 'ET-SOH-2015-66012', contactPerson: 'Daniel Haile', contactRole: 'Sales Director', phone: '+251 917 888 666', email: 'events@sofomer.com', status: 'active', stage: 'negotiation', totalValue: 520000, logo: 'SO' },
   ]
   for (const c of clientsData) {
     const client = await prisma.client.create({ data: c })
@@ -257,12 +263,12 @@ async function main() {
   // 8. Seed events
   const eventMap = {}
   const eventsData = [
-    { name: 'EthFinTech Annual Summit 2026', clientId: 'cl1', venueId: 'vn1', category: 'Conference', date: '2026-08-18', time: '09:00', status: 'upcoming', pmId: 'st2', budget: 1850000, spent: 780000, stage: 8, attendees: null, progress: 64 },
-    { name: 'Zemen Pharma Product Launch', clientId: 'cl2', venueId: 'vn2', category: 'Product Launch', date: '2026-08-25', time: '18:30', status: 'upcoming', pmId: 'st3', budget: 640000, spent: 210000, stage: 5, attendees: null, progress: 43 },
-    { name: 'Abyssinia Bank Leadership Retreat', clientId: 'cl5', venueId: 'vn4', category: 'Retreat', date: '2026-08-02', time: '08:00', status: 'ongoing', pmId: 'st5', budget: 2400000, spent: 1240000, stage: 11, attendees: 146, progress: 86 },
-    { name: 'Walia Telecom Partner Expo', clientId: 'cl3', venueId: 'vn6', category: 'Exhibition', date: '2026-09-12', time: '10:00', status: 'upcoming', pmId: 'st2', budget: 980000, spent: 340000, stage: 4, attendees: null, progress: 36 },
-    { name: 'Sof Omer Hospitality Gala', clientId: 'cl7', venueId: 'vn3', category: 'Gala', date: '2026-07-20', time: '19:00', status: 'completed', pmId: 'st3', budget: 520000, spent: 505000, stage: 13, attendees: 690, progress: 100 },
-    { name: 'Koka University Graduation Day', clientId: 'cl6', venueId: 'vn5', category: 'Ceremony', date: '2026-07-05', time: '09:00', status: 'completed', pmId: 'st5', budget: 0, spent: 0, stage: 13, attendees: 1200, progress: 100 },
+    { name: 'EthFinTech Annual Summit 2026', clientId: 'cl1', venueId: 'vn1', category: 'Conference', date: '2026-08-18', time: '09:00', endDate: '2026-08-19', endTime: '17:00', deadline: '2026-08-14', capacity: 1200, price: 12000, published: true, description: "Two days of keynotes, panels and networking on the future of digital finance — Ethiopia's largest fintech gathering.", tags: ['Fintech', 'Conference', 'Networking'], contactName: 'Dr. Meron Ayele', contactPhone: '+251 911 222 000', status: 'upcoming', pmId: 'st2', budget: 1850000, spent: 780000, stage: 8, attendees: null, progress: 64 },
+    { name: 'Zemen Pharma Product Launch', clientId: 'cl2', venueId: 'vn2', category: 'Product Launch', date: '2026-08-25', time: '18:30', endDate: '2026-08-25', endTime: '22:00', deadline: '2026-08-22', capacity: 600, price: 0, published: false, description: 'Invitation-only unveiling of Zemen Pharmaceuticals\' new product line with media and industry guests.', tags: ['Healthcare', 'Launch'], contactName: 'Rahel Getahun', contactPhone: '+251 912 333 111', status: 'upcoming', pmId: 'st3', budget: 640000, spent: 210000, stage: 5, attendees: null, progress: 43 },
+    { name: 'Abyssinia Bank Leadership Retreat', clientId: 'cl5', venueId: 'vn4', category: 'Retreat', date: '2026-08-02', time: '08:00', endDate: '2026-08-04', endTime: '16:00', deadline: '2026-07-25', capacity: 160, price: 0, published: false, description: 'Two-day leadership retreat covering strategy, risk and branch performance for Abyssinia Bank senior leadership.', tags: ['Banking', 'Retreat', 'Leadership'], contactName: 'Selamawit Desta', contactPhone: '+251 915 666 444', status: 'ongoing', pmId: 'st5', budget: 2400000, spent: 1240000, stage: 11, attendees: 146, progress: 86 },
+    { name: 'Walia Telecom Partner Expo', clientId: 'cl3', venueId: 'vn6', category: 'Exhibition', date: '2026-09-12', time: '10:00', endDate: '2026-09-13', endTime: '18:00', deadline: '2026-09-05', capacity: 3000, price: 5000, published: true, description: 'Open exhibition showcasing Walia Telecom partner ecosystem, booths, demos and B2B matchmaking.', tags: ['Telecom', 'Exhibition', 'B2B'], contactName: 'Kebede Abebe', contactPhone: '+251 913 444 222', status: 'upcoming', pmId: 'st2', budget: 980000, spent: 340000, stage: 4, attendees: null, progress: 36 },
+    { name: 'Sof Omer Hospitality Gala', clientId: 'cl7', venueId: 'vn3', category: 'Gala', date: '2026-07-20', time: '19:00', endDate: '2026-07-20', endTime: '23:30', deadline: '2026-07-15', capacity: 700, price: 25000, published: true, description: 'An elegant fundraising gala dinner for Sof Omer Hotel\'s hospitality partners and distinguished guests.', tags: ['Gala', 'Fundraiser', 'Hospitality'], contactName: 'Daniel Haile', contactPhone: '+251 917 888 666', status: 'completed', pmId: 'st3', budget: 520000, spent: 505000, stage: 13, attendees: 690, progress: 100 },
+    { name: 'Koka University Graduation Day', clientId: 'cl6', venueId: 'vn5', category: 'Ceremony', date: '2026-07-05', time: '09:00', endDate: '2026-07-05', endTime: '14:00', deadline: '2026-06-30', capacity: 1500, price: 0, published: true, description: 'Annual graduation ceremony for Koka University\'s graduating class of 2026.', tags: ['Ceremony', 'Academic'], contactName: 'Prof. Taddese Kassa', contactPhone: '+251 916 777 555', status: 'completed', pmId: 'st5', budget: 0, spent: 0, stage: 13, attendees: 1200, progress: 100 },
   ]
   for (let i = 0; i < eventsData.length; i++) {
     const e = eventsData[i]
@@ -301,10 +307,10 @@ async function main() {
 
   // 10. Seed speakers
   const speakersData = [
-    { name: 'Dr. Meskerem Adugna', topic: 'Digital Banking for the Next Decade', eventId: 'ev1', company: 'EthFinTech', time: '10:30', status: 'confirmed', initials: 'MA', color: 'bg-brand-700' },
-    { name: 'Jemal Yusuf', topic: 'RegTech & Compliance Trends', eventId: 'ev1', company: 'Central Bank', time: '11:30', status: 'confirmed', initials: 'JY', color: 'bg-gold-500' },
-    { name: 'Pr. Yalemwork Tsegaye', topic: 'Financial Inclusion through AI', eventId: 'ev1', company: 'Koka University', time: '14:00', status: 'pending', initials: 'YT', color: 'bg-brand-500' },
-    { name: 'Samuel Mekonnen', topic: 'Partner Channel Innovation', eventId: 'ev4', company: 'Walia Telecom', time: '12:00', status: 'confirmed', initials: 'SM', color: 'bg-ink' },
+    { name: 'Dr. Meskerem Adugna', topic: 'Digital Banking for the Next Decade', eventId: 'ev1', company: 'EthFinTech', email: 'meskerem@ethfintech.et', phone: '+251 911 700 001', bio: 'ED of EthFinTech and policy advisor on the National Digital Strategy.', time: '10:30', status: 'confirmed', initials: 'MA', color: 'bg-brand-700' },
+    { name: 'Jemal Yusuf', topic: 'RegTech & Compliance Trends', eventId: 'ev1', company: 'Central Bank', email: 'jemal.yusuf@cb.gov.et', phone: '+251 911 700 002', bio: 'Senior banking supervisor leading payment-system oversight.', time: '11:30', status: 'confirmed', initials: 'JY', color: 'bg-gold-500' },
+    { name: 'Pr. Yalemwork Tsegaye', topic: 'Financial Inclusion through AI', eventId: 'ev1', company: 'Koka University', email: 'y.tsegaye@koka.edu.et', phone: '+251 911 700 003', bio: 'Professor of applied AI researching agentic financial services.', time: '14:00', status: 'pending', initials: 'YT', color: 'bg-brand-500' },
+    { name: 'Samuel Mekonnen', topic: 'Partner Channel Innovation', eventId: 'ev4', company: 'Walia Telecom', email: 'samuel@walia.et', phone: '+251 911 700 004', bio: 'Head of partnerships driving ecosystem co-innovation.', time: '12:00', status: 'confirmed', initials: 'SM', color: 'bg-ink' },
   ]
   for (const s of speakersData) {
     await prisma.speaker.create({
@@ -324,9 +330,9 @@ async function main() {
 
   // 12. Seed sponsors
   for (const s of [
-    { name: 'Sheba Bank', package: 'Platinum', amount: 500000, status: 'active', deliverables: ['Main stage branding', 'Logo on tickets'] },
-    { name: 'Ethio Air', package: 'Gold', amount: 300000, status: 'active', deliverables: ['VIP lounge', 'Announcements'] },
-    { name: 'Dashen Brewery', package: 'Silver', amount: 180000, status: 'pending', deliverables: ['Beverage corner'] },
+    { name: 'Sheba Bank', package: 'Platinum', amount: 500000, status: 'active', deliverables: ['Main stage branding', 'Logo on tickets'], contact: 'Meseret Haile', email: 'partner@shebabank.et', phone: '+251 911 710 001', date: '2026-07-10' },
+    { name: 'Ethio Air', package: 'Gold', amount: 300000, status: 'active', deliverables: ['VIP lounge', 'Announcements'], contact: 'Yonas Abebe', email: 'events@ethioair.et', phone: '+251 911 710 002', date: '2026-07-14' },
+    { name: 'Dashen Brewery', package: 'Silver', amount: 180000, status: 'pending', deliverables: ['Beverage corner'], contact: 'Lidya Girma', email: 'sponsor@dashen.com', phone: '+251 911 710 003', date: '2026-08-01' },
   ]) {
     await prisma.sponsor.create({ data: s })
   }
@@ -359,12 +365,12 @@ async function main() {
 
   // 15. Seed registrations
   for (const r of [
-    { eventId: 'ev3', name: 'Amanuel Tesfaye', email: 'amanuel@gmail.com', type: 'VIP', amount: 12000, paid: true, checkedIn: true, qr: 'AE-EV3-0001' },
-    { eventId: 'ev3', name: 'Hannah Solomon', email: 'hannah@gmail.com', type: 'Standard', amount: 6000, paid: true, checkedIn: true, qr: 'AE-EV3-0002' },
-    { eventId: 'ev3', name: 'Fitsum Alemu', email: 'fitsum@gmail.com', type: 'Standard', amount: 6000, paid: true, checkedIn: false, qr: 'AE-EV3-0003' },
-    { eventId: 'ev3', name: 'Ruth Mekonnen', email: 'ruth@gmail.com', type: 'VIP', amount: 12000, paid: true, checkedIn: false, qr: 'AE-EV3-0004' },
-    { eventId: 'ev3', name: 'Dagmawi Hailu', email: 'dagmawi@gmail.com', type: 'Group', amount: 5400, paid: false, checkedIn: false, qr: 'AE-EV3-0005' },
-    { eventId: 'ev3', name: 'Nebiyat Zewdie', email: 'nebiyat@gmail.com', type: 'Standard', amount: 6000, paid: true, checkedIn: false, qr: 'AE-EV3-0006' },
+    { eventId: 'ev3', name: 'Amanuel Tesfaye', email: 'amanuel@gmail.com', phone: '+251 911 100 111', type: 'VIP', amount: 12000, paid: true, paymentMethod: 'Telebirr', checkedIn: true, checkedInAt: '8/14/2026, 9:02:00 AM', qr: 'AE-EV3-0001' },
+    { eventId: 'ev3', name: 'Hannah Solomon', email: 'hannah@gmail.com', phone: '+251 912 200 222', type: 'Standard', amount: 6000, paid: true, paymentMethod: 'Cash', checkedIn: true, checkedInAt: '8/14/2026, 9:15:00 AM', qr: 'AE-EV3-0002' },
+    { eventId: 'ev3', name: 'Fitsum Alemu', email: 'fitsum@gmail.com', phone: '+251 913 300 333', type: 'Standard', amount: 6000, paid: true, paymentMethod: 'CBE Birr', checkedIn: false, qr: 'AE-EV3-0003' },
+    { eventId: 'ev3', name: 'Ruth Mekonnen', email: 'ruth@gmail.com', phone: '+251 914 400 444', type: 'VIP', amount: 12000, paid: true, paymentMethod: 'Card', checkedIn: false, qr: 'AE-EV3-0004' },
+    { eventId: 'ev3', name: 'Dagmawi Hailu', email: 'dagmawi@gmail.com', phone: '+251 915 500 555', type: 'Group', amount: 5400, paid: false, paymentMethod: 'Cash', checkedIn: false, qr: 'AE-EV3-0005' },
+    { eventId: 'ev3', name: 'Nebiyat Zewdie', email: 'nebiyat@gmail.com', phone: '+251 916 600 666', type: 'Standard', amount: 6000, paid: true, paymentMethod: 'Telebirr', checkedIn: false, qr: 'AE-EV3-0006' },
   ]) {
     await prisma.registration.create({
       data: { ...r, eventId: eventMap[r.eventId]?.id },
@@ -373,10 +379,10 @@ async function main() {
 
   // 16. Seed campaigns
   for (const c of [
-    { name: 'Summit Early Bird Blast', channel: 'Email', audience: 8200, sent: 8200, opens: 4210, clicks: 930, status: 'sent' },
-    { name: 'Conference Reminder SMS', channel: 'SMS', audience: 1450, sent: 1450, opens: 0, clicks: 0, status: 'sent' },
-    { name: 'WhatsApp VIP Invite', channel: 'WhatsApp', audience: 320, sent: 280, opens: 210, clicks: 122, status: 'sending' },
-    { name: 'Early Bird Coupon Emails', channel: 'Email', audience: 5000, sent: 0, opens: 0, clicks: 0, status: 'draft' },
+    { name: 'Summit Early Bird Blast', channel: 'Email', audience: 8200, sent: 8200, opens: 4210, clicks: 930, status: 'sent', schedule: '2026-07-20', description: 'Discount code push to drive early registrations for the summit.' },
+    { name: 'Conference Reminder SMS', channel: 'SMS', audience: 1450, sent: 1450, opens: 0, clicks: 0, status: 'sent', schedule: '2026-07-28', description: 'Day-before reminder with venue and check-in info.' },
+    { name: 'WhatsApp VIP Invite', channel: 'WhatsApp', audience: 320, sent: 280, opens: 210, clicks: 122, status: 'sending', schedule: '2026-08-05', description: 'Personalized VIP invitations with RSVP link.' },
+    { name: 'Early Bird Coupon Emails', channel: 'Email', audience: 5000, sent: 0, opens: 0, clicks: 0, status: 'draft', schedule: '2026-08-20', description: 'Coupon drop for the remaining Early Bird seats.' },
   ]) {
     await prisma.campaign.create({ data: c })
   }

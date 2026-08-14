@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { User, Mail, Phone, Lock, ArrowRight, CheckCircle2 } from 'lucide-react'
+import { User, Mail, Phone, Lock, ArrowRight, CheckCircle2, Camera } from 'lucide-react'
 import { useAttendee } from '../../store/AttendeeContext'
 import { nameOnly, emailValid, phoneValid, optional, validate, clearError } from '../../store/validation'
 
@@ -10,12 +10,21 @@ export default function PortalRegister() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { login } = useAttendee()
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', password: '', confirm: '' })
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', password: '', confirm: '', avatar: '' })
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState({})
 
   const redirect = searchParams.get('redirect') || '/'
+
+  const onAvatar = (file) => {
+    if (!file) return
+    if (!file.type.startsWith('image/')) { setError('Please select an image file'); return }
+    if (file.size > 5 * 1024 * 1024) { setError('Photo must be under 5MB'); return }
+    const reader = new FileReader()
+    reader.onload = () => { setForm((f) => ({ ...f, avatar: reader.result })); setError(null) }
+    reader.readAsDataURL(file)
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -39,6 +48,7 @@ export default function PortalRegister() {
         body: JSON.stringify({
           firstName: form.firstName, lastName: form.lastName,
           email: form.email, phone: form.phone, password: form.password,
+          avatar: form.avatar,
         }),
       })
       const data = await res.json()
@@ -63,6 +73,15 @@ export default function PortalRegister() {
         {error && <div className="mt-4 rounded-lg bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-700">{error}</div>}
 
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-portal-100 text-base font-bold text-portal-700">
+              {form.avatar ? <img src={form.avatar} alt="avatar" className="h-full w-full object-cover" /> : (form.firstName?.[0] || 'U') + (form.lastName?.[0] || '')}
+            </span>
+            <div className="flex items-center gap-2">
+              <label className="btn-outline cursor-pointer !py-2 text-xs"><Camera size={14} /> Upload photo<input type="file" accept="image/*" className="hidden" onChange={(e) => onAvatar(e.target.files?.[0])} /></label>
+              {form.avatar && <button type="button" className="btn-ghost text-xs !text-red-600" onClick={() => setForm((f) => ({ ...f, avatar: '' }))}>Remove</button>}
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label">First Name</label>

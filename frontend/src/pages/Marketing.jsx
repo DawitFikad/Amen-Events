@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Megaphone, Plus, Mail, MessageSquare, Send, Link2, Tag, TrendingUp, Globe } from 'lucide-react'
+import { Megaphone, Plus, Mail, MessageSquare, Send, Link2, Tag, TrendingUp, Globe, Pencil, CalendarDays, FileText } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, Toast, EmptyState, Th, Td, Modal, Field } from '../components/ui'
 import { exportPDF } from '../store/exportUtils'
@@ -19,11 +19,12 @@ const channelDefaults = {
 }
 
 export default function Marketing() {
-  const { state, patch, addCampaign, addCoupon, logActivity } = useData()
+  const { state, patch, addCampaign, updateCampaign, addCoupon, logActivity } = useData()
   const [view, setView] = useState('campaigns')
   const [toast, setToast] = useState(null)
   const [open, setOpen] = useState(null) // 'campaign' | 'coupon'
   const [form, setForm] = useState({})
+  const [editId, setEditId] = useState(null)
   const [errors, setErrors] = useState({})
   const [channels, setChannels] = useState({ ...channelDefaults, ...(state.channelSettings || {}) })
 
@@ -39,12 +40,23 @@ export default function Marketing() {
     max: [optional(numberPositive('Max uses', { integer: true }))],
   }
 
+  const openCampaign = (c) => {
+    setEditId(c ? c.id : null)
+    setForm(c ? { name: c.name || '', channel: c.channel || 'Email', audience: c.audience ?? '', status: c.status || 'draft', schedule: c.schedule || '', description: c.description || '' } : {})
+    setErrors({}); setOpen('campaign')
+  }
+
   const submitCampaign = () => {
     const res = validate(form, campaignSchema)
     if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
-    addCampaign(form)
-    show(`Campaign "${form.name}" created (${form.channel || 'Email'})`)
-    setOpen(null); setForm({}); setErrors({})
+    if (editId) {
+      updateCampaign(editId, form)
+      show(`Campaign "${form.name}" updated`)
+    } else {
+      addCampaign(form)
+      show(`Campaign "${form.name}" created (${form.channel || 'Email'})`)
+    }
+    setOpen(null); setForm({}); setErrors({}); setEditId(null)
   }
 
   const submitCoupon = () => {
@@ -74,7 +86,7 @@ export default function Marketing() {
         title="Marketing Module"
         subtitle="Email, SMS and WhatsApp campaigns with coupon management."
         icon={Megaphone}
-        actions={<button className="btn-primary" onClick={() => { setErrors({}); setOpen('campaign') }}><Plus size={15} /> New Campaign</button>}
+        actions={<button className="btn-primary" onClick={() => openCampaign(null)}><Plus size={15} /> New Campaign</button>}
       />
 
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -93,14 +105,19 @@ export default function Marketing() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {state.campaigns.map((c) => {
             const rate = c.opens ? Math.round((c.opens / c.sent) * 100) : 0
-            const channelIcon = c.channel === 'Email' ? <Mail size={14} /> : c.channel === 'SMS' ? <Send size={14} /> : <MessageSquare size={14} />
+            const channelIcon = c.channel === 'Email' ? <Mail size={14} /> : c.channel === 'SMS' ? <Send size={14} /> : <MessageSquare size={15} />
             return (
               <div key={c.id} className="card p-5">
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5 rounded-lg bg-brand-50 px-2 py-1 text-xs font-semibold text-brand-800">{channelIcon} {c.channel}</span>
-                  <Badge status={c.status} label={c.status} />
+                  <div className="flex items-center gap-1.5">
+                    <Badge status={c.status} label={c.status} />
+                    <button onClick={() => openCampaign(c)} className="btn-ghost !p-1.5 text-ink/40 hover:text-brand-700" title="Edit campaign"><Pencil size={14} /></button>
+                  </div>
                 </div>
                 <h3 className="mt-3 font-bold text-brand-950">{c.name}</h3>
+                {c.description && <p className="mt-1 line-clamp-2 text-xs text-ink/50">{c.description}</p>}
+                {c.schedule && <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-ink/40"><CalendarDays size={11} /> {c.status === 'draft' ? 'Scheduled' : 'Launched'} {c.schedule}</p>}
                 <div className="mt-3 flex items-end justify-between">
                   <div>
                     <p className="text-2xl font-black text-brand-950">{c.sent.toLocaleString()}</p>
@@ -112,7 +129,10 @@ export default function Marketing() {
                   </div>
                 </div>
                 <Progress value={c.audience ? (c.sent / c.audience) * 100 : 0} className="mt-3" />
-                <button className="btn-outline w-full !py-1.5 text-xs mt-3" onClick={() => viewReport(c)}>View Report</button>
+                <div className="mt-3 flex gap-2">
+                  <button className="btn-outline flex-1 !py-1.5 text-xs" onClick={() => viewReport(c)}>View Report</button>
+                  <button className="btn-ghost !py-1.5 text-xs" onClick={() => { logActivity(`Campaign "${c.name}" duplicated`, 'marketing'); show(`Campaign "${c.name}" duplicated`) }}><FileText size={13} /> Copy</button>
+                </div>
               </div>
             )
           })}
@@ -195,16 +215,18 @@ export default function Marketing() {
         </div>
       )}
 
-      <Modal open={open === 'campaign'} onClose={() => setOpen(null)} title="New Campaign">
+      <Modal open={open === 'campaign'} onClose={() => { setOpen(null); setEditId(null) }} title={editId ? 'Edit Campaign' : 'Create Campaign'}>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Campaign Name *" className="col-span-2"><input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Post-Expo Follow-up" />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
           <Field label="Channel"><select className="input" value={form.channel || 'Email'} onChange={(e) => setForm({ ...form, channel: e.target.value })}><option>Email</option><option>SMS</option><option>WhatsApp</option></select></Field>
-          <Field label="Audience Size"><input type="number" className="input" value={form.audience || ''} onChange={(e) => setForm({ ...form, audience: e.target.value })} placeholder="5000" />{errors.audience && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.audience}</p>}</Field>
+          <Field label="Audience Size"><input type="number" className="input" value={form.audience ?? ''} onChange={(e) => setForm({ ...form, audience: e.target.value })} placeholder="5000" />{errors.audience && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.audience}</p>}</Field>
+          <Field label="Schedule Date"><input type="date" className="input" value={form.schedule || ''} onChange={(e) => setForm({ ...form, schedule: e.target.value })} /></Field>
           <Field label="Status"><select className="input" value={form.status || 'draft'} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="draft">Draft</option><option value="sending">Sending</option><option value="sent">Sent</option></select></Field>
+          <Field label="Description" className="col-span-2"><textarea className="input min-h-[70px] resize-y" value={form.description || ''} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Goal, audience, message summary…" /></Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
-          <button className="btn-outline" onClick={() => setOpen(null)}>Cancel</button>
-          <button className="btn-primary" onClick={submitCampaign}>Create Campaign</button>
+          <button className="btn-outline" onClick={() => { setOpen(null); setEditId(null) }}>Cancel</button>
+          <button className="btn-primary" onClick={submitCampaign}>{editId ? 'Save Changes' : 'Create Campaign'}</button>
         </div>
       </Modal>
 

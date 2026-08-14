@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import {
   CalendarDays, Plus, MapPin, Users, Wallet, ClipboardCheck, FileText, Clock3,
   ChevronRight, ArrowLeft, ListChecks, Sparkles, BarChart3, GitBranch, Boxes,
+  Upload, Globe, Trash2, Info as InfoIcon, Tag, Megaphone, Ticket, Image as ImageIcon, Phone,
 } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, Avatar, Modal, Field, SearchBox, Toast, EmptyState, Th, Td, Segmented } from '../components/ui'
@@ -68,7 +69,7 @@ const timelineDot = {
 }
 
 export default function Events() {
-  const { state, addEvent, addTask, logActivity, patchBy, intent, clearIntent, markDone, setEventTeam, setEventBudget, allocateResource, allocateResources } = useData()
+  const { state, addEvent, addEventDoc, addTask, logActivity, patchBy, intent, clearIntent, markDone, setEventTeam, setEventBudget, allocateResource, allocateResources } = useData()
   const [viewId, setViewId] = useState(null)
   const [tab, setTab] = useState('all')
   const [open, setOpen] = useState(false)
@@ -119,13 +120,55 @@ export default function Events() {
   const client = (id) => state.clients.find((c) => c.id === id)
   const venue = (id) => state.venues.find((v) => v.id === id)
 
-  const submit = () => {
+  const submit = async () => {
     const res = validate(form, { name: [textRequired('Event name', { max: 120 })], date: [dateRequired('Date')], budget: [optional(numberPositive('Budget'))] })
     if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
-    const rec = addEvent(form)
-    show(`Event "${form.name}" created`)
+    const payload = {
+      ...form,
+      tags: typeof form.tags === 'string' ? form.tags.split(',').map((t) => t.trim()).filter(Boolean) : Array.isArray(form.tags) ? form.tags : [],
+      capacity: Number(form.capacity) || 0,
+      price: Number(form.price) || 0,
+      published: !!form.published,
+    }
+    const rec = await addEvent(payload)
+    const docs = form.docs || []
+    for (const d of docs) {
+      await addEventDoc(rec.id, d.name, d.ext || 'PDF', d.size || '—', { type: d.type || 'file', sizeBytes: d.sizeBytes, mimeType: d.mimeType })
+    }
+    show(`Event "${form.name}" created${docs.length ? ` with ${docs.length} document(s)` : ''}`)
     setOpen(false); setForm({}); setErrors({})
     if (rec) setViewId(rec.id)
+  }
+
+  const onEventImage = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) { show('Please select an image file', 'warn'); return }
+    if (file.size > 5 * 1024 * 1024) { show('Image must be under 5MB', 'warn'); return }
+    const reader = new FileReader()
+    reader.onload = () => { setForm((f) => ({ ...f, image: reader.result })) }
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  const onEventDocs = (e) => {
+    const files = Array.from(e.target.files || [])
+    if (!files.length) return
+    const added = files.map((file) => ({
+      id: 'eft-' + Math.random().toString(36).slice(2, 8),
+      name: file.name,
+      ext: (file.name.split('.').pop() || 'PDF').toUpperCase(),
+      size: file.size > 1024 * 1024 ? (file.size / (1024 * 1024)).toFixed(1) + ' MB' : Math.max(1, Math.round(file.size / 1024)) + ' KB',
+      sizeBytes: file.size,
+      mimeType: file.type || '',
+      type: 'file',
+    }))
+    setForm((f) => ({ ...f, docs: [...(f.docs || []), ...added] }))
+    e.target.value = ''
+  }
+
+  const removeEventDoc = (id) => {
+    setForm((f) => ({ ...f, docs: (f.docs || []).filter((d) => d.id !== id) }))
   }
 
   const addChecklistTask = () => {
@@ -142,7 +185,15 @@ export default function Events() {
 
   const saveEvent = () => {
     if (!editForm.name) { show('Event name is required', 'warn'); return }
-    patchBy('events', active.id, { name: editForm.name, category: editForm.category, date: editForm.date, time: editForm.time, status: editForm.status })
+    const tags = typeof editForm.tags === 'string' ? editForm.tags.split(',').map((t) => t.trim()).filter(Boolean) : Array.isArray(editForm.tags) ? editForm.tags : []
+    patchBy('events', active.id, {
+      name: editForm.name, category: editForm.category, date: editForm.date,
+      time: editForm.time, endDate: editForm.endDate || '', endTime: editForm.endTime || '',
+      deadline: editForm.deadline || '', capacity: Number(editForm.capacity) || 0,
+      price: Number(editForm.price) || 0, status: editForm.status,
+      description: editForm.description || '', tags, published: !!editForm.published,
+      contactName: editForm.contactName || '', contactPhone: editForm.contactPhone || '',
+    })
     logActivity(`Event "${editForm.name}" details updated`, 'event')
     setEditOpen(false)
     show('Event updated')
@@ -198,7 +249,8 @@ export default function Events() {
               const team = e.team?.length ? e.team : (teamByEvent[e.id] || [e.pmId])
               const pct = e.progress
               return (
-                <button key={e.id} onClick={() => setViewId(e.id)} className="card group p-5 text-left transition hover:-translate-y-0.5 hover:shadow-pop">
+                <button key={e.id} onClick={() => setViewId(e.id)} className="card group overflow-hidden p-5 text-left transition hover:-translate-y-0.5 hover:shadow-pop">
+                  {e.image && <div className="mb-3 -mx-5 -mt-5 h-28 overflow-hidden"><img src={e.image} alt={e.name} className="h-full w-full object-cover" /></div>}
                   <div className="flex items-start justify-between">
                     <span className={`chip ${e.status === 'upcoming' ? 'bg-gold-100 text-gold-700' : e.status === 'ongoing' ? 'bg-brand-100 text-brand-800' : 'bg-slate-100 text-slate-500'}`}>{e.status}</span>
                     <Badge status="done" label={e.category} />
@@ -294,18 +346,107 @@ export default function Events() {
       )}
 
       {/* Create event */}
-      <Modal open={open} onClose={() => setOpen(false)} title="Create New Event" width="max-w-xl">
+      <Modal open={open} onClose={() => setOpen(false)} title="Register New Event" width="max-w-2xl">
+        {/* Event image */}
+        <div className="mb-4 flex items-center gap-4">
+          <div className="flex h-24 w-40 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-brand-50 ring-1 ring-brand-100">
+            {form.image
+              ? <img src={form.image} alt="Event" className="h-full w-full object-cover" />
+              : <span className="flex flex-col items-center gap-1 text-xl font-black text-brand-400"><ImageIcon size={22} /><span className="text-[10px] font-semibold">Preview</span></span>}
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-bold text-brand-950">Event Image / Banner</p>
+            <p className="text-xs text-ink/50">Upload the event banner used on the public site and cards (JPG, PNG — max 5MB).</p>
+            <div className="mt-2 flex gap-2">
+              <label className="btn-outline !py-1.5 cursor-pointer text-xs">
+                <Upload size={14} /> Choose image
+                <input type="file" accept="image/*" className="hidden" onChange={onEventImage} />
+              </label>
+              {form.image && <button className="btn-ghost !py-1.5 text-xs !text-red-600" onClick={() => setForm((f) => ({ ...f, image: '' }))}><Trash2 size={13} /> Remove</button>}
+            </div>
+          </div>
+        </div>
+
+        {/* Details */}
+        <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><InfoIcon size={13} /> Event Details</p>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Event Name *" className="col-span-2"><input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Annual Innovation Summit 2026" />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
           <Field label="Client"><select className="input" value={form.clientId || ''} onChange={(e) => setForm({ ...form, clientId: e.target.value })}><option value="">Select client…</option>{state.clients.map((c) => <option key={c.id} value={c.id}>{c.company}</option>)}</select></Field>
           <Field label="Category"><select className="input" value={form.category || ''} onChange={(e) => setForm({ ...form, category: e.target.value })}>{eventTypes.map((t) => <option key={t}>{t}</option>)}</select></Field>
-          <Field label="Venue"><select className="input" value={form.venueId || ''} onChange={(e) => setForm({ ...form, venueId: e.target.value })}><option value="">Select venue…</option>{state.venues.filter((v) => v.status === 'available').map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></Field>
-          <Field label="Date"><input type="date" className="input" value={form.date || ''} onChange={(e) => setForm({ ...form, date: e.target.value })} />{errors.date && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.date}</p>}</Field>
-          <Field label="Time"><input type="time" className="input" value={form.time || '09:00'} onChange={(e) => setForm({ ...form, time: e.target.value })} /></Field>
-          <Field label="Budget (ETB)"><input type="number" className="input" value={form.budget || ''} onChange={(e) => setForm({ ...form, budget: e.target.value })} placeholder="850000" />{errors.budget && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.budget}</p>}</Field>
-          <Field label="Project Manager"><select className="input" value={form.pmId || 'st2'} onChange={(e) => setForm({ ...form, pmId: e.target.value })}>{state.staff.filter((m) => m.type === 'Employee').map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select></Field>
           <Field label="Status"><select className="input" value={form.status || 'upcoming'} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="upcoming">Upcoming</option><option value="ongoing">Ongoing</option><option value="completed">Completed</option></select></Field>
+          <Field label="Project Manager"><select className="input" value={form.pmId || 'st2'} onChange={(e) => setForm({ ...form, pmId: e.target.value })}>{state.staff.filter((m) => m.type === 'Employee').map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select></Field>
         </div>
+
+        {/* Schedule */}
+        <p className="mt-5 mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><CalendarDays size={13} /> Schedule</p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Field label="Start Date *"><input type="date" className="input" value={form.date || ''} onChange={(e) => setForm({ ...form, date: e.target.value })} />{errors.date && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.date}</p>}</Field>
+          <Field label="Start Time"><input type="time" className="input" value={form.time || '09:00'} onChange={(e) => setForm({ ...form, time: e.target.value })} /></Field>
+          <Field label="End Date"><input type="date" className="input" value={form.endDate || ''} onChange={(e) => setForm({ ...form, endDate: e.target.value })} /></Field>
+          <Field label="End Time"><input type="time" className="input" value={form.endTime || ''} onChange={(e) => setForm({ ...form, endTime: e.target.value })} /></Field>
+        </div>
+
+        {/* Planning */}
+        <p className="mt-5 mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><ClipboardCheck size={13} /> Planning</p>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Venue"><select className="input" value={form.venueId || ''} onChange={(e) => setForm({ ...form, venueId: e.target.value })}><option value="">Select venue…</option>{state.venues.filter((v) => v.status === 'available').map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></Field>
+          <Field label="Expected Attendees"><div className="relative"><Users size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" /><input type="number" className="input pl-9" value={form.capacity || ''} onChange={(e) => setForm({ ...form, capacity: e.target.value })} placeholder="e.g. 800" /></div></Field>
+          <Field label="Registration Deadline"><input type="date" className="input" value={form.deadline || ''} onChange={(e) => setForm({ ...form, deadline: e.target.value })} /></Field>
+          <Field label="Budget (ETB)"><div className="relative"><Wallet size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" /><input type="number" className="input pl-9" value={form.budget || ''} onChange={(e) => setForm({ ...form, budget: e.target.value })} placeholder="850000" /></div>{errors.budget && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.budget}</p>}</Field>
+        </div>
+
+        {/* Public & ticketing */}
+        <p className="mt-5 mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><Megaphone size={13} /> Public & Ticketing</p>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Ticket price from (ETB)" className="col-span-2 sm:col-span-1"><div className="relative"><Ticket size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" /><input type="number" className="input pl-9" value={form.price || ''} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="0 = free" /></div></Field>
+          <div className="flex items-end">
+            <label className="flex w-full cursor-pointer items-center justify-between rounded-xl border border-brand-100 px-4 py-2.5">
+              <div>
+                <p className="text-xs font-bold text-brand-950">Published on public site</p>
+                <p className="text-[11px] text-ink/50">Visible for attendee registration</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, published: !f.published }))}
+                className={`relative h-6 w-11 shrink-0 rounded-full transition ${form.published ? 'bg-brand-600' : 'bg-ink/20'}`}
+              >
+                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${form.published ? 'left-[22px]' : 'left-0.5'}`} />
+              </button>
+            </label>
+          </div>
+          <Field label="Contact Person"><div className="relative"><Globe size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" /><input className="input pl-9" value={form.contactName || ''} onChange={(e) => setForm({ ...form, contactName: e.target.value })} placeholder="Event contact name" /></div></Field>
+          <Field label="Contact Phone"><div className="relative"><Phone size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" /><input className="input pl-9" value={form.contactPhone || ''} onChange={(e) => setForm({ ...form, contactPhone: e.target.value })} placeholder="+251 9XX XXX XXX" /></div></Field>
+        </div>
+
+        {/* About & tags */}
+        <p className="mt-5 mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><InfoIcon size={13} /> About</p>
+        <div className="grid grid-cols-1 gap-3">
+          <Field label="Description"><textarea className="input min-h-[70px] resize-y" value={form.description || ''} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="What is this event about? Who is it for?" /></Field>
+          <Field label="Tags"><div className="relative"><Tag size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" /><input className="input pl-9" value={form.tags || ''} onChange={(e) => setForm({ ...form, tags: e.target.value })} placeholder="Fintech, Conference, Networking (comma separated)" /></div></Field>
+        </div>
+
+        {/* Documents */}
+        <p className="mt-5 mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><FileText size={13} /> Registration Documents</p>
+        <label className="flex w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-brand-200 bg-brand-50/40 py-5 text-center transition hover:border-brand-400 hover:bg-brand-50">
+          <Upload size={20} className="text-brand-500" />
+          <span className="text-xs font-bold text-brand-700">Click to attach documents</span>
+          <span className="text-[11px] text-ink/45">Proposal, venue contract, floor plan, run of show… (multiple files)</span>
+          <input type="file" multiple className="hidden" onChange={onEventDocs} />
+        </label>
+        {(form.docs || []).length > 0 && (
+          <div className="mt-2 space-y-1.5">
+            {(form.docs || []).map((d) => (
+              <div key={d.id} className="flex items-center justify-between rounded-lg border border-brand-100 bg-white px-3 py-2">
+                <span className="flex min-w-0 items-center gap-2 text-sm text-ink/80"><FileText size={14} className="shrink-0 text-brand-600" /><span className="truncate">{d.name}</span></span>
+                <span className="flex shrink-0 items-center gap-2">
+                  <span className="chip bg-brand-50 text-brand-800">{d.ext} · {d.size}</span>
+                  <button onClick={() => removeEventDoc(d.id)} className="rounded-md p-1 text-ink/40 hover:bg-red-50 hover:text-red-600"><Trash2 size={14} /></button>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="mt-5 flex justify-end gap-2">
           <button className="btn-outline" onClick={() => setOpen(false)}>Cancel</button>
           <button className="btn-primary" onClick={submit}>Create Event</button>
@@ -345,9 +486,29 @@ export default function Events() {
 }
 
 function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, detailTab, setDetailTab, show, teamOpen, setTeamOpen, resOpen, setResOpen, budgetOpen, setBudgetOpen, budgetVal, setBudgetVal, completeOpen, setCompleteOpen, setEventTeam, setEventBudget, allocateResource, allocateResources, budgetEvent, openBudgetModal, markDone, timeline, tlOpen, setTlOpen, tlMap, editOpen, setEditOpen, editForm, setEditForm, noteOpen, setNoteOpen, noteText, setNoteText, tlAddOpen, setTlAddOpen, tlAddTitle, setTlAddTitle, saveEvent, patchBy, saveNote, saveTimelineEntry, onEditOpen, onAddTimeline, notes, onAddNote, logActivity }) {
-  const { toggleChecklist, addChecklistItem, setEventSuppliers } = useData()
+  const { toggleChecklist, addChecklistItem, setEventSuppliers, patch, addEventDoc } = useData()
   const [errors, setErrors] = useState({})
   const [budgetErr, setBudgetErr] = useState('')
+  const [edFile, setEdFile] = useState('')
+  const eventDocs = (state.eventDocs || []).filter((d) => d.eventId === event.id)
+
+  const onEventDocFile = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const size = file.size > 1024 * 1024 ? (file.size / (1024 * 1024)).toFixed(1) + ' MB' : Math.max(1, Math.round(file.size / 1024)) + ' KB'
+    addEventDoc(event.id, file.name, (file.name.split('.').pop() || 'PDF').toUpperCase(), size, { sizeBytes: file.size, mimeType: file.type || '' })
+    logActivity(`Uploaded document "${file.name}" to "${event.name}"`, 'event')
+    show('Document uploaded & archived')
+    e.target.value = ''
+    setEdFile(file.name)
+  }
+
+  const removeEventDocFile = (id) => {
+    const d = eventDocs.find((x) => x.id === id)
+    patch('eventDocs', (l) => l.filter((x) => x.id !== id))
+    logActivity(`Removed document "${d?.name || id}" from "${event.name}"`, 'event')
+    show('Document removed')
+  }
   useEffect(() => { if (!editOpen) setErrors({}) }, [editOpen])
   const editSave = () => {
     const res = validate(editForm, { name: [textRequired('Event name', { min: 2, max: 120 })] })
@@ -381,6 +542,7 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
 
       {/* Header */}
       <div className="card overflow-hidden">
+        {event.image && <div className="relative h-44 w-full"><img src={event.image} alt={event.name} className="h-full w-full object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-brand-950/70 to-transparent" /></div>}
         <div className="bg-brand-900 p-6 text-white">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -390,6 +552,11 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
               </div>
               <h1 className="text-xl font-bold tracking-tight">{event.name}</h1>
               <p className="mt-1 text-sm text-brand-200">{client?.company} · {client?.industry}</p>
+              {event.tags?.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {event.tags.map((t) => <span key={t} className="rounded-full bg-white/10 px-2.5 py-0.5 text-[11px] font-semibold text-brand-100">{t}</span>)}
+                </div>
+              )}
             </div>
             <div className="flex gap-2">
               <button className="btn-gold" onClick={onStatus}>{event.status === 'ongoing' ? 'Mark Completed' : event.status === 'completed' ? 'Reopen' : 'Start Event'}</button>
@@ -397,10 +564,14 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
             </div>
           </div>
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Info label="Date" value={`${event.date} · ${event.time}`} />
+            <Info label="Date" value={event.date ? `${event.date} · ${event.time || ''}` : 'TBD'} />
+            <Info label="Ends" value={event.endDate ? `${event.endDate}${event.endTime ? ' · ' + event.endTime : ''}` : 'One day event'} />
             <Info label="Venue" value={venue?.name || 'TBD'} />
             <Info label="Project Manager" value={state.staff.find((m) => m.id === event.pmId)?.name || '—'} />
-            <Info label="Attendees" value={event.attendees ? `${event.attendees} confirmed` : 'Awaiting registration'} />
+            <Info label="Attendees" value={event.capacity ? `${event.capacity} capacity` : 'Open capacity'} />
+            <Info label="Reg. deadline" value={event.deadline || 'No deadline'} />
+            <Info label="Tickets from" value={event.price > 0 ? `ETB ${event.price.toLocaleString()}` : 'Free entry'} />
+            <Info label="Status" value={event.published ? 'Published on public site' : 'Draft (hidden)'} />
           </div>
         </div>
 
@@ -416,6 +587,12 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
               {/* Left column */}
               <div className="space-y-6 xl:col-span-2">
+                {event.description && (
+                  <div className="rounded-xl border border-brand-100 p-5">
+                    <p className="mb-2 flex items-center gap-1.5 font-bold text-brand-950"><InfoIcon size={15} className="text-brand-600" /> About This Event</p>
+                    <p className="text-sm leading-relaxed text-ink/70">{event.description}</p>
+                  </div>
+                )}
                 {/* Budget snapshot */}
                 <div className="rounded-xl border border-brand-100 p-5">
                   <div className="mb-3 flex items-center justify-between">
@@ -501,8 +678,11 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
                   <dl className="space-y-2.5 text-sm">
                     {[
                       ['Client', client?.company], ['Venue', venue?.name], ['City', venue?.city || '—'],
-                      ['Category', event.category], ['Date', event.date], ['Time', event.time],
-                      ['Status', event.status], ['Progress', `${event.progress}%`],
+                      ['Category', event.category], ['Date', event.date], ['Time', event.time || '—'],
+                      ['End', event.endDate ? `${event.endDate}${event.endTime ? ' · ' + event.endTime : ''}` : '—'],
+                      ['Reg. deadline', event.deadline || '—'], ['Capacity', event.capacity ? `${event.capacity} people` : 'Open'],
+                      ['Status', event.status], ['Published', event.published ? 'Yes' : 'No'],
+                      ['Contact', event.contactName ? `${event.contactName}${event.contactPhone ? ' · ' + event.contactPhone : ''}` : '—'],
                     ].map(([k, v]) => (
                       <div key={k} className="flex items-center justify-between">
                         <dt className="text-ink/45">{k}</dt>
@@ -599,19 +779,26 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
 
           {detailTab === 'documents' && (
             <div className="max-w-2xl">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {[['Event Proposal.pdf', 'PDF', '2.4 MB'], ['Venue Contract.pdf', 'PDF', '1.1 MB'], ['Floor Plan.png', 'PNG', '4.8 MB'], ['Run of Show.xlsx', 'XLSX', '980 KB']].map(([f, t, s]) => (
-                  <div key={f} className="flex items-center gap-3 rounded-xl border border-brand-100 p-4">
+              <label className="flex w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-brand-200 bg-brand-50/40 py-5 text-center transition hover:border-brand-400 hover:bg-brand-50">
+                <Upload size={18} className="text-brand-500" />
+                <span className="text-xs font-bold text-brand-700">Upload a document</span>
+                <span className="text-[11px] text-ink/45">Proposal, venue contract, floor plan, run of show…</span>
+                <input type="file" className="hidden" onChange={onEventDocFile} />
+              </label>
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {eventDocs.length === 0 && <p className="col-span-full rounded-lg border border-dashed border-brand-100 p-4 text-center text-xs text-ink/45">No documents attached yet. Upload the proposal, contracts and floor plans here.</p>}
+                {eventDocs.map((d) => (
+                  <div key={d.id} className="flex items-center gap-3 rounded-xl border border-brand-100 p-4">
                     <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-700"><FileText size={18} /></span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-brand-950">{f}</p>
-                      <p className="text-[11px] text-ink/40">{t} · {s}</p>
+                      <p className="truncate text-sm font-semibold text-brand-950">{d.name}</p>
+                      <p className="text-[11px] text-ink/40">{d.ext} · {d.size}</p>
                     </div>
-                    <button className="btn-ghost !px-2 !py-1 text-xs" onClick={() => { logActivity(`Opened document "${f}" on "${event.name}"`, 'event'); show(`Opening ${f}…`) }}>Open</button>
+                    <button className="btn-ghost !px-2 !py-1 text-xs" onClick={() => { logActivity(`Opened document "${d.name}" on "${event.name}"`, 'event'); show(`Opening ${d.name}…`) }}>Open</button>
+                    <button className="rounded-md p-1 text-ink/40 hover:bg-red-50 hover:text-red-600" onClick={() => removeEventDocFile(d.id)}><Trash2 size={14} /></button>
                   </div>
                 ))}
               </div>
-              <button className="btn-outline mt-4" onClick={() => { logActivity(`Uploaded a document to "${event.name}"`, 'event'); show('Document uploaded & archived') }}><Plus size={14} /> Upload Document</button>
             </div>
           )}
         </div>
@@ -644,13 +831,37 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
       </Modal>
 
       {/* Edit event modal */}
-      <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit Event" width="max-w-xl">
+      <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit Event" width="max-w-2xl">
         <div className="grid grid-cols-2 gap-3">
           <Field label="Event Name *" className="col-span-2"><input className="input" value={editForm.name || ''} onChange={(e) => { setEditForm({ ...editForm, name: e.target.value }); if (errors.name) setErrors({ ...errors, name: undefined }) }} />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
           <Field label="Category"><select className="input" value={editForm.category || ''} onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}>{eventTypes.map((t) => <option key={t}>{t}</option>)}</select></Field>
           <Field label="Status"><select className="input" value={editForm.status || 'upcoming'} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}><option value="upcoming">Upcoming</option><option value="ongoing">Ongoing</option><option value="completed">Completed</option></select></Field>
-          <Field label="Date"><input type="date" className="input" value={editForm.date || ''} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} /></Field>
-          <Field label="Time"><input type="time" className="input" value={editForm.time || '09:00'} onChange={(e) => setEditForm({ ...editForm, time: e.target.value })} /></Field>
+          <Field label="Start Date"><input type="date" className="input" value={editForm.date || ''} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} /></Field>
+          <Field label="Start Time"><input type="time" className="input" value={editForm.time || '09:00'} onChange={(e) => setEditForm({ ...editForm, time: e.target.value })} /></Field>
+          <Field label="End Date"><input type="date" className="input" value={editForm.endDate || ''} onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })} /></Field>
+          <Field label="End Time"><input type="time" className="input" value={editForm.endTime || ''} onChange={(e) => setEditForm({ ...editForm, endTime: e.target.value })} /></Field>
+          <Field label="Reg. Deadline"><input type="date" className="input" value={editForm.deadline || ''} onChange={(e) => setEditForm({ ...editForm, deadline: e.target.value })} /></Field>
+          <Field label="Capacity"><input type="number" className="input" value={editForm.capacity || ''} onChange={(e) => setEditForm({ ...editForm, capacity: e.target.value })} placeholder="e.g. 800" /></Field>
+          <Field label="Ticket price (ETB)"><input type="number" className="input" value={editForm.price ?? ''} onChange={(e) => setEditForm({ ...editForm, price: e.target.value })} placeholder="0 = free" /></Field>
+          <Field label="Contact Person"><input className="input" value={editForm.contactName || ''} onChange={(e) => setEditForm({ ...editForm, contactName: e.target.value })} /></Field>
+          <Field label="Contact Phone"><input className="input" value={editForm.contactPhone || ''} onChange={(e) => setEditForm({ ...editForm, contactPhone: e.target.value })} /></Field>
+          <Field label="Tags" className="col-span-2"><input className="input" value={Array.isArray(editForm.tags) ? editForm.tags.join(', ') : (editForm.tags || '')} onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })} placeholder="Fintech, Conference (comma separated)" /></Field>
+          <Field label="Description" className="col-span-2"><textarea className="input min-h-[70px] resize-y" value={editForm.description || ''} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} /></Field>
+          <div className="flex items-end">
+            <label className="flex w-full cursor-pointer items-center justify-between rounded-xl border border-brand-100 px-4 py-2.5">
+              <div>
+                <p className="text-xs font-bold text-brand-950">Published on public site</p>
+                <p className="text-[11px] text-ink/50">Visible for attendee registration</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditForm((f) => ({ ...f, published: !f.published }))}
+                className={`relative h-6 w-11 shrink-0 rounded-full transition ${editForm.published ? 'bg-brand-600' : 'bg-ink/20'}`}
+              >
+                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${editForm.published ? 'left-[22px]' : 'left-0.5'}`} />
+              </button>
+            </label>
+          </div>
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button className="btn-outline" onClick={() => setEditOpen(false)}>Cancel</button>

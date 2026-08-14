@@ -80,8 +80,9 @@ export default function Ticketing() {
       phone: [optional(phoneValid('Phone number'))],
     })
     if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
-    const rec = await registerAttendee({ ...form, eventId: activeEvent.id, amount: ticketTypes.find((t) => t.name === form.type)?.price || 6000, paid: true })
-    show('Attendee registered')
+    const amount = ticketTypes.find((t) => t.name === form.type)?.price || 6000
+    const rec = await registerAttendee({ ...form, eventId: activeEvent.id, amount, paid: true, paymentMethod: form.paymentMethod || 'Cash' })
+    show(`Attendee registered — payment collected via ${form.paymentMethod || 'Cash'}`)
     setQrView(rec)
     setOpen(false); setForm({}); setErrors({})
   }
@@ -169,7 +170,7 @@ export default function Ticketing() {
         <div className="card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px]">
-              <thead className="bg-brand-50/50"><tr><Th>Attendee</Th><Th>Type</Th><Th className="text-right">Amount</Th><Th>Payment</Th><Th>Check-in</Th><Th>QR Code</Th></tr></thead>
+              <thead className="bg-brand-50/50"><tr><Th>Attendee</Th><Th>Type</Th><Th className="text-right">Amount</Th><Th>Payment</Th><Th>Method</Th><Th>Check-in</Th><Th>QR Code</Th></tr></thead>
               <tbody className="divide-y divide-brand-50">
                 {filtered.map((r) => (
                   <tr key={r.id} className="hover:bg-brand-50/40">
@@ -182,7 +183,8 @@ export default function Ticketing() {
                     <Td><Badge status={r.type === 'VIP' ? 'pending' : 'done'} label={r.type} /></Td>
                     <Td className="font-semibold">{fmt(r.amount)}</Td>
                     <Td><Badge status={r.paid ? 'paid' : 'outstanding'} label={r.paid ? 'Paid' : 'Unpaid'} /></Td>
-                    <Td><Badge status={r.checkedIn ? 'active' : 'todo'} label={r.checkedIn ? 'Checked in' : 'Pending'} /></Td>
+                    <Td className="text-ink/55">{r.paymentMethod || 'Cash'}</Td>
+                    <Td><Badge status={r.checkedIn ? 'active' : 'todo'} label={r.checkedIn ? (r.checkedInAt ? `In · ${r.checkedInAt}` : 'Checked in') : 'Pending'} /></Td>
                     <Td><button onClick={() => setQrView(r)} className="btn-outline !py-1 text-xs"><QrCode size={13} /> View</button></Td>
                   </tr>
                 ))}
@@ -238,13 +240,25 @@ export default function Ticketing() {
           <Field label="Email" className="col-span-2"><input className="input" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} />{errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}</Field>
           <Field label="Phone" className="col-span-2"><input className="input" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+251 9XX XXX XXX" />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</Field>
           <Field label="Ticket Type"><select className="input" value={form.type || 'Standard'} onChange={(e) => setForm({ ...form, type: e.target.value })}>{ticketTypes.map((t) => <option key={t.id} value={t.name}>{t.name} — {fmt(t.price)}</option>)}</select></Field>
-          <div className="flex items-end">
-            <p className="rounded-lg bg-brand-50/70 px-3 py-2 text-[11px] font-medium text-brand-800">Payment is collected at registration — the QR ticket is issued after the attendee pays.</p>
+
+          {/* Payment section — manual collection for this demo */}
+          <div className="rounded-xl border border-brand-100 bg-brand-50/40 p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-xs font-bold uppercase tracking-wide text-brand-800">Payment</p>
+              <span className="text-sm font-black text-brand-950">{fmt(ticketTypes.find((t) => t.name === form.type)?.price || 6000)}</span>
+            </div>
+            <select className="input" value={form.paymentMethod || 'Cash'} onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}>
+              {['Cash', 'Card', 'Telebirr', 'CBE Birr', 'Bank Transfer'].map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
+            <p className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-brand-700">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-brand-600 text-white text-[9px]"><CheckCircle2 size={9} /></span>
+              Collected manually at registration — QR ticket issued after payment
+            </p>
           </div>
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button className="btn-outline" onClick={() => setOpen(false)}>Cancel</button>
-          <button className="btn-primary" onClick={submit}>Register & Generate QR</button>
+          <button className="btn-primary" onClick={submit}>Collect Payment & Register</button>
         </div>
       </Modal>
 
@@ -294,8 +308,10 @@ export default function Ticketing() {
                   ['Venue', activeVenue?.name || '—'],
                   ['Ticket Type', qrView.type || '—'],
                   ['Amount', fmt(qrView.amount)],
+                  ['Payment Method', qrView.paymentMethod || 'Cash'],
                   ['Payment', qrView.paid ? 'Paid' : 'Unpaid'],
                   ['Ticket Code', qrView.qr || '—'],
+                  ['Check-in', qrView.checkedIn ? (qrView.checkedInAt || 'Checked in') : 'Not checked in'],
                   ['Status', qrView.checkedIn ? 'Used' : 'Valid'],
                 ].map(([k, val]) => (
                   <div key={k} className="flex items-center justify-between gap-2">

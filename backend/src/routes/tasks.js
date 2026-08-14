@@ -21,16 +21,25 @@ router.get('/', authRequired, requirePermission('projects', 'view'), async (req,
 })
 
 router.post('/', authRequired, requirePermission('projects', 'create'), async (req, res) => {
-  const task = await prisma.task.create({ data: req.body })
+  const fields = ['title', 'eventId', 'assigneeId', 'priority', 'status', 'due', 'comments']
+  const out = {}
+  for (const k of fields) if (req.body[k] !== undefined) out[k] = req.body[k]
+  if (!out.priority) out.priority = 'medium'
+  if (!out.status) out.status = 'todo'
+  const task = await prisma.task.create({ data: out })
   await prisma.activityLog.create({
-    data: { userId: req.user.id, text: `Task created: ${req.body.title}`, type: 'task', at: 'Just now' },
+    data: { userId: req.user.id, text: `Task created: ${out.title}`, type: 'task', at: 'Just now' },
   })
-  if (req.body.eventId) await autoAdvance(req.body.eventId, req.user.id)
+  if (out.eventId) await autoAdvance(out.eventId, req.user.id)
   res.json({ task })
 })
 
 router.put('/:id', authRequired, requirePermission('projects', 'edit'), async (req, res) => {
-  const task = await prisma.task.update({ where: { id: req.params.id }, data: req.body })
+  const fields = ['title', 'eventId', 'assigneeId', 'priority', 'status', 'due', 'comments']
+  const out = {}
+  for (const k of fields) if (req.body[k] !== undefined) out[k] = req.body[k]
+  if (out.comments !== undefined) out.comments = Number(out.comments) || 0
+  const task = await prisma.task.update({ where: { id: req.params.id }, data: out })
   res.json({ task })
 })
 

@@ -181,10 +181,8 @@ export default function PortalEventDetail() {
         <div className="mt-8 rounded-[20px] border border-gray-100 bg-white p-7" style={{ boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
           <h2 className="text-xl font-bold text-gray-900">About This Event</h2>
           <p className="mt-4 text-sm leading-relaxed text-gray-600">
-            Join us for {event.name}, a premier {event.category.toLowerCase()} event organized by {event.client?.company || 'Amen Events'}. 
-            This event brings together industry leaders, innovators, and professionals for a day of networking, learning, and collaboration.
-            {event.venue?.name && ` Located at ${event.venue.name}${event.venue?.city ? ` in ${event.venue.city}` : ''},`}
-            {' '}this is an event you won't want to miss.
+            {event.description || `Join us for ${event.name}, organized by ${event.client?.company || 'Amen Events'}. Check the agenda below for the session schedule.`}
+            {event.venue?.name && ` Located at ${event.venue.name}${event.venue?.city ? `, ${event.venue.city}` : ''}.`}
           </p>
         </div>
 

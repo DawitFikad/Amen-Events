@@ -33,7 +33,7 @@ export default function MyTickets() {
 
   const qrValue = selected
     ? encodeTicket(ticketPayload(
-        { id: selected.id, qr: selected.qr, name: attendee?.name || '', email: attendee?.email || '', type: selected.type, amount: selected.amount, paid: selected.paid, checkedIn: selected.checkedIn, eventId: selected.event?.id || selected.event?._id },
+        { id: selected.id, qr: selected.qr, name: attendee?.name || '', email: attendee?.email || '', phone: selected.phone || '', type: selected.type, amount: selected.amount, paid: selected.paid, paymentMethod: selected.paymentMethod || 'Cash', checkedIn: selected.checkedIn, eventId: selected.event?.id || selected.event?._id },
         selected.event,
         selected.event?.venue
       ))
@@ -85,6 +85,7 @@ export default function MyTickets() {
               <div className="flex justify-between py-1"><span className="text-gray-400">Email</span><span className="font-semibold text-gray-900">{attendee?.email || '—'}</span></div>
               <div className="flex justify-between py-1.5"><span className="text-gray-400">Type</span><span className="font-semibold text-gray-900">{selected.type}</span></div>
               <div className="flex justify-between py-1.5"><span className="text-gray-400">Amount</span><span className="font-semibold text-gray-900">ETB {(selected.amount || 0).toLocaleString()}</span></div>
+              <div className="flex justify-between py-1.5"><span className="text-gray-400">Payment</span><span className="font-semibold text-gray-900">{selected.paymentMethod || 'Cash'}</span></div>
               <div className="flex justify-between py-1.5"><span className="text-gray-400">Date</span><span className="font-semibold text-gray-900">{selected.event?.date ? new Date(selected.event.date).toLocaleDateString() : 'TBA'}</span></div>
               <div className="flex justify-between py-1.5"><span className="text-gray-400">Venue</span><span className="font-semibold text-gray-900">{selected.event?.venue?.name || 'TBA'}</span></div>
               <div className="flex justify-between py-1.5"><span className="text-gray-400">Status</span><span className="font-semibold text-gray-900">{selected.checkedIn ? 'Checked In' : selected.paid ? 'Valid' : 'Pending'}</span></div>

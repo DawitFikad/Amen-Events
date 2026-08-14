@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Building2, User, Phone, Mail, MapPin, Lock, Bell, Shield, CheckCircle2 } from 'lucide-react'
+import { Building2, User, Phone, Mail, MapPin, Globe, Lock, Bell, Shield, CheckCircle2 } from 'lucide-react'
 import { useData } from '../../store/DataContext'
 import { Toast } from '../../components/ui'
 import { textRequired, nameOnly, phoneValid, emailValid, optional, validate, clearError } from '../../store/validation'
@@ -18,6 +18,8 @@ export default function ClientProfile() {
     email: client?.email || '',
     address: client?.city || '',
     industry: client?.industry || '',
+    website: client?.website || '',
+    taxId: client?.taxId || '',
   })
   const [notifPrefs, setNotifPrefs] = useState({
     budget: true, invoices: true, documents: true, timeline: true, reminders: true,
@@ -35,12 +37,19 @@ export default function ClientProfile() {
       email: [emailValid('Email')],
       address: [optional(textRequired('Address', { max: 150 }))],
       industry: [optional(textRequired('Industry', { max: 120 }))],
+      website: [optional((v) => {
+        const s = String(v || '').trim()
+        if (!s) return ''
+        const ok = /^https?:\/\/[^\s]+\.[^\s]+/.test(s) || /^(www\.)?[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+(\/(\S)*)?$/.test(s)
+        return ok ? '' : 'Enter a valid website (e.g. https://company.com)'
+      })],
+      taxId: [optional(textRequired('Tax ID', { max: 60 }))],
     })
     if (!res.ok) { setErrors(res.errors); show(res.first, 'error'); return }
     setErrors({})
     setSaving(true)
     setTimeout(() => {
-      patchBy('clients', clientId, { company: form.company, contactPerson: form.contactPerson, phone: form.phone, email: form.email, city: form.address, industry: form.industry })
+      patchBy('clients', clientId, { company: form.company, contactPerson: form.contactPerson, phone: form.phone, email: form.email, city: form.address, industry: form.industry, website: form.website, taxId: form.taxId })
       logActivity('Client updated company profile', 'crm')
       setSaving(false); show('Company profile updated successfully')
     }, 800)
@@ -138,6 +147,19 @@ export default function ClientProfile() {
                 <input className="input pl-10" value={form.address} onChange={(e) => { setForm({ ...form, address: e.target.value }); setErrors(clearError(errors, 'address')) }} />
               </div>
               {errors.address && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.address}</p>}
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-bold text-ink/60">Website</label>
+              <div className="relative">
+                <Globe size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" />
+                <input className="input pl-10" value={form.website} onChange={(e) => { setForm({ ...form, website: e.target.value }); setErrors(clearError(errors, 'website')) }} placeholder="https://company.com" />
+              </div>
+              {errors.website && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.website}</p>}
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-bold text-ink/60">Tax ID (TIN)</label>
+              <input className="input" value={form.taxId} onChange={(e) => { setForm({ ...form, taxId: e.target.value }); setErrors(clearError(errors, 'taxId')) }} placeholder="e.g. ET-ABC-2020-12345" />
+              {errors.taxId && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.taxId}</p>}
             </div>
           </div>
           <div className="mt-5 flex justify-end">

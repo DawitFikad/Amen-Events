@@ -42,7 +42,7 @@ router.get('/', authRequired, async (req, res) => {
     isAdmin ? prisma.expense.findMany() : prisma.expense.findMany({
       where: { event: { OR: [{ pmId: userId }, { team: { has: userId } }] } },
     }),
-    prisma.user.findMany({ select: { id: true, name: true, initials: true, color: true, dept: true, jobTitle: true, email: true, phone: true, type: true, status: true } }),
+    prisma.user.findMany({ select: { id: true, name: true, initials: true, color: true, dept: true, jobTitle: true, email: true, phone: true, type: true, status: true, avatar: true } }),
     isAdmin ? prisma.venue.findMany() : prisma.venue.findMany({
       where: { events: { some: { OR: [{ pmId: userId }, { team: { has: userId } }] } } },
     }),

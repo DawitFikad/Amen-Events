@@ -244,12 +244,16 @@ export const registrations = {
 export const modules = {
   speakers: () => apiFetch('/modules/speakers'),
   createSpeaker: (data) => apiFetch('/modules/speakers', { method: 'POST', body: JSON.stringify(data) }),
+  updateSpeaker: (id, data) => apiFetch(`/modules/speakers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   exhibitors: () => apiFetch('/modules/exhibitors'),
   createExhibitor: (data) => apiFetch('/modules/exhibitors', { method: 'POST', body: JSON.stringify(data) }),
+  updateExhibitor: (id, data) => apiFetch(`/modules/exhibitors/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   sponsors: () => apiFetch('/modules/sponsors'),
   createSponsor: (data) => apiFetch('/modules/sponsors', { method: 'POST', body: JSON.stringify(data) }),
+  updateSponsor: (id, data) => apiFetch(`/modules/sponsors/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   campaigns: () => apiFetch('/modules/campaigns'),
   createCampaign: (data) => apiFetch('/modules/campaigns', { method: 'POST', body: JSON.stringify(data) }),
+  updateCampaign: (id, data) => apiFetch(`/modules/campaigns/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   coupons: () => apiFetch('/modules/coupons'),
   createCoupon: (data) => apiFetch('/modules/coupons', { method: 'POST', body: JSON.stringify(data) }),
 }

@@ -32,6 +32,7 @@ export function ticketPayload(reg, event, venue) {
     type: reg.type || 'Standard',
     amount: reg.amount || 0,
     paid: !!reg.paid,
+    paymentMethod: reg.paymentMethod || 'Cash',
     eventId: e.id || reg.eventId || '',
     event: e.name || '',
     category: e.category || '',

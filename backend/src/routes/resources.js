@@ -16,12 +16,25 @@ router.get('/', authRequired, requirePermission('resources', 'view'), async (req
 })
 
 router.post('/', authRequired, requirePermission('resources', 'create'), async (req, res) => {
-  const resource = await prisma.resource.create({ data: { ...req.body, qty: Number(req.body.qty) || 1, allocated: 0, maintenance: 0, status: 'available' } })
+  const fields = ['name', 'category', 'status', 'location', 'code']
+  const out = {}
+  for (const k of fields) if (req.body[k] !== undefined) out[k] = req.body[k]
+  out.qty = Number(req.body.qty) || 1
+  out.allocated = 0
+  out.maintenance = 0
+  if (!out.status) out.status = 'available'
+  if (!out.location) out.location = 'Main Warehouse'
+  const resource = await prisma.resource.create({ data: out })
   res.json({ resource })
 })
 
 router.put('/:id', authRequired, requirePermission('resources', 'edit'), async (req, res) => {
-  const resource = await prisma.resource.update({ where: { id: req.params.id }, data: req.body })
+  const numeric = ['qty', 'allocated', 'maintenance']
+  const stringFields = ['name', 'category', 'status', 'location', 'code']
+  const out = {}
+  for (const k of stringFields) if (req.body[k] !== undefined) out[k] = req.body[k]
+  for (const k of numeric) if (req.body[k] !== undefined) out[k] = Number(req.body[k]) || 0
+  const resource = await prisma.resource.update({ where: { id: req.params.id }, data: out })
   res.json({ resource })
 })
 

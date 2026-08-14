@@ -25,7 +25,16 @@ router.post('/', authRequired, requirePermission('venues', 'create'), async (req
 })
 
 router.put('/:id', authRequired, requirePermission('venues', 'edit'), async (req, res) => {
-  const venue = await prisma.venue.update({ where: { id: req.params.id }, data: req.body })
+  const venueFields = ['name', 'city', 'halls', 'capacity', 'price', 'contact', 'equipment', 'status', 'color', 'abbr']
+  const out = {}
+  for (const k of venueFields) if (req.body[k] !== undefined) out[k] = req.body[k]
+  if (out.equipment !== undefined) {
+    out.equipment = typeof out.equipment === 'string' ? out.equipment.split(',').map((s) => s.trim()).filter(Boolean) : Array.isArray(out.equipment) ? out.equipment : []
+  }
+  if (out.halls !== undefined) out.halls = Number(out.halls) || 1
+  if (out.capacity !== undefined) out.capacity = Number(out.capacity) || 0
+  if (out.price !== undefined) out.price = Number(out.price) || 0
+  const venue = await prisma.venue.update({ where: { id: req.params.id }, data: out })
   res.json({ venue })
 })
 

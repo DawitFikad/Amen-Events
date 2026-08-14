@@ -8,14 +8,14 @@ const router = Router()
 // Users (staff)
 router.get('/', authRequired, requirePermission('staff', 'view'), async (req, res) => {
   const users = await prisma.user.findMany({
-    select: { id: true, email: true, name: true, initials: true, color: true, phone: true, dept: true, jobTitle: true, type: true, status: true, twoStepEnabled: true },
+    select: { id: true, email: true, name: true, initials: true, color: true, phone: true, dept: true, jobTitle: true, type: true, status: true, twoStepEnabled: true, avatar: true },
     orderBy: { createdAt: 'desc' },
   })
   res.json({ users })
 })
 
 router.post('/', authRequired, requirePermission('staff', 'create'), async (req, res) => {
-  const { name, email, password, dept, jobTitle, phone, type, roleId } = req.body
+  const { name, email, password, dept, jobTitle, phone, type, roleId, avatar } = req.body
   if (!name || !email) {
     return res.status(400).json({ error: 'Name and email are required' })
   }
@@ -28,7 +28,7 @@ router.post('/', authRequired, requirePermission('staff', 'create'), async (req,
   const hash = await bcrypt.default.hash(password || 'demo@amen', 10)
   const initials = name.split(' ').map(p => p[0]).slice(0, 2).join('')
   const user = await prisma.user.create({
-    data: { name, email: normalizedEmail, passwordHash: hash, initials, dept, jobTitle, phone, type },
+    data: { name, email: normalizedEmail, passwordHash: hash, initials, dept, jobTitle, phone, type, avatar: avatar || '' },
   })
   if (roleId) {
     await prisma.userRole.create({ data: { userId: user.id, roleId } })
@@ -40,7 +40,7 @@ router.post('/', authRequired, requirePermission('staff', 'create'), async (req,
 })
 
 router.put('/:id', authRequired, requirePermission('staff', 'edit'), async (req, res) => {
-  const { name, email, dept, jobTitle, phone, type, status } = req.body
+  const { name, email, dept, jobTitle, phone, type, status, avatar } = req.body
   const data = {}
   if (name !== undefined) { data.name = name; data.initials = name.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase() }
   if (email !== undefined) {
@@ -54,6 +54,7 @@ router.put('/:id', authRequired, requirePermission('staff', 'edit'), async (req,
   if (phone !== undefined) data.phone = phone
   if (type !== undefined) data.type = type
   if (status !== undefined) data.status = status
+  if (avatar !== undefined) data.avatar = avatar
   const user = await prisma.user.update({ where: { id: req.params.id }, data })
   res.json({ user })
 })

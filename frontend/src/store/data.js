@@ -2,27 +2,31 @@
 
 const uid = () => Math.random().toString(36).slice(2, 10)
 
+// Generate a mockup profile avatar (SVG data URL) — distinct gradient + initials.
+export const mockAvatar = (initials, c1 = '#188A2E', c2 = '#0B3B16') =>
+  `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs><rect width="96" height="96" rx="16" fill="url(#g)"/><circle cx="48" cy="38" r="16" fill="rgba(255,255,255,0.92)"/><path d="M22 86c4-20 15-32 26-32s22 12 26 32z" fill="rgba(255,255,255,0.92)"/><text x="48" y="91" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="800" fill="#041C0B" text-anchor="middle">${initials}</text></svg>`)}`
+
 // ----------------------------- STAFF -----------------------------
 export const staffSeed = [
-  { id: 'st1', name: 'Hana Tadesse', role: 'Director', dept: 'Management', phone: '+251 911 220 445', email: 'hana@amen.et', type: 'Employee', status: 'active', color: 'bg-brand-700', initials: 'HT' },
-  { id: 'st2', name: 'Dawit Mengistu', role: 'Project Manager', dept: 'Operations', phone: '+251 912 778 301', email: 'dawit@amen.et', type: 'Employee', status: 'active', color: 'bg-gold-500', initials: 'DM' },
-  { id: 'st3', name: 'Selam Bekele', role: 'Event Coordinator', dept: 'Operations', phone: '+251 913 554 209', email: 'selam@amen.et', type: 'Employee', status: 'active', color: 'bg-brand-500', initials: 'SB' },
-  { id: 'st4', name: 'Yonas Girma', role: 'Finance Officer', dept: 'Finance', phone: '+251 914 339 876', email: 'yonas@amen.et', type: 'Employee', status: 'active', color: 'bg-ink', initials: 'YG' },
-  { id: 'st5', name: 'Sara Ahmed', role: 'Logistics Lead', dept: 'Operations', phone: '+251 915 662 118', email: 'sara@amen.et', type: 'Employee', status: 'active', color: 'bg-brand-400', initials: 'SA' },
-  { id: 'st6', name: 'Mekonnen Assefa', role: 'Vendor Liaison', dept: 'Procurement', phone: '+251 916 998 540', email: 'meki@amen.et', type: 'Freelancer', status: 'active', color: 'bg-gold-400', initials: 'MA' },
-  { id: 'st7', name: 'Liya Kebede', role: 'Marketing Lead', dept: 'Marketing', phone: '+251 917 445 772', email: 'liya@amen.et', type: 'Employee', status: 'active', color: 'bg-brand-600', initials: 'LK' },
-  { id: 'st8', name: 'Bereket Tesfaye', role: 'Technician', dept: 'Technical', phone: '+251 918 229 650', email: 'bereket@amen.et', type: 'Employee', status: 'active', color: 'bg-brand-300', initials: 'BT' },
+  { id: 'st1', name: 'Hana Tadesse', role: 'Director', dept: 'Management', phone: '+251 911 220 445', email: 'hana@amen.et', type: 'Employee', status: 'active', color: 'bg-brand-700', initials: 'HT', avatar: mockAvatar('HT', '#188A2E', '#0B3B16'), salary: 120000, joinedDate: '2021-03-01', contractEnd: '', address: 'Bole, Addis Ababa', bio: 'Leads strategy and client partnerships across the agency.' },
+  { id: 'st2', name: 'Dawit Mengistu', role: 'Project Manager', dept: 'Operations', phone: '+251 912 778 301', email: 'dawit@amen.et', type: 'Employee', status: 'active', color: 'bg-gold-500', initials: 'DM', avatar: mockAvatar('DM', '#D9A441', '#8A5E1C'), salary: 85000, joinedDate: '2022-01-15', contractEnd: '', address: 'Yeka, Addis Ababa', bio: 'PM for flagship summits and conferences.' },
+  { id: 'st3', name: 'Selam Bekele', role: 'Event Coordinator', dept: 'Operations', phone: '+251 913 554 209', email: 'selam@amen.et', type: 'Employee', status: 'active', color: 'bg-brand-500', initials: 'SB', avatar: mockAvatar('SB', '#0D9488', '#0B3B16'), salary: 52000, joinedDate: '2022-06-01', contractEnd: '', address: 'Kirkos, Addis Ababa', bio: 'Runs logistics and on-site coordination.' },
+  { id: 'st4', name: 'Yonas Girma', role: 'Finance Officer', dept: 'Finance', phone: '+251 914 339 876', email: 'yonas@amen.et', type: 'Employee', status: 'active', color: 'bg-ink', initials: 'YG', avatar: mockAvatar('YG', '#10B981', '#065F46'), salary: 64000, joinedDate: '2023-02-01', contractEnd: '', address: 'Gulele, Addis Ababa', bio: 'Handles budgets, invoices and vendor payments.' },
+  { id: 'st5', name: 'Sara Ahmed', role: 'Logistics Lead', dept: 'Operations', phone: '+251 915 662 118', email: 'sara@amen.et', type: 'Employee', status: 'active', color: 'bg-brand-400', initials: 'SA', avatar: mockAvatar('SA', '#F59E0B', '#92400E'), salary: 58000, joinedDate: '2022-09-01', contractEnd: '', address: 'Arada, Addis Ababa', bio: 'Owns venue, transport and vendor procurement.' },
+  { id: 'st6', name: 'Mekonnen Assefa', role: 'Vendor Liaison', dept: 'Procurement', phone: '+251 916 998 540', email: 'mekonnen@amen.et', type: 'Freelancer', status: 'active', color: 'bg-gold-400', initials: 'MA', avatar: mockAvatar('MA', '#0F172A', '#334155'), salary: 48000, joinedDate: '2023-05-15', contractEnd: '', address: 'Nifas Silk, Addis Ababa', bio: 'Vendor contracts, site inspections and supplier coordination.' },
+  { id: 'st7', name: 'Liya Kebede', role: 'Marketing Lead', dept: 'Marketing', phone: '+251 917 445 772', email: 'liya@amen.et', type: 'Employee', status: 'active', color: 'bg-brand-600', initials: 'LK', avatar: mockAvatar('LK', '#0284C7', '#0C4A6E'), salary: 45000, joinedDate: '2023-08-01', contractEnd: '', address: 'Bole, Addis Ababa', bio: 'Runs campaigns, registrations and attendee comms.' },
+  { id: 'st8', name: 'Bereket Tesfaye', role: 'Technician', dept: 'Technical', phone: '+251 918 229 650', email: 'bereket@amen.et', type: 'Freelancer', status: 'active', color: 'bg-brand-300', initials: 'BT', avatar: mockAvatar('BT', '#E11D48', '#7F1D1D'), salary: 0, joinedDate: '2024-02-01', contractEnd: '2026-12-31', address: 'Lideta, Addis Ababa', bio: 'Freelance tech support for exhibitions and check-ins.' },
 ]
 
 // ----------------------------- CLIENTS -----------------------------
 export const clientsSeed = [
-  { id: 'cl1', company: 'ETH FINTECH Group', industry: 'Financial Services', city: 'Addis Ababa', contactPerson: 'Dr. Meron Ayele', role: 'Events Director', phone: '+251 911 222 000', email: 'meron@ethfintech.com', status: 'active', stage: 'contract', totalValue: 1850000, logo: 'EF' },
-  { id: 'cl2', company: 'Zemen Pharmaceuticals', industry: 'Healthcare', city: 'Addis Ababa', contactPerson: 'Rahel Getahun', role: 'Marketing Manager', phone: '+251 912 333 111', email: 'rahel@zemenpharma.com', status: 'active', stage: 'opportunity', totalValue: 640000, logo: 'ZP' },
-  { id: 'cl3', company: 'Walia Telecom', industry: 'Telecommunications', city: 'Addis Ababa', contactPerson: 'Kebede Abebe', role: 'Head of Brand', phone: '+251 913 444 222', email: 'kebede@walia.co.et', status: 'active', stage: 'quotation', totalValue: 980000, logo: 'WT' },
-  { id: 'cl4', company: 'Sheba Construction', industry: 'Construction', city: 'Addis Ababa', contactPerson: 'Ashenafi Wolde', role: 'Admin Director', phone: '+251 914 555 333', email: 'ashenafi@sheba.et', status: 'inactive', stage: 'lead', totalValue: 0, logo: 'SC' },
-  { id: 'cl5', company: 'Abyssinia Bank', industry: 'Banking', city: 'Addis Ababa', contactPerson: 'Selamawit Desta', role: 'PR Manager', phone: '+251 915 666 444', email: 'selamawit@abysbank.com', status: 'active', stage: 'contract', totalValue: 2400000, logo: 'AB' },
-  { id: 'cl6', company: 'Koka University', industry: 'Education', city: 'Adama', contactPerson: 'Prof. Taddese Kassa', role: 'Vice President', phone: '+251 916 777 555', email: 'consult@kokau.edu', status: 'active', stage: 'lead', totalValue: 0, logo: 'KU' },
-  { id: 'cl7', company: 'Sof Omer Hotel', industry: 'Hospitality', city: 'Hawassa', contactPerson: 'Daniel Haile', role: 'Sales Director', phone: '+251 917 888 666', email: 'events@sofomer.com', status: 'active', stage: 'negotiation', totalValue: 520000, logo: 'SO' },
+{ id: 'cl1', company: 'ETH FINTECH Group', industry: 'Financial Services', city: 'Addis Ababa', address: 'Bole Road, Churchill Tower 8th Floor, Addis Ababa', website: 'https://ethfintech.com', taxId: 'ET-ETH-2023-48912', contactPerson: 'Dr. Meron Ayele', role: 'Events Director', phone: '+251 911 222 000', email: 'meron@ethfintech.com', status: 'active', stage: 'contract', totalValue: 1850000, logo: 'EF' },
+  { id: 'cl2', company: 'Zemen Pharmaceuticals', industry: 'Healthcare', city: 'Addis Ababa', address: 'Kazanchis, Zemen HQ, Addis Ababa', website: 'https://zemenpharma.com', taxId: 'ET-ZPH-2019-77821', contactPerson: 'Rahel Getahun', role: 'Marketing Manager', phone: '+251 912 333 111', email: 'rahel@zemenpharma.com', status: 'active', stage: 'opportunity', totalValue: 640000, logo: 'ZP' },
+  { id: 'cl3', company: 'Walia Telecom', industry: 'Telecommunications', city: 'Addis Ababa', address: 'Megenagna, Walia Campus, Addis Ababa', website: 'https://walia.co.et', taxId: 'ET-WTC-2016-11304', contactPerson: 'Kebede Abebe', role: 'Head of Brand', phone: '+251 913 444 222', email: 'kebede@walia.co.et', status: 'active', stage: 'quotation', totalValue: 980000, logo: 'WT' },
+  { id: 'cl4', company: 'Sheba Construction', industry: 'Construction', city: 'Addis Ababa', address: 'Cazanchise, Sheba Tower, Addis Ababa', website: 'https://sheba.et', taxId: 'ET-SCC-2011-90455', contactPerson: 'Ashenafi Wolde', role: 'Admin Director', phone: '+251 914 555 333', email: 'ashenafi@sheba.et', status: 'inactive', stage: 'lead', totalValue: 0, logo: 'SC' },
+  { id: 'cl5', company: 'Abyssinia Bank', industry: 'Banking', city: 'Addis Ababa', address: 'Meklit Building 26, Addis Ababa', website: 'https://abysbank.com', taxId: 'ET-ABS-1998-33210', contactPerson: 'Selamawit Desta', role: 'PR Manager', phone: '+251 915 666 444', email: 'selamawit@abysbank.com', status: 'active', stage: 'contract', totalValue: 2400000, logo: 'AB' },
+  { id: 'cl6', company: 'Koka University', industry: 'Education', city: 'Adama', address: 'Main Campus, Adama Town', website: 'https://kokau.edu', taxId: 'ET-KUU-2010-22187', contactPerson: 'Prof. Taddese Kassa', role: 'Vice President', phone: '+251 916 777 555', email: 'consult@kokau.edu', status: 'active', stage: 'lead', totalValue: 0, logo: 'KU' },
+  { id: 'cl7', company: 'Sof Omer Hotel', industry: 'Hospitality', city: 'Hawassa', address: 'Lake Shore Road, Hawassa', website: 'https://sofomer.com', taxId: 'ET-SOH-2015-66012', contactPerson: 'Daniel Haile', role: 'Sales Director', phone: '+251 917 888 666', email: 'events@sofomer.com', status: 'active', stage: 'negotiation', totalValue: 520000, logo: 'SO' },
 ]
 
 // ----------------------------- CONTRACTS -----------------------------
@@ -44,25 +48,25 @@ export const clientDocsSeed = [
 
 // ----------------------------- VENUES -----------------------------
 export const venuesSeed = [
-  { id: 'vn1', name: 'Millennium Hall', city: 'Addis Ababa', halls: 4, capacity: 5000, price: 850000, contact: '+251 911 100 001', equipment: ['Stage', 'Sound', 'Lighting', 'VIP Lounge'], status: 'available', color: 'bg-brand-700', abbr: 'MH' },
-  { id: 'vn2', name: 'Sheraton Skyline Ballroom', city: 'Addis Ababa', halls: 2, capacity: 1200, price: 420000, contact: '+251 911 100 002', equipment: ['Sound', 'AV', 'Catering Kitchen'], status: 'booked', color: 'bg-gold-500', abbr: 'SB' },
-  { id: 'vn3', name: 'Unity Park Pavilion', city: 'Addis Ababa', halls: 1, capacity: 800, price: 260000, contact: '+251 911 100 003', equipment: ['Open Air', 'Stage'], status: 'available', color: 'bg-brand-500', abbr: 'UP' },
-  { id: 'vn4', name: 'Bishoftu Resort Gardens', city: 'Bishoftu', halls: 3, capacity: 2500, price: 640000, contact: '+251 911 100 004', equipment: ['Stage', 'Swimming Lawn'], status: 'maintenance', color: 'bg-brand-400', abbr: 'BR' },
-  { id: 'vn5', name: 'Hilton Addis Grand Hall', city: 'Addis Ababa', halls: 2, capacity: 950, price: 380000, contact: '+251 911 100 005', equipment: ['AV', 'Backstage', 'Catering'], status: 'booked', color: 'bg-ink', abbr: 'HI' },
-  { id: 'vn6', name: 'Skylight Convention Center', city: 'Addis Ababa', halls: 6, capacity: 6000, price: 1100000, contact: '+251 911 100 006', equipment: ['Exhibition Floor', 'Stage', 'Press Room'], status: 'available', color: 'bg-brand-600', abbr: 'SC' },
+  { id: 'vn1', name: 'Millennium Hall', city: 'Addis Ababa', address: 'Africa Avenue, Bole', halls: 4, capacity: 5000, price: 850000, contact: '+251 911 100 001', phone: '+251 911 100 001', email: 'bookings@millenniumhall.com', parking: 400, description: "Addis Ababa's largest convention hall with a main auditorium, breakout rooms and full staging infrastructure.", equipment: ['Stage', 'Sound', 'Lighting', 'VIP Lounge', 'WiFi'], status: 'available', color: 'bg-brand-700', abbr: 'MH', image: '' },
+  { id: 'vn2', name: 'Sheraton Skyline Ballroom', city: 'Addis Ababa', address: 'Taitu Street', halls: 2, capacity: 1200, price: 420000, contact: '+251 911 100 002', phone: '+251 911 100 002', email: 'events@sheratonaddis.com', parking: 250, description: 'Iconic ballroom with panoramic city views, ideal for galas and high-profile product launches.', equipment: ['Stage', 'AV', 'Chandeliers', 'WiFi'], status: 'booked', color: 'bg-gold-500', abbr: 'SB', image: '' },
+  { id: 'vn3', name: 'Unity Park Pavilion', city: 'Addis Ababa', address: 'Unity Park, Arat Kilo', halls: 1, capacity: 800, price: 260000, contact: '+251 911 100 003', phone: '+251 911 100 003', email: 'park@unitypark.gov.et', parking: 150, description: 'Open-air ceremonial pavilion surrounded by gardens — outdoor galas and cultural events.', equipment: ['Stage', 'Lighting', 'Garden', 'Outdoor Power'], status: 'available', color: 'bg-brand-500', abbr: 'UP', image: '' },
+  { id: 'vn4', name: 'Bishoftu Resort Gardens', city: 'Bishoftu', address: 'Lakeside, Bishoftu', halls: 3, capacity: 2500, price: 640000, contact: '+251 911 100 004', phone: '+251 911 100 004', email: 'events@bishofturesort.com', parking: 200, description: 'Lakeside retreat venue with gardens, amphitheatre and conference pavilions.', equipment: ['Stage', 'Sound', 'Accommodation', 'WiFi'], status: 'maintenance', color: 'bg-brand-400', abbr: 'BR', image: '' },
+  { id: 'vn5', name: 'Hilton Addis Grand Hall', city: 'Addis Ababa', address: 'Menelik II Avenue', halls: 2, capacity: 950, price: 380000, contact: '+251 911 100 005', phone: '+251 911 100 005', email: 'events@hiltonaddis.com', parking: 300, description: 'Grand hotel ballroom with banquet capacity, full AV and catering partners.', equipment: ['Stage', 'AV', 'Catering', 'WiFi'], status: 'booked', color: 'bg-ink', abbr: 'HI', image: '' },
+  { id: 'vn6', name: 'Skylight Convention Center', city: 'Addis Ababa', address: 'Meskel Square', halls: 6, capacity: 6000, price: 1100000, contact: '+251 911 100 006', phone: '+251 911 100 006', email: 'info@skylightcc.com', parking: 500, description: 'Purpose-built exhibition and conference venue with 6 halls and a 6000m² exhibition floor.', equipment: ['Booth Grid', 'Stage', 'Sound', 'Lighting', 'WiFi', 'Loading Bay'], status: 'available', color: 'bg-brand-600', abbr: 'SC', image: '' },
 ]
 
 // ----------------------------- RESOURCES / INVENTORY -----------------------------
 export const resourcesSeed = [
-  { id: 'rc1', name: 'LED Wall 4K 12m²', category: 'LED Screens', qty: 2, allocated: 1, maintenance: 0, status: 'available', location: 'Main Warehouse', code: 'A-LE-01' },
-  { id: 'rc2', name: 'Line Array Sound System', category: 'Sound Systems', qty: 3, allocated: 2, maintenance: 0, status: 'in-use', location: 'Main Warehouse', code: 'A-SD-02' },
-  { id: 'rc3', name: 'Moving Head Lights (Beam)', category: 'Lighting', qty: 24, allocated: 18, maintenance: 2, status: 'maintenance', location: 'Main Warehouse', code: 'A-LT-03' },
-  { id: 'rc4', name: 'Truss Stage 8x10m', category: 'Stages', qty: 4, allocated: 1, maintenance: 0, status: 'available', location: 'Yard', code: 'A-ST-04' },
-  { id: 'rc5', name: 'Banquet Chairs (Gold)', category: 'Furniture', qty: 400, allocated: 260, maintenance: 0, status: 'in-use', location: 'Yard', code: 'A-FR-05' },
-  { id: 'rc6', name: 'Decorative Flower Arches', category: 'Decoration', qty: 12, allocated: 6, maintenance: 1, status: 'available', location: 'Store B', code: 'A-DC-06' },
-  { id: 'rc7', name: '4x4 Utility Truck', category: 'Vehicles', qty: 3, allocated: 3, maintenance: 0, status: 'in-use', location: 'Fleet', code: 'A-VH-07' },
-  { id: 'rc8', name: 'Diesel Generators 150kVA', category: 'Generators', qty: 2, allocated: 1, maintenance: 0, status: 'available', location: 'Yard', code: 'A-GN-08' },
-  { id: 'rc9', name: 'Branding Banners / Standees', category: 'Branding', qty: 50, allocated: 22, maintenance: 0, status: 'available', location: 'Store A', code: 'A-BR-09' },
+  { id: 'rc1', name: 'LED Wall 4K 12m²', category: 'LED Screens', qty: 2, allocated: 1, maintenance: 0, status: 'available', location: 'Main Warehouse', code: 'A-LE-01', image: '', unitCost: 450000, supplier: 'Addis AV Traders', purchaseDate: '2024-03-15', notes: 'Hire-ready; spare power modules in stock.' },
+  { id: 'rc2', name: 'Line Array Sound System', category: 'Sound Systems', qty: 3, allocated: 2, maintenance: 0, status: 'in-use', location: 'Main Warehouse', code: 'A-SD-02', image: '', unitCost: 380000, supplier: 'JBL Ethiopia', purchaseDate: '2023-11-20', notes: 'Full PA with 2 subwoofers and mixing desk.' },
+  { id: 'rc3', name: 'Moving Head Lights', category: 'Lighting', qty: 24, allocated: 18, maintenance: 2, status: 'maintenance', location: 'Main Warehouse', code: 'A-LT-03', image: '', unitCost: 85000, supplier: 'Beam Lights Co', purchaseDate: '2024-01-10', notes: 'DMX controlled; two units under service.' },
+  { id: 'rc4', name: 'Truss Stage (modular)', category: 'Stages', qty: 4, allocated: 1, maintenance: 0, status: 'available', location: 'Stage Warehouse', code: 'A-ST-04', image: '', unitCost: 210000, supplier: 'TrussPro', purchaseDate: '2023-06-05', notes: 'Covers up to 6m×4m per module.' },
+  { id: 'rc5', name: 'Banquet Chairs', category: 'Furniture', qty: 400, allocated: 260, maintenance: 0, status: 'in-use', location: 'Hall Storage', code: 'A-FR-05', image: '', unitCost: 3500, supplier: 'Furniture World', purchaseDate: '2022-05-18', notes: 'White padded chairs; covers available.' },
+  { id: 'rc6', name: 'Flower Arches', category: 'Decoration', qty: 12, allocated: 6, maintenance: 1, status: 'available', location: 'Decoration Store', code: 'A-DR-06', image: '', unitCost: 18000, supplier: 'Floral Studio', purchaseDate: '2024-02-12', notes: 'Compatible with white & rose florals.' },
+  { id: 'rc7', name: '4x4 Utility Truck', category: 'Vehicles', qty: 3, allocated: 3, maintenance: 0, status: 'in-use', location: 'Fleet Yard', code: 'A-VH-07', image: '', unitCost: 2200000, supplier: 'Toyota Ethiopia', purchaseDate: '2023-01-30', notes: 'Diesel; trailers available for freight.' },
+  { id: 'rc8', name: 'Diesel Generators', category: 'Generators', qty: 2, allocated: 1, maintenance: 0, status: 'available', location: 'Fleet Yard', code: 'A-GN-08', image: '', unitCost: 640000, supplier: 'Genset PLC', purchaseDate: '2022-09-14', notes: 'Backup power for outdoor staging.' },
+  { id: 'rc9', name: 'Branding Banners', category: 'Branding', qty: 50, allocated: 22, maintenance: 0, status: 'available', location: 'Print Store', code: 'A-BR-09', image: '', unitCost: 4500, supplier: 'PrintHub', purchaseDate: '2024-04-01', notes: 'Rolled banners with stands; reprint on request.' },
 ]
 
 // ----------------------------- MAINTENANCE -----------------------------
@@ -86,12 +90,12 @@ export const vendorsSeed = [
 
 // ----------------------------- EVENTS -----------------------------
 export const eventsSeed = [
-  { id: 'ev1', name: 'EthFinTech Annual Summit 2026', clientId: 'cl1', venueId: 'vn1', category: 'Conference', date: '2026-08-18', time: '09:00', status: 'upcoming', pmId: 'st2', budget: 1850000, spent: 780000, stage: 60, attendees: null, progress: 62 },
-  { id: 'ev2', name: 'Zemen Pharma Product Launch', clientId: 'cl2', venueId: 'vn2', category: 'Product Launch', date: '2026-08-25', time: '18:30', status: 'upcoming', pmId: 'st3', budget: 640000, spent: 210000, stage: 35, attendees: null, progress: 35 },
-  { id: 'ev3', name: 'Abyssinia Bank Leadership Retreat', clientId: 'cl5', venueId: 'vn4', category: 'Retreat', date: '2026-08-02', time: '08:00', status: 'ongoing', pmId: 'st5', budget: 2400000, spent: 1240000, stage: 78, attendees: 146, progress: 78 },
-  { id: 'ev4', name: 'Walia Telecom Partner Expo', clientId: 'cl3', venueId: 'vn6', category: 'Exhibition', date: '2026-09-12', time: '10:00', status: 'upcoming', pmId: 'st2', budget: 980000, spent: 340000, stage: 24, attendees: null, progress: 24 },
-  { id: 'ev5', name: 'Sof Omer Hospitality Gala', clientId: 'cl7', venueId: 'vn3', category: 'Gala', date: '2026-07-20', time: '19:00', status: 'completed', pmId: 'st3', budget: 520000, spent: 505000, stage: 100, attendees: 690, progress: 100 },
-  { id: 'ev6', name: 'Koka University Graduation Day', clientId: 'cl6', venueId: 'vn5', category: 'Ceremony', date: '2026-07-05', time: '09:00', status: 'completed', pmId: 'st5', budget: 0, spent: 0, stage: 30, attendees: 1200, progress: 30 },
+  { id: 'ev1', name: 'EthFinTech Annual Summit 2026', clientId: 'cl1', venueId: 'vn1', category: 'Conference', date: '2026-08-18', time: '09:00', endDate: '2026-08-19', endTime: '17:00', deadline: '2026-08-14', capacity: 1200, price: 12000, published: true, description: "Two days of keynotes, panels and networking on the future of digital finance — Ethiopia's largest fintech gathering.", tags: ['Fintech', 'Conference', 'Networking'], contactName: 'Dr. Meron Ayele', contactPhone: '+251 911 222 000', status: 'upcoming', pmId: 'st2', budget: 1850000, spent: 780000, stage: 8, attendees: null, progress: 64 },
+  { id: 'ev2', name: 'Zemen Pharma Product Launch', clientId: 'cl2', venueId: 'vn2', category: 'Product Launch', date: '2026-08-25', time: '18:30', endDate: '2026-08-25', endTime: '22:00', deadline: '2026-08-22', capacity: 600, price: 0, published: false, description: "Invitation-only unveiling of Zemen Pharmaceuticals' new product line with media and industry guests.", tags: ['Healthcare', 'Launch'], contactName: 'Rahel Getahun', contactPhone: '+251 912 333 111', status: 'upcoming', pmId: 'st3', budget: 640000, spent: 210000, stage: 5, attendees: null, progress: 43 },
+  { id: 'ev3', name: 'Abyssinia Bank Leadership Retreat', clientId: 'cl5', venueId: 'vn4', category: 'Retreat', date: '2026-08-02', time: '08:00', endDate: '2026-08-04', endTime: '16:00', deadline: '2026-07-25', capacity: 160, price: 0, published: false, description: 'Two-day leadership retreat covering strategy, risk and branch performance for Abyssinia Bank senior leadership.', tags: ['Banking', 'Retreat', 'Leadership'], contactName: 'Selamawit Desta', contactPhone: '+251 915 666 444', status: 'ongoing', pmId: 'st5', budget: 2400000, spent: 1240000, stage: 11, attendees: 146, progress: 86 },
+  { id: 'ev4', name: 'Walia Telecom Partner Expo', clientId: 'cl3', venueId: 'vn6', category: 'Exhibition', date: '2026-09-12', time: '10:00', endDate: '2026-09-13', endTime: '18:00', deadline: '2026-09-05', capacity: 3000, price: 5000, published: true, description: 'Open exhibition showcasing Walia Telecom partner ecosystem, booths, demos and B2B matchmaking.', tags: ['Telecom', 'Exhibition', 'B2B'], contactName: 'Kebede Abebe', contactPhone: '+251 913 444 222', status: 'upcoming', pmId: 'st2', budget: 980000, spent: 340000, stage: 4, attendees: null, progress: 36 },
+  { id: 'ev5', name: 'Sof Omer Hospitality Gala', clientId: 'cl7', venueId: 'vn3', category: 'Gala', date: '2026-07-20', time: '19:00', endDate: '2026-07-20', endTime: '23:30', deadline: '2026-07-15', capacity: 700, price: 25000, published: true, description: "An elegant fundraising gala dinner for Sof Omer Hotel's hospitality partners and distinguished guests.", tags: ['Gala', 'Fundraiser', 'Hospitality'], contactName: 'Daniel Haile', contactPhone: '+251 917 888 666', status: 'completed', pmId: 'st3', budget: 520000, spent: 505000, stage: 13, attendees: 690, progress: 100 },
+  { id: 'ev6', name: 'Koka University Graduation Day', clientId: 'cl6', venueId: 'vn5', category: 'Ceremony', date: '2026-07-05', time: '09:00', endDate: '2026-07-05', endTime: '14:00', deadline: '2026-06-30', capacity: 1500, price: 0, published: true, description: "Annual graduation ceremony for Koka University's graduating class of 2026.", tags: ['Ceremony', 'Academic'], contactName: 'Prof. Taddese Kassa', contactPhone: '+251 916 777 555', status: 'completed', pmId: 'st5', budget: 0, spent: 0, stage: 13, attendees: 1200, progress: 100 },
 ]
 
 // ----------------------------- EVENT SUPPLIERS -----------------------------
@@ -126,6 +130,16 @@ export const eventChecklistsSeed = [
   { id: 'ec13', eventId: 'ev4', label: 'Branding production', done: false },
 ]
 
+// ----------------------------- EVENT DOCUMENTS -----------------------------
+export const eventDocsSeed = [
+  { id: 'ed1', eventId: 'ev1', name: 'Fintech Summit Event Proposal.pdf', ext: 'PDF', size: '2.4 MB' },
+  { id: 'ed2', eventId: 'ev1', name: 'Millennium Hall Contract.pdf', ext: 'PDF', size: '1.1 MB' },
+  { id: 'ed3', eventId: 'ev1', name: 'Floor Plan Main Hall.png', ext: 'PNG', size: '4.8 MB' },
+  { id: 'ed4', eventId: 'ev1', name: 'Run of Show - Day 1.xlsx', ext: 'XLSX', size: '980 KB' },
+  { id: 'ed5', eventId: 'ev3', name: 'Retreat Agenda 2026.pdf', ext: 'PDF', size: '860 KB' },
+  { id: 'ed6', eventId: 'ev4', name: 'Exhibitor Booth Layout.png', ext: 'PNG', size: '3.2 MB' },
+]
+
 // ----------------------------- TASKS -----------------------------
 export const tasksSeed = [
   { id: 'tk1', title: 'Confirm final speaker lineup', eventId: 'ev1', assigneeId: 'st2', priority: 'high', status: 'todo', due: '2026-08-05', comments: 3, progress: 0 },
@@ -140,25 +154,25 @@ export const tasksSeed = [
 
 // ----------------------------- SPEAKERS -----------------------------
 export const speakersSeed = [
-  { id: 'sp1', name: 'Dr. Meskerem Adugna', topic: 'Digital Banking for the Next Decade', eventId: 'ev1', company: 'EthFinTech', time: '10:30', status: 'confirmed', initials: 'MA', color: 'bg-brand-700' },
-  { id: 'sp2', name: 'Jemal Yusuf', topic: 'RegTech & Compliance Trends', eventId: 'ev1', company: 'Central Bank', time: '11:30', status: 'confirmed', initials: 'JY', color: 'bg-gold-500' },
-  { id: 'sp3', name: 'Pr. Yalemwork Tsegaye', topic: 'Financial Inclusion through AI', eventId: 'ev1', company: 'Koka University', time: '14:00', status: 'pending', initials: 'YT', color: 'bg-brand-500' },
-  { id: 'sp4', name: 'Samuel Mekonnen', topic: 'Partner Channel Innovation', eventId: 'ev4', company: 'Walia Telecom', time: '12:00', status: 'confirmed', initials: 'SM', color: 'bg-ink' },
+  { id: 'sp1', name: 'Dr. Meskerem Adugna', topic: 'Digital Banking for the Next Decade', eventId: 'ev1', company: 'EthFinTech', email: 'meskerem@ethfintech.et', phone: '+251 911 700 001', bio: 'ED of EthFinTech and policy advisor on the National Digital Strategy.', time: '10:30', status: 'confirmed', initials: 'MA', color: 'bg-brand-700' },
+  { id: 'sp2', name: 'Jemal Yusuf', topic: 'RegTech & Compliance Trends', eventId: 'ev1', company: 'Central Bank', email: 'jemal.yusuf@cb.gov.et', phone: '+251 911 700 002', bio: 'Senior banking supervisor leading payment-system oversight.', time: '11:30', status: 'confirmed', initials: 'JY', color: 'bg-gold-500' },
+  { id: 'sp3', name: 'Pr. Yalemwork Tsegaye', topic: 'Financial Inclusion through AI', eventId: 'ev1', company: 'Koka University', email: 'y.tsegaye@koka.edu.et', phone: '+251 911 700 003', bio: 'Professor of applied AI researching agentic financial services.', time: '14:00', status: 'pending', initials: 'YT', color: 'bg-brand-500' },
+  { id: 'sp4', name: 'Samuel Mekonnen', topic: 'Partner Channel Innovation', eventId: 'ev4', company: 'Walia Telecom', email: 'samuel@walia.et', phone: '+251 911 700 004', bio: 'Head of partnerships driving ecosystem co-innovation.', time: '12:00', status: 'confirmed', initials: 'SM', color: 'bg-ink' },
 ]
 
 // ----------------------------- EXHIBITORS -----------------------------
 export const exhibitorsSeed = [
-  { id: 'ex1', company: 'InnovPay', booth: 'A1', size: 'Premium', package: 'Gold Sponsor', paid: 400000, status: 'confirmed' },
-  { id: 'ex2', company: 'SavaTech', booth: 'B3', size: 'Standard', package: 'Exhibitor', paid: 150000, status: 'confirmed' },
-  { id: 'ex3', company: 'PayCore', booth: 'A4', size: 'Premium', package: 'Silver Sponsor', paid: 250000, status: 'pending' },
-  { id: 'ex4', company: 'Mulu Hub', booth: 'C2', size: 'Standard', package: 'Exhibitor', paid: 0, status: 'registering' },
+  { id: 'ex1', company: 'InnovPay', booth: 'A1', size: 'Premium', package: 'Gold Sponsor', paid: 400000, status: 'confirmed', contact: 'Meron Taddesse', email: 'partners@innovpay.et', phone: '+251 911 800 001', website: 'innovpay.et', description: 'Payment gateway booth — live demo of QR payment and instant settlement.', logo: '' },
+  { id: 'ex2', company: 'SavaTech', booth: 'B3', size: 'Standard', package: 'Exhibitor', paid: 150000, status: 'confirmed', contact: 'Kaleb Girma', email: 'hello@savatech.co', phone: '+251 912 800 002', website: 'savatech.co', description: 'SaaS tools for SME banking, compliance dashboards and core integrations.', logo: '' },
+  { id: 'ex3', company: 'PayCore', booth: 'A4', size: 'Premium', package: 'Silver Sponsor', paid: 250000, status: 'pending', contact: 'Sara Ayalew', email: 'events@paycore.io', phone: '', website: 'paycore.io', description: 'Cross-border payments and FX-as-a-service for fintechs in the Horn of Africa.', logo: '' },
+  { id: 'ex4', company: 'Mulu Hub', booth: 'C2', size: 'Standard', package: 'Exhibitor', paid: 0, status: 'registering', contact: 'Nahom Admasu', email: 'team@muluhub.com', phone: '+251 913 800 003', website: 'muluhub.com', description: 'Community innovation hub recruiting developers and partners.', logo: '' },
 ]
 
 // ----------------------------- SPONSORS -----------------------------
 export const sponsorsSeed = [
-  { id: 'spn1', name: 'Sheba Bank', package: 'Platinum', amount: 500000, status: 'active', deliverables: ['Main stage branding', 'Logo on tickets'] },
-  { id: 'spn2', name: 'Ethio Air', package: 'Gold', amount: 300000, status: 'active', deliverables: ['VIP lounge', 'Announcements'] },
-  { id: 'spn3', name: 'Dashen Brewery', package: 'Silver', amount: 180000, status: 'pending', deliverables: ['Beverage corner'] },
+  { id: 'spn1', name: 'Sheba Bank', package: 'Platinum', amount: 500000, status: 'active', deliverables: ['Main stage branding', 'Logo on tickets'], contact: 'Meseret Haile', email: 'partner@shebabank.et', phone: '+251 911 710 001', date: '2026-07-10' },
+  { id: 'spn2', name: 'Ethio Air', package: 'Gold', amount: 300000, status: 'active', deliverables: ['VIP lounge', 'Announcements'], contact: 'Yonas Abebe', email: 'events@ethioair.et', phone: '+251 911 710 002', date: '2026-07-14' },
+  { id: 'spn3', name: 'Dashen Brewery', package: 'Silver', amount: 180000, status: 'pending', deliverables: ['Beverage corner'], contact: 'Lidya Girma', email: 'sponsor@dashen.com', phone: '+251 911 710 003', date: '2026-08-01' },
 ]
 
 // ----------------------------- INVOICES / FINANCE -----------------------------
@@ -171,11 +185,11 @@ export const invoicesSeed = [
 ]
 
 export const expensesSeed = [
-  { id: 'ex1', eventId: 'ev1', category: 'Venue Rental', amount: 425000, date: '2026-07-28', vendorId: 'vd1' },
-  { id: 'ex2', eventId: 'ev1', category: 'Catering', amount: 210000, date: '2026-08-01', vendorId: 'vd1' },
-  { id: 'ex3', eventId: 'ev1', category: 'Technical', amount: 145000, date: '2026-08-02', vendorId: 'vd4' },
-  { id: 'ex4', eventId: 'ev3', category: 'Retreat Package', amount: 1240000, date: '2026-07-25', vendorId: 'vd5' },
-  { id: 'ex5', eventId: 'ev5', category: 'Catering', amount: 180000, date: '2026-07-10', vendorId: 'vd1' },
+  { id: 'exp1', eventId: 'ev1', category: 'Venue Rental', amount: 425000, date: '2026-07-28', vendorId: 'vd1' },
+  { id: 'exp2', eventId: 'ev1', category: 'Catering', amount: 210000, date: '2026-08-01', vendorId: 'vd1' },
+  { id: 'exp3', eventId: 'ev1', category: 'Technical', amount: 145000, date: '2026-08-02', vendorId: 'vd4' },
+  { id: 'exp4', eventId: 'ev3', category: 'Retreat Package', amount: 1240000, date: '2026-07-25', vendorId: 'vd5' },
+  { id: 'exp5', eventId: 'ev5', category: 'Catering', amount: 180000, date: '2026-07-10', vendorId: 'vd1' },
 ]
 
 // ----------------------------- PURCHASE REQUESTS -----------------------------
@@ -188,12 +202,12 @@ export const purchaseRequestsSeed = [
 
 // ----------------------------- REGISTRATIONS -----------------------------
 export const registrationsSeed = [
-  { id: 'rg1', eventId: 'ev3', name: 'Amanuel Tesfaye', email: 'amanuel@gmail.com', type: 'VIP', amount: 12000, paid: true, checkedIn: true, qr: 'AE-EV3-0001' },
-  { id: 'rg2', eventId: 'ev3', name: 'Hannah Solomon', email: 'hannah@gmail.com', type: 'Standard', amount: 6000, paid: true, checkedIn: true, qr: 'AE-EV3-0002' },
-  { id: 'rg3', eventId: 'ev3', name: 'Fitsum Alemu', email: 'fitsum@gmail.com', type: 'Standard', amount: 6000, paid: true, checkedIn: false, qr: 'AE-EV3-0003' },
-  { id: 'rg4', eventId: 'ev3', name: 'Ruth Mekonnen', email: 'ruth@gmail.com', type: 'VIP', amount: 12000, paid: true, checkedIn: false, qr: 'AE-EV3-0004' },
-  { id: 'rg5', eventId: 'ev3', name: 'Dagmawi Hailu', email: 'dagmawi@gmail.com', type: 'Group', amount: 5400, paid: false, checkedIn: false, qr: 'AE-EV3-0005' },
-  { id: 'rg6', eventId: 'ev3', name: 'Nebiyat Zewdie', email: 'nebiyat@gmail.com', type: 'Standard', amount: 6000, paid: true, checkedIn: false, qr: 'AE-EV3-0006' },
+  { id: 'rg1', eventId: 'ev3', name: 'Amanuel Tesfaye', email: 'amanuel@gmail.com', phone: '+251 911 100 111', type: 'VIP', amount: 12000, paid: true, paymentMethod: 'Telebirr', checkedIn: true, checkedInAt: '8/14/2026, 9:02:00 AM', qr: 'AE-EV3-0001' },
+  { id: 'rg2', eventId: 'ev3', name: 'Hannah Solomon', email: 'hannah@gmail.com', phone: '+251 912 200 222', type: 'Standard', amount: 6000, paid: true, paymentMethod: 'Cash', checkedIn: true, checkedInAt: '8/14/2026, 9:15:00 AM', qr: 'AE-EV3-0002' },
+  { id: 'rg3', eventId: 'ev3', name: 'Fitsum Alemu', email: 'fitsum@gmail.com', phone: '+251 913 300 333', type: 'Standard', amount: 6000, paid: true, paymentMethod: 'CBE Birr', checkedIn: false, qr: 'AE-EV3-0003' },
+  { id: 'rg4', eventId: 'ev3', name: 'Ruth Mekonnen', email: 'ruth@gmail.com', phone: '+251 914 400 444', type: 'VIP', amount: 12000, paid: true, paymentMethod: 'Card', checkedIn: false, qr: 'AE-EV3-0004' },
+  { id: 'rg5', eventId: 'ev3', name: 'Dagmawi Hailu', email: 'dagmawi@gmail.com', phone: '+251 915 500 555', type: 'Group', amount: 5400, paid: false, paymentMethod: 'Cash', checkedIn: false, qr: 'AE-EV3-0005' },
+  { id: 'rg6', eventId: 'ev3', name: 'Nebiyat Zewdie', email: 'nebiyat@gmail.com', phone: '+251 916 600 666', type: 'Standard', amount: 6000, paid: true, paymentMethod: 'Telebirr', checkedIn: false, qr: 'AE-EV3-0006' },
 ]
 
 // ----------------------------- ACTIVITIES -----------------------------
@@ -216,10 +230,10 @@ export const notificationsSeed = [
 ]
 
 export const campaignsSeed = [
-  { id: 'cm1', name: 'Summit Early Bird Blast', channel: 'Email', audience: 8200, sent: 8200, opens: 4210, clicks: 930, status: 'sent' },
-  { id: 'cm2', name: 'Conference Reminder SMS', channel: 'SMS', audience: 1450, sent: 1450, opens: 0, clicks: 0, status: 'sent' },
-  { id: 'cm3', name: 'WhatsApp VIP Invite', channel: 'WhatsApp', audience: 320, sent: 280, opens: 210, clicks: 122, status: 'sending' },
-  { id: 'cm4', name: 'Early Bird Coupon Emails', channel: 'Email', audience: 5000, sent: 0, opens: 0, clicks: 0, status: 'draft' },
+  { id: 'cm1', name: 'Summit Early Bird Blast', channel: 'Email', audience: 8200, sent: 8200, opens: 4210, clicks: 930, status: 'sent', schedule: '2026-07-20', description: 'Discount code push to drive early registrations for the summit.' },
+  { id: 'cm2', name: 'Conference Reminder SMS', channel: 'SMS', audience: 1450, sent: 1450, opens: 0, clicks: 0, status: 'sent', schedule: '2026-07-28', description: 'Day-before reminder with venue and check-in info.' },
+  { id: 'cm3', name: 'WhatsApp VIP Invite', channel: 'WhatsApp', audience: 320, sent: 280, opens: 210, clicks: 122, status: 'sending', schedule: '2026-08-05', description: 'Personalized VIP invitations with RSVP link.' },
+  { id: 'cm4', name: 'Early Bird Coupon Emails', channel: 'Email', audience: 5000, sent: 0, opens: 0, clicks: 0, status: 'draft', schedule: '2026-08-20', description: 'Coupon drop for the remaining Early Bird seats.' },
 ]
 
 export const couponsSeed = [

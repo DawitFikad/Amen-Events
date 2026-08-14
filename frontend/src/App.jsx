@@ -4,7 +4,6 @@ import Sidebar from './components/layout/Sidebar'
 import Topbar from './components/layout/Topbar'
 import DemoWizard from './components/DemoWizard'
 import LiveKpiBar from './components/LiveKpiBar'
-import { Modal, Field, Toast } from './components/ui'
 import { DataProvider, useData } from './store/DataContext'
 
 const Dashboard = lazy(() => import('./pages/Dashboard'))
@@ -75,88 +74,6 @@ function RouteFallback() {
   )
 }
 
-function QuickAdd({ onMenuClick }) {
-  const [open, setOpen] = useState(false)
-  const navigate = useNavigate()
-  const { state, addClient, addEvent, addTask } = useData()
-  const [tab, setTab] = useState('client')
-  const [form, setForm] = useState({})
-  const [toast, setToast] = useState(null)
-
-  const show = (message, type = 'success') => {
-    setToast({ message, type })
-    setTimeout(() => setToast(null), 2600)
-  }
-
-  const submit = () => {
-    if (tab === 'client' && form.company) {
-      addClient(form)
-      show(`Client "${form.company}" created`)
-    } else if (tab === 'event' && form.name) {
-      addEvent(form)
-      show(`Event "${form.name}" created`)
-      navigate('/erp/admin/events')
-    } else if (tab === 'task' && form.title) {
-      addTask({ ...form, assigneeId: form.assigneeId || 'st2', priority: form.priority || 'medium' })
-      show('Task created')
-    } else {
-      show('Please fill the required fields', 'warn')
-      return
-    }
-    setOpen(false)
-    setForm({})
-  }
-
-  return (
-    <>
-      <Topbar onQuickAdd={() => setOpen(true)} onMenuClick={onMenuClick} />
-      <Modal open={open} onClose={() => setOpen(false)} title="Quick Add">
-        <div className="flex gap-1 rounded-xl bg-brand-50 p-1 mb-4">
-          {[
-            ['client', 'Client'], ['event', 'Event'], ['task', 'Task'],
-          ].map(([v, l]) => (
-            <button key={v} onClick={() => setTab(v)} className={`tab flex-1 ${tab === v ? 'tab-active' : 'tab-idle'}`}>{l}</button>
-          ))}
-        </div>
-
-        {tab === 'client' && (
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Company *"><input className="input" value={form.company || ''} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="e.g. Walia Telecom" /></Field>
-            <Field label="Industry"><input className="input" value={form.industry || ''} onChange={(e) => setForm({ ...form, industry: e.target.value })} placeholder="Financial Services" /></Field>
-            <Field label="Contact Person"><input className="input" value={form.contactPerson || ''} onChange={(e) => setForm({ ...form, contactPerson: e.target.value })} placeholder="Full name" /></Field>
-            <Field label="Phone"><input className="input" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+251 9…" /></Field>
-            <Field label="Email" className="col-span-2"><input className="input" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="name@company.com" /></Field>
-          </div>
-        )}
-
-        {tab === 'event' && (
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Event Name *" className="col-span-2"><input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Annual Innovation Summit" /></Field>
-            <Field label="Category"><select className="input" value={form.category || ''} onChange={(e) => setForm({ ...form, category: e.target.value })}><option value="">Select…</option><option>Conference</option><option>Exhibition</option><option>Product Launch</option><option>Retreat</option><option>Gala</option><option>Ceremony</option></select></Field>
-            <Field label="Date"><input type="date" className="input" value={form.date || ''} onChange={(e) => setForm({ ...form, date: e.target.value })} /></Field>
-            <Field label="Budget (ETB)"><input type="number" className="input" value={form.budget || ''} onChange={(e) => setForm({ ...form, budget: e.target.value })} placeholder="850000" /></Field>
-            <Field label="Client"><select className="input" value={form.clientId || ''} onChange={(e) => setForm({ ...form, clientId: e.target.value })}><option value="">Select…</option>{state.clients.map((c) => <option key={c.id} value={c.id}>{c.company}</option>)}</select></Field>
-          </div>
-        )}
-
-        {tab === 'task' && (
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Task Title *" className="col-span-2"><input className="input" value={form.title || ''} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Book transport" /></Field>
-            <Field label="Priority"><select className="input" value={form.priority || 'medium'} onChange={(e) => setForm({ ...form, priority: e.target.value })}><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></Field>
-            <Field label="Due Date"><input type="date" className="input" value={form.due || ''} onChange={(e) => setForm({ ...form, due: e.target.value })} /></Field>
-          </div>
-        )}
-
-        <div className="mt-5 flex justify-end gap-2">
-          <button className="btn-outline" onClick={() => setOpen(false)}>Cancel</button>
-          <button className="btn-primary" onClick={submit}>Create</button>
-        </div>
-      </Modal>
-      <Toast toast={toast} />
-    </>
-  )
-}
-
 function PoweredFooter() {
   return (
     <footer className="animate-fade-up mt-10 pb-8">
@@ -210,7 +127,7 @@ function Shell() {
       )}
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} mobileNav={mobileNav} setMobileNav={setMobileNav} />
       <div className={`${collapsed ? 'lg:pl-[72px]' : 'lg:pl-64'} transition-all duration-300`}>
-        <QuickAdd onMenuClick={() => setMobileNav(true)} />
+        <Topbar onMenuClick={() => setMobileNav(true)} />
         <main key={location.pathname} className="mx-auto max-w-[1400px] overflow-x-hidden px-5 py-6 animate-page-enter">
           {/* KPI OFF */}
           <Outlet />

@@ -16,19 +16,19 @@ const CATEGORIES = [
 ]
 
 const TESTIMONIALS = [
-  { name: 'Hanan Ali', role: 'Marketing Director', text: 'Amen Events made our product launch seamless. The QR check-in was instant and professional.', rating: 5 },
-  { name: 'Dawit Tsegaye', role: 'Tech Entrepreneur', text: 'Best event platform in Ethiopia. I found three conferences and registered in minutes.', rating: 5 },
-  { name: 'Selam Bekele', role: 'Event Attendee', text: 'The ticket QR system is brilliant. No paper, no hassle — just scan and enter.', rating: 5 },
+  { name: 'Hanan Ali', role: 'Marketing Director', text: 'The QR check-in at our product launch was quick and professional — guests were through the door in seconds.', rating: 5 },
+  { name: 'Dawit Tsegaye', role: 'Tech Entrepreneur', text: 'I registered for three conferences in one sitting. Clearest ticket page I have used so far.', rating: 5 },
+  { name: 'Selam Bekele', role: 'Event Attendee', text: 'No paper, no queue. My ticket lived on my phone and got scanned straight at the entrance.', rating: 4 },
 ]
 
-const SPONSORS = ['Ethio Telecom', 'Dashen Bank', 'Heineken', 'Coca-Cola', 'Ethiopian Airlines', 'Safaricom']
+const SPONSORS = ['ETH FINTECH Group', 'Abyssinia Bank', 'Walia Telecom', 'Sheba Bank', 'Sof Omer Hotel']
 
 const FAQS = [
-  { q: 'How do I purchase tickets?', a: 'Browse events, select your ticket type, complete checkout, and receive your QR code instantly.' },
-  { q: 'Can I get a refund?', a: 'Refund policies vary by event. Check the event page for specific refund terms.' },
-  { q: 'How do I check in at an event?', a: 'Simply show your QR code from your phone at the entrance. Our staff will scan it for instant entry.' },
-  { q: 'Do I need an account to buy tickets?', a: 'Yes, creating a free account allows you to manage your tickets, view purchase history, and receive event updates.' },
-  { q: 'What payment methods are supported?', a: 'We currently support mock payments for demo. Telebirr, Chapa, and Stripe integration is coming soon.' },
+  { q: 'How do I purchase tickets?', a: 'Browse events, pick your ticket type, complete checkout, and your QR ticket arrives instantly on your profile.' },
+  { q: 'Can I get a refund?', a: 'Refund policies vary by event. Check the event page for the specific terms before buying.' },
+  { q: 'How do I check in at an event?', a: 'Open your ticket QR at the entrance — our staff scan it for immediate entry. No printing needed.' },
+  { q: 'Do I need an account to buy tickets?', a: 'Yes, a free account stores your tickets, your purchase history, and event updates in one place.' },
+  { q: 'What payment methods are available?', a: 'Cash, card, Telebirr, CBE Birr and bank transfer are accepted at checkout.' },
 ]
 
 export default function Landing() {
@@ -63,11 +63,11 @@ export default function Landing() {
         <div className="relative mx-auto max-w-7xl px-5 pt-16 pb-12 sm:px-8 sm:pt-24 sm:pb-16">
           <div className="mx-auto max-w-3xl text-center">
             <div className="animate-portal-fade-up mb-6 inline-flex items-center gap-2 rounded-full border border-portal-100 bg-portal-50 px-4 py-2 text-sm font-semibold text-portal-600">
-              <Sparkles size={15} /> Ethiopia's #1 Event Platform
+              <Sparkles size={15} /> Event Ticketing & Entry
             </div>
             <h1 className="animate-portal-fade-up text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl lg:text-6xl" style={{ animationDelay: '0.1s' }}>
-              Find amazing events
-              <span className="block text-portal-500">near you</span>
+              Find events
+              <span className="block text-portal-500">across Ethiopia</span>
             </h1>
             <p className="animate-portal-fade-up mx-auto mt-6 max-w-xl text-lg leading-relaxed text-gray-500" style={{ animationDelay: '0.2s' }}>
               Browse upcoming conferences, concerts, and exhibitions. Register with instant QR ticket delivery.
@@ -142,9 +142,8 @@ export default function Landing() {
               <div className="flex flex-col justify-center p-8 lg:p-10">
                 <span className="text-sm font-semibold text-portal-600">{featured.category}</span>
                 <h3 className="mt-2 text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">{featured.name}</h3>
-                <div className="mt-4 flex items-center gap-1 text-gold-500">
-                  {[1, 2, 3, 4, 5].map((i) => <Star key={i} size={16} fill="currentColor" />)}
-                  <span className="ml-2 text-sm font-semibold text-gray-600">5.0</span>
+                <div className="mt-4 flex items-center gap-2 text-sm text-gray-600">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-portal-50 px-3 py-1 font-semibold text-portal-600"><Users size={13} /> {featured._count?.registrations || 0} registered</span>
                 </div>
                 <div className="mt-5 space-y-2.5">
                   <div className="flex items-center gap-2.5 text-sm text-gray-600">
@@ -156,7 +155,6 @@ export default function Landing() {
                 </div>
                 <div className="mt-6 flex items-center gap-3">
                   <span className="rounded-xl bg-portal-500 px-6 py-3 text-sm font-bold text-white transition group-hover:bg-portal-600">Buy Ticket</span>
-                  <span className="text-sm text-gray-400">{featured._count?.registrations || 0} registered</span>
                 </div>
               </div>
             </div>

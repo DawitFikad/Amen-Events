@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Ticket, CheckCircle2, XCircle, Loader2, ArrowLeft, CreditCard, Shield } from 'lucide-react'
+import { Ticket, CheckCircle2, XCircle, Loader2, ArrowLeft, Shield } from 'lucide-react'
 import { useAttendee } from '../../store/AttendeeContext'
 
 export default function Checkout() {
@@ -8,6 +8,7 @@ export default function Checkout() {
   const navigate = useNavigate()
   const { isAuthenticated, authFetch } = useAttendee()
   const [couponCode, setCouponCode] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState('Telebirr')
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState(null)
   const [agreeTerms, setAgreeTerms] = useState(false)
@@ -49,7 +50,7 @@ export default function Checkout() {
 
       const payData = await authFetch(`/portal/orders/${orderData.order.id}/pay`, {
         method: 'POST',
-        body: JSON.stringify({ method: 'mock' }),
+        body: JSON.stringify({ method: paymentMethod }),
       })
       if (payData.error) { setError(payData.error); setProcessing(false); return }
 
@@ -113,14 +114,16 @@ export default function Checkout() {
 
           {/* Payment Method */}
           <h3 className="mt-6 text-lg font-bold text-gray-900">Payment Method</h3>
-          <div className="mt-4 rounded-2xl border-2 border-portal-200 bg-portal-50/50 p-4">
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-portal-100 text-portal-600"><CreditCard size={20} /></span>
-              <div>
-                <p className="text-sm font-bold text-gray-900">Mock Payment</p>
-                <p className="text-xs text-gray-400">Demo mode — no real charge</p>
-              </div>
-            </div>
+          <div className="mt-4 grid gap-2.5">
+            {['Telebirr', 'CBE Birr', 'Card', 'Bank Transfer', 'Cash'].map((m) => (
+              <label key={m} className={`flex cursor-pointer items-center gap-3 rounded-2xl border p-4 transition ${paymentMethod === m ? 'border-portal-300 bg-portal-50/60' : 'border-gray-200 bg-white hover:bg-gray-50'}`}>
+                <input type="radio" name="payment" checked={paymentMethod === m} onChange={() => setPaymentMethod(m)} className="accent-portal-600" />
+                <div>
+                  <p className="text-sm font-bold text-gray-900">{m}</p>
+                  <p className="text-xs text-gray-400">{m === 'Card' ? 'Visa · Mastercard' : m === 'Telebirr' || m === 'CBE Birr' ? 'Mobile money' : m === 'Bank Transfer' ? 'Direct deposit' : 'Pay at the venue'}</p>
+                </div>
+              </label>
+            ))}
           </div>
 
           {/* Terms */}

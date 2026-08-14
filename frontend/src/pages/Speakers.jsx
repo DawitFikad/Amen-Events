@@ -1,16 +1,17 @@
 import React, { useState } from 'react'
-import { Mic2, Plus, CalendarDays, Award, Upload, Clock3, Video, UserCheck } from 'lucide-react'
+import { Mic2, Plus, CalendarDays, Award, Upload, Clock3, Video, UserCheck, Pencil, Phone, Mail } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, Toast, EmptyState, Th, Td, Avatar, Segmented, Modal, Field } from '../components/ui'
 import { downloadCSV } from '../store/exportUtils'
-import { nameOnly, textRequired, optional, validate } from '../store/validation'
+import { nameOnly, textRequired, emailValid, phoneValid, optional, validate } from '../store/validation'
 
 export default function Speakers() {
-  const { state, patch, addSpeaker, logActivity } = useData()
+  const { state, patch, addSpeaker, updateSpeaker, logActivity } = useData()
   const [view, setView] = useState('speakers')
   const [toast, setToast] = useState(null)
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({})
+  const [editId, setEditId] = useState(null)
   const [sessionOpen, setSessionOpen] = useState(false)
   const [sessionForm, setSessionForm] = useState({})
   const [errors, setErrors] = useState({})
@@ -25,14 +26,25 @@ export default function Speakers() {
     name: [nameOnly('Full name')],
     company: [optional(textRequired('Organization', { min: 2, max: 100 }))],
     topic: [optional(textRequired('Topic', { min: 3, max: 120 }))],
+    email: [optional(emailValid('Email'))],
+    phone: [optional(phoneValid('Phone number'))],
   }
+
+  const openAdd = () => { setEditId(null); setForm({}); setErrors({}); setOpen(true) }
+
+  const openEdit = (s) => { setEditId(s.id); setForm({ name: s.name || '', company: s.company || '', topic: s.topic || '', eventId: s.eventId || 'ev1', time: s.time || '12:00', status: s.status || 'pending', email: s.email || '', phone: s.phone || '', bio: s.bio || '' }); setErrors({}); setOpen(true) }
 
   const submit = () => {
     const res = validate(form, speakerSchema)
     if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
-    addSpeaker(form)
-    show(`${form.name} added as speaker`)
-    setOpen(false); setForm({}); setErrors({})
+    if (editId) {
+      updateSpeaker(editId, form)
+      show(`${form.name} updated`)
+    } else {
+      addSpeaker(form)
+      show(`${form.name} added as speaker`)
+    }
+    setOpen(false); setForm({}); setErrors({}); setEditId(null)
   }
 
   const addSession = () => {
@@ -68,7 +80,7 @@ export default function Speakers() {
         title="Speaker & Conference Management"
         subtitle="Speakers, sessions, agenda and certificates."
         icon={Mic2}
-        actions={<button className="btn-primary" onClick={() => { setOpen(true); setErrors({}) }}><Plus size={15} /> Add Speaker</button>}
+        actions={<button className="btn-primary" onClick={openAdd}><Plus size={15} /> Add Speaker</button>}
       />
 
       <div className="mb-5 flex flex-wrap gap-1.5">
@@ -83,15 +95,25 @@ export default function Speakers() {
             <div key={s.id} className="card p-5">
               <div className="flex items-center justify-between">
                 <Avatar name={s.name} initials={s.initials} color={s.color} size="lg" />
-                <Badge status={s.status} label={s.status} />
+                <div className="flex items-center gap-1.5">
+                  <Badge status={s.status} label={s.status} />
+                  <button onClick={() => openEdit(s)} className="btn-ghost !p-1.5 text-ink/40 hover:text-brand-700" title="Edit speaker"><Pencil size={14} /></button>
+                </div>
               </div>
               <h3 className="mt-3 font-bold text-brand-950">{s.name}</h3>
               <p className="text-xs text-ink/50">{s.company}</p>
+              {(s.email || s.phone) && (
+                <div className="mt-1.5 space-y-0.5">
+                  {s.email && <p className="flex items-center gap-1.5 text-[11px] text-ink/45"><Mail size={11} /> {s.email}</p>}
+                  {s.phone && <p className="flex items-center gap-1.5 text-[11px] text-ink/45"><Phone size={11} /> {s.phone}</p>}
+                </div>
+              )}
               <div className="mt-3 rounded-lg bg-brand-50 p-3">
                 <p className="text-[11px] font-semibold text-ink/40">Topic</p>
                 <p className="mt-0.5 text-sm font-semibold text-brand-950">{s.topic}</p>
                 <p className="mt-1 flex items-center gap-1 text-xs text-ink/45"><Clock3 size={12} /> {s.time} · {state.events.find((e) => e.id === s.eventId)?.name}</p>
               </div>
+              {s.bio && <p className="mt-2 line-clamp-2 text-xs text-ink/50">{s.bio}</p>}
               <div className="mt-3 flex gap-2">
                 <button className="btn-outline flex-1 !py-1.5 text-xs" onClick={() => { logActivity(`Presentation uploaded for ${s.name}`, 'speakers'); show(`Presentation uploaded for ${s.name}`) }}><Upload size={13} /> Upload</button>
                 <button className="btn-ghost flex-1 !py-1.5 text-xs" onClick={() => { logActivity(`Certificate generated for ${s.name}`, 'speakers'); show(`Certificate generated for ${s.name}`) }}><Award size={13} /> Certificate</button>
@@ -175,18 +197,21 @@ export default function Speakers() {
         </div>
       )}
 
-      <Modal open={open} onClose={() => setOpen(false)} title="Add Speaker">
+      <Modal open={open} onClose={() => { setOpen(false); setEditId(null) }} title={editId ? 'Edit Speaker' : 'Register Speaker'}>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Full Name *" className="col-span-2"><input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Prof. Elias Bekele" />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
           <Field label="Organization/Company"><input className="input" value={form.company || ''} onChange={(e) => setForm({ ...form, company: e.target.value })} />{errors.company && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.company}</p>}</Field>
           <Field label="Topic"><input className="input" value={form.topic || ''} onChange={(e) => setForm({ ...form, topic: e.target.value })} placeholder="e.g. Digital Payments Trends" />{errors.topic && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.topic}</p>}</Field>
-          <Field label="Event"><select className="input" value={form.eventId || 'ev1'} onChange={(e) => setForm({ ...form, eventId: e.target.value })}>{state.events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}</select></Field>
+          <Field label="Email"><input className="input" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="speaker@org.et" />{errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}</Field>
+          <Field label="Phone"><input className="input" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+251 9XX XXX XXX" />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</Field>
+          <Field label="Event" className="col-span-2"><select className="input" value={form.eventId || 'ev1'} onChange={(e) => setForm({ ...form, eventId: e.target.value })}>{state.events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}</select></Field>
           <Field label="Session Time"><input type="time" className="input" value={form.time || '12:00'} onChange={(e) => setForm({ ...form, time: e.target.value })} /></Field>
           <Field label="Status"><select className="input" value={form.status || 'pending'} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="confirmed">Confirmed</option><option value="pending">Pending</option></select></Field>
+          <Field label="Speaker Bio" className="col-span-2"><textarea className="input min-h-[70px] resize-y" value={form.bio || ''} onChange={(e) => setForm({ ...form, bio: e.target.value })} placeholder="Background, expertise, talk highlights…" /></Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
-          <button className="btn-outline" onClick={() => setOpen(false)}>Cancel</button>
-          <button className="btn-primary" onClick={submit}>Add Speaker</button>
+          <button className="btn-outline" onClick={() => { setOpen(false); setEditId(null) }}>Cancel</button>
+          <button className="btn-primary" onClick={submit}>{editId ? 'Save Changes' : 'Register Speaker'}</button>
         </div>
       </Modal>
 

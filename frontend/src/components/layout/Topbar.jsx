@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { Menu, Bell, Search, Plus, ChevronDown, LogOut, UserRound, CheckCheck } from 'lucide-react'
+import { Menu, Bell, ChevronDown, LogOut, UserRound, CheckCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useData } from '../../store/DataContext'
 import { Avatar, BackButton } from '../ui'
 import api from '../../store/api'
 import GlobalSearch from '../GlobalSearch'
 
-export default function Topbar({ onQuickAdd, onMenuClick }) {
+export default function Topbar({ onMenuClick }) {
   const { state, logout, backendOnline } = useData()
   const navigate = useNavigate()
   const [showBell, setShowBell] = useState(false)
@@ -119,16 +119,12 @@ export default function Topbar({ onQuickAdd, onMenuClick }) {
           )}
         </div>
 
-        <button onClick={onQuickAdd} className="btn-primary !px-3.5">
-          <Plus size={16} /> <span className="hidden sm:inline">Quick Add</span>
-        </button>
-
         <div className="relative">
           <button
             onClick={() => setShowUser((s) => !s)}
             className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-brand-50"
           >
-            <Avatar name={me?.name} initials={me?.initials} color={me?.color} size="sm" />
+            <Avatar name={me?.name} initials={me?.initials} color={me?.color} size="sm" img={me?.avatar} />
             <span className="hidden md:flex items-center gap-1 text-[13px] font-semibold text-ink/70">
               {me?.name.split(' ')[0]}
               <ChevronDown size={13} className="text-ink/35" />
@@ -140,7 +136,7 @@ export default function Topbar({ onQuickAdd, onMenuClick }) {
               <div className="absolute right-0 top-12 z-20 w-64 rounded-xl border border-brand-100 bg-white p-2 shadow-pop">
                 <div className="border-b border-brand-50 px-3 py-2.5">
                   <div className="flex items-center gap-2.5">
-                    <Avatar name={me?.name} initials={me?.initials} color={me?.color} />
+                    <Avatar name={me?.name} initials={me?.initials} color={me?.color} img={me?.avatar} />
                     <div className="min-w-0">
                       <p className="truncate text-[13px] font-bold text-brand-950">{me?.name}</p>
                       <p className="truncate text-[11px] text-ink/45">{me?.role} · {me?.dept}</p>

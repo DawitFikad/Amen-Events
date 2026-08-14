@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from 'react'
-import { UserCircle, Lock, History, Shield, Save, CheckCircle2, XCircle, MapPin, Mail, Phone, Building2, Briefcase } from 'lucide-react'
+import { UserCircle, Lock, History, Shield, Save, CheckCircle2, XCircle, MapPin, Mail, Phone, Building2, Briefcase, Camera } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import api from '../store/api'
 import { PageHeader, Avatar, Badge, Toast, Th, Td } from '../components/ui'
 import { nameOnly, phoneValid, optional, validate } from '../store/validation'
 
 export default function Profile() {
-  const { state, rbac, backendOnline } = useData()
+  const { state, rbac, backendOnline, patch } = useData()
   const user = state.currentUser
+  const me = state.staff?.find((m) => m.id === state.currentUserId)
   const [view, setView] = useState('info')
   const [toast, setToast] = useState(null)
   const [saving, setSaving] = useState(false)
 
   // Profile form
   const [form, setForm] = useState({
-    name: '', phone: '', dept: '', jobTitle: '', bio: '',
+    name: '', phone: '', dept: '', jobTitle: '', bio: '', avatar: '',
   })
 
   // Password form
@@ -34,9 +35,10 @@ export default function Profile() {
         dept: user.dept || '',
         jobTitle: user.jobTitle || '',
         bio: user.bio || '',
+        avatar: me?.avatar || user.avatar || '',
       })
     }
-  }, [user])
+  }, [user, me])
 
   // Load login history when tab is selected
   useEffect(() => {
@@ -59,12 +61,16 @@ export default function Profile() {
       if (backendOnline) {
         const { user: updated } = await api.auth.updateProfile(form)
         show('Profile updated successfully')
-        // Update local state
-        if (state.currentUser) {
-          // Trigger a re-render by updating via patch
+        if (state.currentUserId) {
+          patch('staff', (list) => list.map((m) => (m.id === state.currentUserId ? { ...m, name: form.name, phone: form.phone, dept: form.dept, jobTitle: form.jobTitle, bio: form.bio, avatar: form.avatar } : m)))
+          patch('currentUser', (u) => ({ ...u, ...(updated || {}), name: form.name, avatar: form.avatar }))
         }
       } else {
         show('Profile saved (offline mode)')
+        if (state.currentUserId) {
+          patch('staff', (list) => list.map((m) => (m.id === state.currentUserId ? { ...m, name: form.name, phone: form.phone, dept: form.dept, jobTitle: form.jobTitle, bio: form.bio, avatar: form.avatar } : m)))
+          patch('currentUser', (u) => ({ ...u, name: form.name, avatar: form.avatar }))
+        }
       }
     } catch (err) {
       show(err.message || 'Failed to update profile', 'error')
@@ -121,7 +127,13 @@ export default function Profile() {
       {/* Profile summary card */}
       <div className="card mb-5 overflow-hidden">
         <div className="flex flex-col items-center gap-4 p-6 sm:flex-row sm:items-center">
-          <Avatar name={user.name} initials={initials} color={user.color || 'bg-brand-700'} size="lg" />
+          <div className="relative">
+            <Avatar name={user.name} initials={initials} color={user.color || 'bg-brand-700'} size="lg" img={form.avatar} />
+            <label className="absolute -bottom-1 -right-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-brand-700 text-white shadow-md hover:bg-brand-800" title="Change photo">
+              <Camera size={13} />
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (!f) return; if (f.size > 5 * 1024 * 1024) { show('Photo must be under 5MB', 'warn'); return } const r = new FileReader(); r.onload = () => setForm((pf) => ({ ...pf, avatar: r.result })); r.readAsDataURL(f) }} />
+            </label>
+          </div>
           <div className="flex-1 text-center sm:text-left">
             <div className="flex items-center justify-center gap-2 sm:justify-start">
               <h2 className="text-lg font-black text-brand-950">{user.name}</h2>
@@ -152,6 +164,14 @@ export default function Profile() {
           <div className="card p-5">
             <p className="mb-4 font-bold text-brand-950">Personal Information</p>
             <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <label className="label">Profile Photo</label>
+                <div className="flex items-center gap-3">
+                  <Avatar name={form.name || user.name} initials={form.name ? form.name.split(' ').map((p) => p[0]).slice(0, 2).join('') : initials} color={user.color || 'bg-brand-700'} size="lg" img={form.avatar} />
+                  <label className="btn-outline cursor-pointer !py-2 text-xs"><Camera size={14} /> Upload photo<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (!f) return; if (f.size > 5 * 1024 * 1024) { show('Photo must be under 5MB', 'warn'); return } const r = new FileReader(); r.onload = () => setForm((pf) => ({ ...pf, avatar: r.result })); r.readAsDataURL(f) }} /></label>
+                  {form.avatar && <button className="btn-ghost text-xs !text-red-600" onClick={() => setForm((pf) => ({ ...pf, avatar: '' }))}><XCircle size={13} /> Remove</button>}
+                </div>
+              </div>
               <div>
                 <label className="label">Full Name</label>
                 <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Your name" />

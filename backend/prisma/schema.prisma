@@ -124,6 +124,11 @@ model Client {
   contactRole   String    @default("Contact")
   phone         String    @default("")
   email         String    @default("")
+  website       String    @default("")
+  taxId         String    @default("")
+  address       String    @default("")
+  notes         String    @default("")
+  photo         String    @default("")
   status        String    @default("active")
   stage         String    @default("lead")
   totalValue    Int       @default(0)
@@ -197,6 +202,18 @@ model Event {
   attendees  Int?
   progress   Int           @default(0)
   team       String[]
+  // Registration & planning profile
+  image          String   @default("")
+  description    String   @default("")
+  endDate        String   @default("")
+  endTime        String   @default("")
+  deadline       String   @default("")
+  capacity       Int      @default(0)
+  price          Int      @default(0)
+  published      Boolean  @default(false)
+  tags           String[] @default([])
+  contactName    String   @default("")
+  contactPhone   String   @default("")
   client     Client?       @relation(fields: [clientId], references: [id])
   venue      Venue?        @relation(fields: [venueId], references: [id])
   tasks      Task[]
@@ -233,6 +250,9 @@ model Speaker {
   topic     String   @default("TBD")
   eventId   String?
   company   String   @default("")
+  email     String   @default("")
+  phone     String   @default("")
+  bio       String   @default("")
   time      String   @default("12:00")
   status    String   @default("pending")
   initials  String   @default("")
@@ -242,14 +262,20 @@ model Speaker {
 }
 
 model Exhibitor {
-  id        String   @id @default(cuid())
-  company   String
-  booth     String   @default("")
-  size      String   @default("Standard")
-  package   String   @default("Exhibitor")
-  paid      Int      @default(0)
-  status    String   @default("registering")
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  company     String
+  booth       String   @default("")
+  size        String   @default("Standard")
+  package     String   @default("Exhibitor")
+  paid        Int      @default(0)
+  status      String   @default("registering")
+  contact     String   @default("")
+  email       String   @default("")
+  phone       String   @default("")
+  website     String   @default("")
+  description String   @default("")
+  logo        String   @default("")
+  createdAt   DateTime @default(now())
 }
 
 model Sponsor {
@@ -259,6 +285,10 @@ model Sponsor {
   amount      Int      @default(0)
   status      String   @default("pending")
   deliverables String[]
+  contact     String   @default("")
+  email       String   @default("")
+  phone       String   @default("")
+  date        String   @default("")
   createdAt   DateTime @default(now())
 }
 
@@ -290,17 +320,20 @@ model Expense {
 }
 
 model Registration {
-  id        String   @id @default(cuid())
-  eventId   String?
-  name      String
-  email     String   @default("")
-  type      String   @default("Standard")
-  amount    Int      @default(0)
-  paid      Boolean  @default(false)
-  checkedIn Boolean  @default(false)
-  qr        String   @default("") @unique
-  event     Event?   @relation(fields: [eventId], references: [id])
-  createdAt DateTime @default(now())
+  id            String   @id @default(cuid())
+  eventId       String?
+  name          String
+  email         String   @default("")
+  phone         String   @default("")
+  type          String   @default("Standard")
+  amount        Int      @default(0)
+  paid          Boolean  @default(false)
+  paymentMethod String   @default("Cash")
+  checkedIn     Boolean  @default(false)
+  checkedInAt   String   @default("")
+  qr            String   @default("") @unique
+  event         Event?   @relation(fields: [eventId], references: [id])
+  createdAt     DateTime @default(now())
 }
 
 model Allocation {
@@ -322,6 +355,8 @@ model Campaign {
   opens     Int      @default(0)
   clicks    Int      @default(0)
   status    String   @default("draft")
+  schedule  String   @default("")
+  description String @default("")
   createdAt DateTime @default(now())
 }
 

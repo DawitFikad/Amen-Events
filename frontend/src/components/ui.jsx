@@ -23,11 +23,11 @@ export function BackButton({ fallback = '/', className = '', label = 'Back' }) {
 }
 
 // ---- Avatars / initials ---- 
-export function Avatar({ name, initials, color = 'bg-brand-700', size = 'md' }) {
+export function Avatar({ name, initials, color = 'bg-brand-700', size = 'md', img }) {
   const sizes = { xs: 'h-6 w-6 text-[10px]', sm: 'h-7 w-7 text-[11px]', md: 'h-9 w-9 text-xs', lg: 'h-11 w-11 text-sm' }
   return (
-    <span className={`inline-flex items-center justify-center rounded-full ${color} text-white font-bold ${sizes[size]} shrink-0`} title={name}>
-      {initials || (name ? name.split(' ').map((p) => p[0]).slice(0, 2).join('') : '?')}
+    <span className={`inline-flex items-center justify-center overflow-hidden rounded-full ${color} text-white font-bold ${sizes[size]} shrink-0`} title={name}>
+      {img ? <img src={img} alt={name} className="h-full w-full object-cover" /> : (initials || (name ? name.split(' ').map((p) => p[0]).slice(0, 2).join('') : '?'))}
     </span>
   )
 }

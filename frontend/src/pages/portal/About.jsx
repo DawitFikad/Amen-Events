@@ -8,15 +8,15 @@ export default function About() {
       <div className="text-center">
         <h1 className="text-3xl font-bold text-brand-950">About Amen Events</h1>
         <p className="mx-auto mt-4 max-w-2xl text-ink/60">
-          Amen Events is Ethiopia's premier event management platform, connecting attendees with extraordinary events — from conferences and product launches to retreats and exhibitions.
+          Amen Events helps organizers and attendees across Ethiopia — from conferences and product launches to retreats and exhibitions. One platform handles registration, ticketing and entry.
         </p>
       </div>
 
       <div className="mt-10 grid gap-6 sm:grid-cols-3">
         {[
-          { icon: Ticket, title: 'Instant Tickets', desc: 'Get QR codes immediately after purchase. No waiting, no printing.' },
-          { icon: Shield, title: 'Secure Platform', desc: 'Your data and payments are protected with enterprise-grade security.' },
-          { icon: Zap, title: 'Seamless Experience', desc: 'Browse, register, and check in — all in seconds, from any device.' },
+          { icon: Ticket, title: 'Instant Tickets', desc: 'QR codes are issued as soon as you register. No waiting, no printing.' },
+          { icon: Shield, title: 'In Control', desc: 'Organizers set the pricing, collect payments and manage the guest list in one place.' },
+          { icon: Zap, title: 'Fast Entry', desc: 'Guests scan at the entrance and staff see attendance in real time.' },
         ].map((f) => (
           <div key={f.title} className="card p-6 text-center">
             <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-100 text-brand-700"><f.icon size={22} /></span>
@@ -27,9 +27,9 @@ export default function About() {
       </div>
 
       <div className="mt-10 card p-8">
-        <h2 className="font-bold text-brand-950 text-lg">Our Mission</h2>
+        <h2 className="font-bold text-brand-950 text-lg">What We Do</h2>
         <p className="mt-3 text-sm text-ink/65 leading-relaxed">
-          We believe that attending events should be effortless. Our platform bridges the gap between event organizers and attendees, providing a seamless experience from discovery to check-in. Whether you're a professional looking to network at a conference, a student attending a workshop, or an enthusiast exploring exhibitions — Amen Events makes it simple.
+          Organizers use Amen Events to publish events, sell tickets, manage sponsors and run guest check-in at the door. Attendees use it to find events, buy their tickets and keep a clean digital pass in their profile — no paper, no queues.
         </p>
       </div>
 

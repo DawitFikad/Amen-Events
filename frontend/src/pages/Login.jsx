@@ -40,7 +40,7 @@ const securityBadges = [
 ]
 
 export default function Login() {
-  const { login, backendOnline } = useData()
+  const { login, backendOnline, state } = useData()
   const navigate = useNavigate()
   const [role, setRole] = useState('')
   const [email, setEmail] = useState('')
@@ -118,6 +118,7 @@ export default function Login() {
   }
 
   const selectedRole = roles.find((rr) => rr.key === role)
+  const selectedStaff = state.staff?.find((m) => m.id === selectedRole?.userId)
 
   return (
     <div className="relative flex min-h-screen w-full overflow-y-auto bg-white lg:h-screen lg:overflow-hidden">
@@ -600,8 +601,8 @@ export default function Login() {
           {/* User preview card */}
           {selectedRole && (
           <div key={role} className="animate-fade-in mt-4 flex items-center gap-3 rounded-2xl border border-gray-100/80 bg-gray-50/40 p-3 backdrop-blur-sm">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-brand-700 to-brand-900 text-[11px] font-black text-white shadow-sm">
-              {selectedRole?.name?.split(' ').map(p => p[0]).slice(0, 2).join('') || '?'}
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-brand-700 to-brand-900 text-[11px] font-black text-white shadow-sm">
+              {selectedStaff?.avatar ? <img src={selectedStaff.avatar} alt={selectedRole?.name} className="h-full w-full object-cover" /> : (selectedRole?.name?.split(' ').map(p => p[0]).slice(0, 2).join('') || '?')}
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-bold text-brand-950">{selectedRole?.name}</p>

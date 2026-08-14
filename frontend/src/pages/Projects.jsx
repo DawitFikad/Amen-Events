@@ -51,9 +51,9 @@ export default function Projects() {
   }
 
 const submit = () => {
-    const res = validate(form, { title: [textRequired('Task title', { min: 3, max: 120 })], due: [optional(dateRequired('Due date'))] })
+    const res = validate(form, { title: [textRequired('Task title', { min: 3, max: 120 })], due: [optional(dateRequired('Due date'))], progress: [optional((v) => { const n = Number(v); if (v === '' || v === null || v === undefined) return ''; if (isNaN(n) || n < 0 || n > 100) return 'Progress must be 0–100'; return '' })] })
     if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
-    addTask({ ...form, assigneeId: form.assigneeId || 'st2', priority: form.priority || 'medium', status: 'todo', eventId: form.eventId || 'ev1', progress: 0 })
+    addTask({ ...form, assigneeId: form.assigneeId || 'st2', priority: form.priority || 'medium', status: form.status || 'todo', eventId: form.eventId || 'ev1', progress: Number(form.progress) || 0, description: form.description || '' })
     show(`${form.title} added to board`)
     setOpen(false); setForm({}); setErrors({})
   }
@@ -247,13 +247,16 @@ const submit = () => {
       )}
 
       {/* New task modal */}
-      <Modal open={open} onClose={() => setOpen(false)} title="Create Task">
+      <Modal open={open} onClose={() => setOpen(false)} title="Create Task" width="max-w-xl">
         <div className="grid grid-cols-2 gap-3">
           <Field label="Title *" className="col-span-2"><input className="input" value={form.title || ''} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Arrange VIP transport" />{errors.title && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.title}</p>}</Field>
           <Field label="Event"><select className="input" value={form.eventId || 'ev1'} onChange={(e) => setForm({ ...form, eventId: e.target.value })}>{state.events.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}</select></Field>
           <Field label="Assignee"><select className="input" value={form.assigneeId || 'st2'} onChange={(e) => setForm({ ...form, assigneeId: e.target.value })}>{state.staff.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select></Field>
           <Field label="Priority"><select className="input" value={form.priority || 'medium'} onChange={(e) => setForm({ ...form, priority: e.target.value })}><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></Field>
-          <Field label="Due Date"><input type="date" className="input" value={form.due || ''} onChange={(e) => setForm({ ...form, due: e.target.value })} /></Field>
+          <Field label="Status"><select className="input" value={form.status || 'todo'} onChange={(e) => setForm({ ...form, status: e.target.value })}>{columns.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}</select></Field>
+          <Field label="Due Date"><input type="date" className="input" value={form.due || ''} onChange={(e) => setForm({ ...form, due: e.target.value })} />{errors.due && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.due}</p>}</Field>
+          <Field label="Progress (%)"><input type="number" className="input" value={form.progress ?? ''} onChange={(e) => setForm({ ...form, progress: e.target.value })} placeholder="0" />{errors.progress && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.progress}</p>}</Field>
+          <Field label="Description" className="col-span-2"><textarea className="input min-h-[70px] resize-y" value={form.description || ''} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Scope, dependencies, acceptance criteria…" /></Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button className="btn-outline" onClick={() => setOpen(false)}>Cancel</button>
@@ -262,7 +265,7 @@ const submit = () => {
       </Modal>
 
       {/* Task detail */}
-      {detail && state.tasks.find((t) => t.id === detail.id) && <TaskModal task={{ ...state.tasks.find((t) => t.id === detail.id) }} state={state} onClose={() => setDetail(null)} show={show} updateTask={updateTask} />}
+      {detail && state.tasks.find((t) => t.id === detail.id) && <TaskModal key={detail.id} task={{ ...state.tasks.find((t) => t.id === detail.id) }} state={state} onClose={() => setDetail(null)} show={show} updateTask={updateTask} />}
 
       {/* Team workload modal */}
       <Modal open={workloadOpen} onClose={() => setWorkloadOpen(false)} title="Team Workload" width="max-w-md">
@@ -295,11 +298,10 @@ const submit = () => {
 function avatarMini(m) { return m ? { name: m.name, initials: m.initials, color: m.color } : { name: '?', initials: '?', color: 'bg-brand-400' } }
 
 function TaskModal({ task, state, onClose, show, updateTask }) {
-  const a = state.staff.find((m) => m.id === task.assigneeId)
-  const ev = state.events.find((e) => e.id === task.eventId)
+  const [edit, setEdit] = useState({ title: task.title || '', eventId: task.eventId || 'ev1', assigneeId: task.assigneeId || '', priority: task.priority || 'medium', status: task.status || 'todo', due: task.due || '', progress: task.progress || 0, description: task.description || '' })
   const [comments, setComments] = useState([
     'Locking stage layout with client this week.',
-    `${a?.name}: Confirmed — tracker updated.`,
+    'Confirmed — tracker updated.',
   ])
   const [draft, setDraft] = useState('')
   const addComment = () => {
@@ -308,37 +310,50 @@ function TaskModal({ task, state, onClose, show, updateTask }) {
     setDraft('')
     show('Comment added')
   }
+  const save = () => {
+    const res = validate(edit, { title: [textRequired('Task title', { min: 3, max: 120 })], due: [optional(dateRequired('Due date'))] })
+    if (!res.ok) { show(res.first, 'warn'); return }
+    updateTask(task.id, { ...edit, progress: Number(edit.progress) || 0 })
+    show('Task updated')
+  }
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-brand-950/40" onClick={onClose} />
-      <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-pop">
+      <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-pop">
         <div className="mb-3 flex items-center justify-between">
-          <div className="flex gap-2"><Badge status={task.priority} label={task.priority} /><Badge status={task.status} label={task.status.replace('-', ' ')} /></div>
+          <div className="flex gap-2"><Badge status={edit.priority} label={edit.priority} /><Badge status={edit.status} label={edit.status.replace('-', ' ')} /></div>
           <button onClick={onClose} className="rounded-lg p-1 text-ink/40 hover:bg-brand-50"><X /></button>
         </div>
-        <h3 className="text-lg font-bold text-brand-950">{task.title}</h3>
-        <p className="mt-1 text-sm text-ink/50">{ev?.name}</p>
-        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-          <div className="rounded-lg bg-brand-50 p-3"><p className="text-[11px] font-semibold text-ink/40">Assignee</p><p className="mt-1 flex items-center gap-2 font-semibold"><Avatar {...avatarMini(a)} size="xs" />{a?.name}</p></div>
-          <div className="rounded-lg bg-brand-50 p-3"><p className="text-[11px] font-semibold text-ink/40">Due</p><p className="mt-1 font-semibold">{task.due}</p></div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Title *" className="col-span-2"><input className="input" value={edit.title} onChange={(e) => setEdit({ ...edit, title: e.target.value })} /></Field>
+          <Field label="Event"><select className="input" value={edit.eventId} onChange={(e) => setEdit({ ...edit, eventId: e.target.value })}>{state.events.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}</select></Field>
+          <Field label="Assignee"><select className="input" value={edit.assigneeId} onChange={(e) => setEdit({ ...edit, assigneeId: e.target.value })}>{state.staff.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select></Field>
+          <Field label="Priority"><select className="input" value={edit.priority} onChange={(e) => setEdit({ ...edit, priority: e.target.value })}><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></Field>
+          <Field label="Status"><select className="input" value={edit.status} onChange={(e) => setEdit({ ...edit, status: e.target.value })}>{columns.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}</select></Field>
+          <Field label="Due Date"><input type="date" className="input" value={edit.due} onChange={(e) => setEdit({ ...edit, due: e.target.value })} /></Field>
         </div>
+
         <div className="mt-4 rounded-xl border border-brand-100 p-4">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-xs font-bold uppercase tracking-wider text-ink/40">Progress</p>
-            <span className="text-sm font-black text-brand-800">{task.progress || 0}%</span>
+            <span className="text-sm font-black text-brand-800">{edit.progress}%</span>
           </div>
           <input
             type="range"
             min="0"
             max="100"
             step="5"
-            value={task.progress || 0}
-            onChange={(e) => { updateTask(task.id, { progress: Number(e.target.value) }); show(`Progress updated to ${e.target.value}%`) }}
+            value={edit.progress}
+            onChange={(e) => setEdit({ ...edit, progress: Number(e.target.value) })}
             className="w-full accent-brand-700"
           />
-          <div className="mt-2"><Progress value={task.progress || 0} color={(task.progress || 0) >= 100 ? 'bg-brand-700' : 'bg-brand-600'} /></div>
+          <div className="mt-2"><Progress value={edit.progress} color={edit.progress >= 100 ? 'bg-brand-700' : 'bg-brand-600'} /></div>
         </div>
-        <p className="mt-4 mb-2 text-xs font-bold uppercase tracking-wider text-ink/40">Comments ({comments.length})</p>
+
+        <Field label="Description" className="mt-4"><textarea className="input min-h-[70px] resize-y" value={edit.description} onChange={(e) => setEdit({ ...edit, description: e.target.value })} /></Field>
+
+        <p className="mt-5 mb-2 text-xs font-bold uppercase tracking-wider text-ink/40">Comments ({comments.length})</p>
         <div className="max-h-40 space-y-2 overflow-y-auto rounded-xl border border-brand-100 p-3">
           {comments.map((c, i) => (
             <p key={i} className="text-sm text-ink/70">{c}</p>
@@ -354,7 +369,11 @@ function TaskModal({ task, state, onClose, show, updateTask }) {
           />
           <button className="btn-primary" onClick={addComment}>Comment</button>
         </div>
-        <p className="mt-3 flex items-center gap-2 text-xs text-ink/45"><Paperclip size={12} /> Attach a file to this task</p>
+
+        <div className="mt-5 flex items-center justify-end gap-2 border-t border-brand-50 pt-4">
+          <button className="btn-outline" onClick={onClose}>Close</button>
+          <button className="btn-primary" onClick={save}>Save Changes</button>
+        </div>
       </div>
     </div>
   )

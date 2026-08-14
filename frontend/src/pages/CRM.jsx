@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import {
   Users, Building2, FileText, Phone, Mail, MapPin, Plus, Filter, StickyNote,
-  MessageSquare, ShieldCheck, Eye, ArrowRight,
+  MessageSquare, ShieldCheck, Eye, ArrowRight, Upload, Globe, Link, Trash2, Info,
 } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, SearchBox, Avatar, Modal, Field, EmptyState, Toast, Th, Td } from '../components/ui'
 import { fmt, todayISO } from '../store/data'
 import { downloadCSV } from '../store/exportUtils'
-import { required, nameOnly, emailValid, phoneValid, textRequired, numberPositive, dateRequired, dateRange, validate } from '../store/validation'
+import { required, nameOnly, emailValid, phoneValid, textRequired, numberPositive, dateRequired, dateRange, optional, validate } from '../store/validation'
 
 const inquiries = [
   { id: 'iq1', company: 'Sheba Construction', contact: 'Ashenafi Wolde', type: 'Corporate Gala', value: 450000, date: '2026-08-02', status: 'new' },
@@ -34,10 +34,12 @@ const pipelineStages = ['lead', 'opportunity', 'quotation', 'negotiation', 'cont
 const pipelineLabels = { lead: 'Lead', opportunity: 'Opportunity', quotation: 'Quotation', negotiation: 'Negotiation', contract: 'Contract' }
 
 export default function CRM() {
-  const { state, addClient, patchBy, logActivity, intent, clearIntent, addContract, updateContractStatus, addClientDoc } = useData()
+  const { state, addClient, updateClient, patchBy, patch, logActivity, intent, clearIntent, addContract, updateContractStatus, addClientDoc } = useData()
   const [tab, setTab] = useState('clients')
   const [q, setQ] = useState('')
   const [open, setOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [editForm, setEditForm] = useState({})
   const [toast, setToast] = useState(null)
   const [view, setView] = useState(null) // client detail
   const [form, setForm] = useState({})
@@ -60,6 +62,12 @@ export default function CRM() {
     contactPerson: [nameOnly('Contact person')],
     phone: [phoneValid('Phone number')],
     email: [emailValid('Email')],
+    website: [optional((v) => {
+      const s = String(v || '').trim()
+      if (!s) return ''
+      const ok = /^https?:\/\/[^\s]+\.[^\s]+/.test(s) || /^(www\.)?[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+(\/(\S)*)?$/.test(s)
+      return ok ? '' : 'Enter a valid website (e.g. https://company.com)'
+    })],
   }
   const quoteSchema = {
     company: [required('Client')],
@@ -106,12 +114,85 @@ export default function CRM() {
     items: state.clients.filter((c) => c.stage === st),
   }))
 
-  const submit = () => {
+  const submit = async () => {
     const res = validate(form, clientSchema)
     if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
-    addClient(form)
-    show(`Client "${form.company}" created — added to pipeline`)
+    const client = await addClient(form)
+    const docs = form.docs || []
+    for (const d of docs) {
+      await addClientDoc(client.id, d.name, d.ext || 'PDF', d.size || '—', { type: d.type || 'company_doc', sizeBytes: d.sizeBytes, mimeType: d.mimeType })
+    }
+    show(`Client "${form.company}" created — added to pipeline${docs.length ? ` with ${docs.length} document(s)` : ''}`)
     setOpen(false); setForm({}); setErrors({}); clearIntent()
+  }
+
+  const onPhoto = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) { show('Please select an image file', 'warn'); return }
+    if (file.size > 5 * 1024 * 1024) { show('Image must be under 5MB', 'warn'); return }
+    const reader = new FileReader()
+    reader.onload = () => { setForm((f) => ({ ...f, photo: reader.result })) }
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  const openEdit = () => {
+    setEditForm({ ...detail, role: detail.role || detail.contactRole || '', contactPerson: detail.contactPerson || '' })
+    setErrors({})
+    setEditOpen(true)
+  }
+
+  const editSave = async () => {
+    const res = validate(editForm, clientSchema)
+    if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
+    await updateClient(detail.id, { ...editForm, contactRole: editForm.role || editForm.contactRole || '' })
+    show(`Client "${editForm.company}" updated`)
+    setEditOpen(false); setEditForm({}); setErrors({})
+  }
+
+  const onEditPhoto = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) { show('Please select an image file', 'warn'); return }
+    if (file.size > 5 * 1024 * 1024) { show('Image must be under 5MB', 'warn'); return }
+    const reader = new FileReader()
+    reader.onload = () => { setEditForm((f) => ({ ...f, photo: reader.result })) }
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  const onDocs = (e) => {
+    const files = Array.from(e.target.files || [])
+    if (!files.length) return
+    const added = files.map((file) => ({
+      id: 'dft-' + Math.random().toString(36).slice(2, 8),
+      name: file.name,
+      ext: (file.name.split('.').pop() || 'PDF').toUpperCase(),
+      size: file.size > 1024 * 1024 ? (file.size / (1024 * 1024)).toFixed(1) + ' MB' : Math.max(1, Math.round(file.size / 1024)) + ' KB',
+      sizeBytes: file.size,
+      mimeType: file.type || '',
+      type: 'company_doc',
+    }))
+    setForm((f) => ({ ...f, docs: [...(f.docs || []), ...added] }))
+    e.target.value = ''
+  }
+
+  const removeSelectedDoc = (id) => {
+    setForm((f) => ({ ...f, docs: (f.docs || []).filter((d) => d.id !== id) }))
+  }
+
+  const onDocFile = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setDocForm({
+      name: file.name,
+      ext: (file.name.split('.').pop() || 'PDF').toUpperCase(),
+      size: file.size > 1024 * 1024 ? (file.size / (1024 * 1024)).toFixed(1) + ' MB' : Math.max(1, Math.round(file.size / 1024)) + ' KB',
+      sizeBytes: file.size,
+      mimeType: file.type || '',
+    })
+    e.target.value = ''
   }
 
   const convertInquiry = (inq) => {
@@ -156,7 +237,7 @@ export default function CRM() {
   const submitDoc = () => {
     const res = validate(docForm, docSchema)
     if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
-    addClientDoc(detail.clientId, docForm.name, docForm.ext || 'PDF', docForm.size || '—')
+    addClientDoc(detail.clientId, docForm.name, docForm.ext || 'PDF', docForm.size || '—', { sizeBytes: docForm.sizeBytes, mimeType: docForm.mimeType, type: 'company_doc' })
     show(`Document "${docForm.name}" attached`)
     setDocOpen(false); setDocForm({}); setErrors({})
   }
@@ -384,7 +465,27 @@ export default function CRM() {
       )}
 
       {/* New client modal */}
-      <Modal open={open} onClose={() => setOpen(false)} title="Create New Client" width="max-w-xl">
+      <Modal open={open} onClose={() => setOpen(false)} title="Register New Client" width="max-w-2xl">
+        {/* Profile image */}
+        <div className="mb-4 flex items-center gap-4">
+          <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-brand-50 ring-1 ring-brand-100">
+            {form.photo
+              ? <img src={form.photo} alt="Client" className="h-full w-full object-cover" />
+              : <span className="text-xl font-black text-brand-400"><Upload size={24} /></span>}
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-bold text-brand-950">Company Logo / Photo</p>
+            <p className="text-xs text-ink/50">Upload a logo or representative image for this client (JPG, PNG — max 5MB).</p>
+            <div className="mt-2 flex gap-2">
+              <label className="btn-outline !py-1.5 cursor-pointer text-xs">
+                <Upload size={14} /> Choose image
+                <input type="file" accept="image/*" className="hidden" onChange={onPhoto} />
+              </label>
+              {form.photo && <button className="btn-ghost !py-1.5 text-xs !text-red-600" onClick={() => setForm((f) => ({ ...f, photo: '' }))}><Trash2 size={13} /> Remove</button>}
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 gap-3">
           <Field label="Company Name *"><input className="input" value={form.company || ''} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="e.g. Walia Telecom" />{errors.company && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.company}</p>}</Field>
           <Field label="Industry"><select className="input" value={form.industry || ''} onChange={(e) => setForm({ ...form, industry: e.target.value })}><option value="">Select…</option><option>Financial Services</option><option>Telecommunications</option><option>Healthcare</option><option>Banking</option><option>Education</option><option>Hospitality</option><option>Construction</option></select></Field>
@@ -395,9 +496,87 @@ export default function CRM() {
           <Field label="City"><input className="input" value={form.city || 'Addis Ababa'} onChange={(e) => setForm({ ...form, city: e.target.value })} /></Field>
           <Field label="Pipeline Stage"><select className="input" value={form.stage || 'lead'} onChange={(e) => setForm({ ...form, stage: e.target.value })}>{pipelineStages.map((s) => <option key={s} value={s}>{pipelineLabels[s]}</option>)}</select></Field>
         </div>
+
+        {/* Additional registration details */}
+        <p className="mt-5 mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><Info size={13} /> Additional Details</p>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Website"><div className="relative"><Globe size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" /><input className="input pl-9" value={form.website || ''} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://company.com" /></div>{errors.website && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.website}</p>}</Field>
+          <Field label="Tax ID (TIN)"><input className="input" value={form.taxId || ''} onChange={(e) => setForm({ ...form, taxId: e.target.value })} placeholder="e.g. ET-ABC-2020-12345" /></Field>
+          <Field label="Street Address" className="col-span-2"><div className="relative"><MapPin size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" /><input className="input pl-9" value={form.address || ''} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Street, building, city" /></div></Field>
+          <Field label="Notes" className="col-span-2"><textarea className="input min-h-[70px] resize-y" value={form.notes || ''} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Background, preferences, requirements…" /></Field>
+        </div>
+
+        {/* Documents */}
+        <p className="mt-5 mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><FileText size={13} /> Registration Documents</p>
+        <label className="flex w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-brand-200 bg-brand-50/40 py-5 text-center transition hover:border-brand-400 hover:bg-brand-50">
+          <Upload size={20} className="text-brand-500" />
+          <span className="text-xs font-bold text-brand-700">Click to attach documents</span>
+          <span className="text-[11px] text-ink/45">Contracts, briefs, licenses, company profile… (multiple files)</span>
+          <input type="file" multiple className="hidden" onChange={onDocs} />
+        </label>
+        {(form.docs || []).length > 0 && (
+          <div className="mt-2 space-y-1.5">
+            {(form.docs || []).map((d) => (
+              <div key={d.id} className="flex items-center justify-between rounded-lg border border-brand-100 bg-white px-3 py-2">
+                <span className="flex min-w-0 items-center gap-2 text-sm text-ink/80"><FileText size={14} className="shrink-0 text-brand-600" /><span className="truncate">{d.name}</span></span>
+                <span className="flex shrink-0 items-center gap-2">
+                  <span className="chip bg-brand-50 text-brand-800">{d.ext} · {d.size}</span>
+                  <button onClick={() => removeSelectedDoc(d.id)} className="rounded-md p-1 text-ink/40 hover:bg-red-50 hover:text-red-600"><Trash2 size={14} /></button>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="mt-5 flex justify-end gap-2">
           <button className="btn-outline" onClick={() => setOpen(false)}>Cancel</button>
           <button className="btn-primary" onClick={submit}>Create Client</button>
+        </div>
+      </Modal>
+
+      {/* Edit client modal */}
+      <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit Client Profile" width="max-w-2xl">
+        <div className="mb-4 flex items-center gap-4">
+          <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-brand-50 ring-1 ring-brand-100">
+            {editForm.photo
+              ? <img src={editForm.photo} alt="Client" className="h-full w-full object-cover" />
+              : <span className="text-xl font-black text-brand-400"><Upload size={24} /></span>}
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-bold text-brand-950">Company Logo / Photo</p>
+            <p className="text-xs text-ink/50">Update the logo or representative image (JPG, PNG — max 5MB).</p>
+            <div className="mt-2 flex gap-2">
+              <label className="btn-outline !py-1.5 cursor-pointer text-xs">
+                <Upload size={14} /> Change image
+                <input type="file" accept="image/*" className="hidden" onChange={onEditPhoto} />
+              </label>
+              {editForm.photo && <button className="btn-ghost !py-1.5 text-xs !text-red-600" onClick={() => setEditForm((f) => ({ ...f, photo: '' }))}><Trash2 size={13} /> Remove</button>}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Company Name *"><input className="input" value={editForm.company || ''} onChange={(e) => { setEditForm({ ...editForm, company: e.target.value }); if (errors.company) setErrors({ ...errors, company: undefined }) }} />{errors.company && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.company}</p>}</Field>
+          <Field label="Industry"><select className="input" value={editForm.industry || ''} onChange={(e) => setEditForm({ ...editForm, industry: e.target.value })}><option value="">Select…</option><option>Financial Services</option><option>Telecommunications</option><option>Healthcare</option><option>Banking</option><option>Education</option><option>Hospitality</option><option>Construction</option></select></Field>
+          <Field label="Contact Person"><input className="input" value={editForm.contactPerson || ''} onChange={(e) => setEditForm({ ...editForm, contactPerson: e.target.value })} />{errors.contactPerson && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.contactPerson}</p>}</Field>
+          <Field label="Role"><input className="input" value={editForm.role || ''} onChange={(e) => setEditForm({ ...editForm, role: e.target.value })} placeholder="Events Director" /></Field>
+          <Field label="Phone"><input className="input" value={editForm.phone || ''} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} placeholder="+251 911 000 000" />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</Field>
+          <Field label="Email"><input className="input" value={editForm.email || ''} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} placeholder="contact@company.com" />{errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}</Field>
+          <Field label="City"><input className="input" value={editForm.city || ''} onChange={(e) => setEditForm({ ...editForm, city: e.target.value })} /></Field>
+          <Field label="Pipeline Stage"><select className="input" value={editForm.stage || 'lead'} onChange={(e) => setEditForm({ ...editForm, stage: e.target.value })}>{pipelineStages.map((s) => <option key={s} value={s}>{pipelineLabels[s]}</option>)}</select></Field>
+        </div>
+
+        <p className="mt-5 mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><Info size={13} /> Additional Details</p>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Website"><div className="relative"><Globe size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" /><input className="input pl-9" value={editForm.website || ''} onChange={(e) => setEditForm({ ...editForm, website: e.target.value })} placeholder="https://company.com" /></div>{errors.website && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.website}</p>}</Field>
+          <Field label="Tax ID (TIN)"><input className="input" value={editForm.taxId || ''} onChange={(e) => setEditForm({ ...editForm, taxId: e.target.value })} placeholder="e.g. ET-ABC-2020-12345" /></Field>
+          <Field label="Street Address" className="col-span-2"><div className="relative"><MapPin size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" /><input className="input pl-9" value={editForm.address || ''} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} placeholder="Street, building, city" /></div></Field>
+          <Field label="Notes" className="col-span-2"><textarea className="input min-h-[70px] resize-y" value={editForm.notes || ''} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} placeholder="Background, preferences, requirements…" /></Field>
+        </div>
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button className="btn-outline" onClick={() => setEditOpen(false)}>Cancel</button>
+          <button className="btn-primary" onClick={editSave}>Save Changes</button>
         </div>
       </Modal>
 
@@ -409,12 +588,15 @@ export default function CRM() {
             <div className="bg-brand-900 p-6 text-white">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-4">
-                  <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gold-400 text-lg font-black text-brand-950">{detail.logo}</span>
+                  {detail.photo
+                    ? <img src={detail.photo} alt={detail.company} className="h-14 w-14 rounded-2xl object-cover ring-2 ring-gold-400" />
+                    : <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gold-400 text-lg font-black text-brand-950">{detail.logo}</span>}
                   <div>
                     <h3 className="text-lg font-bold">{detail.company}</h3>
                     <p className="text-sm text-brand-200">{detail.industry} · {detail.city}</p>
                   </div>
                 </div>
+                <button className="btn-gold !px-3 !py-1.5 text-xs" onClick={openEdit}>Edit Profile</button>
                 <button onClick={() => setView(null)} className="rounded-lg p-1.5 text-brand-200 hover:bg-white/10"><XIcon /></button>
               </div>
               <div className="mt-4 flex items-center gap-2 text-xs text-brand-200">
@@ -425,9 +607,13 @@ export default function CRM() {
             <div className="flex-1 overflow-y-auto p-6">
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-xl border border-brand-100 p-3"><p className="text-[11px] font-semibold text-ink/40">Contact Person</p><p className="mt-1 text-sm font-semibold">{detail.contactPerson}</p></div>
-                <div className="rounded-xl border border-brand-100 p-3"><p className="text-[11px] font-semibold text-ink/40">Role</p><p className="mt-1 text-sm font-semibold">{detail.role}</p></div>
+                <div className="rounded-xl border border-brand-100 p-3"><p className="text-[11px] font-semibold text-ink/40">Role</p><p className="mt-1 text-sm font-semibold">{detail.contactRole || detail.role}</p></div>
                 <div className="rounded-xl border border-brand-100 p-3"><p className="text-[11px] font-semibold text-ink/40">Phone</p><p className="mt-1 text-sm font-semibold">{detail.phone}</p></div>
                 <div className="rounded-xl border border-brand-100 p-3"><p className="text-[11px] font-semibold text-ink/40">Email</p><p className="mt-1 truncate text-sm font-semibold">{detail.email}</p></div>
+                {detail.website && <div className="rounded-xl border border-brand-100 p-3"><p className="text-[11px] font-semibold text-ink/40">Website</p><p className="mt-1 flex items-center gap-1 truncate text-sm font-semibold text-brand-700"><Link size={13} className="shrink-0" /> {detail.website}</p></div>}
+                {detail.taxId && <div className="rounded-xl border border-brand-100 p-3"><p className="text-[11px] font-semibold text-ink/40">Tax ID</p><p className="mt-1 font-mono text-sm font-semibold">{detail.taxId}</p></div>}
+                {detail.address && <div className="col-span-2 rounded-xl border border-brand-100 p-3"><p className="text-[11px] font-semibold text-ink/40">Street Address</p><p className="mt-1 flex items-center gap-1 text-sm font-semibold"><MapPin size={13} className="shrink-0 text-ink/40" /> {detail.address}</p></div>}
+                {detail.notes && <div className="col-span-2 rounded-xl border border-brand-100 p-3"><p className="text-[11px] font-semibold text-ink/40">Notes</p><p className="mt-1 text-sm text-ink/75">{detail.notes}</p></div>}
               </div>
 
               <p className="mt-6 mb-2 text-xs font-bold uppercase tracking-wider text-ink/40">Associated Events</p>
@@ -465,8 +651,11 @@ export default function CRM() {
               <div className="space-y-2">
                 {state.clientDocs.filter((d) => d.clientId === view.id).map((d) => (
                   <div key={d.id} className="flex items-center justify-between rounded-lg border border-brand-100 p-3">
-                    <span className="flex items-center gap-2 text-sm text-ink/70"><ShieldCheck size={15} className="text-brand-600" /> {d.name}</span>
-                    <span className="chip bg-brand-50 text-brand-800">{d.ext}</span>
+                    <span className="flex min-w-0 items-center gap-2 text-sm text-ink/70"><ShieldCheck size={15} className="shrink-0 text-brand-600" /><span className="truncate">{d.name}</span></span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      <span className="chip bg-brand-50 text-brand-800">{d.ext}</span>
+                      <button className="rounded-md p-1 text-ink/40 hover:bg-red-50 hover:text-red-600" onClick={() => { patch('clientDocs', (l) => l.filter((x) => x.id !== d.id)); show(`Removed ${d.name}`) }}><Trash2 size={14} /></button>
+                    </span>
                   </div>
                 ))}
                 <button className="mt-2 w-full rounded-lg border border-dashed border-brand-200 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-50" onClick={() => setDocOpen(true)}><Plus size={13} /> Upload Document</button>
@@ -527,8 +716,14 @@ export default function CRM() {
       {/* Upload document modal */}
       <Modal open={docOpen} onClose={() => setDocOpen(false)} title={`Upload Document — ${detail?.company || ''}`} width="max-w-md">
         <div className="grid grid-cols-2 gap-3">
+          <label className="col-span-2 flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-brand-200 bg-brand-50/40 py-5 text-center transition hover:border-brand-400 hover:bg-brand-50">
+            <Upload size={18} className="text-brand-500" />
+            <span className="text-xs font-bold text-brand-700">Choose a file to attach</span>
+            <span className="text-[11px] text-ink/45">PDF, DOCX, XLSX, ZIP, PNG…</span>
+            <input type="file" className="hidden" onChange={onDocFile} />
+          </label>
           <Field label="File Name *" className="col-span-2"><input className="input" value={docForm.name || ''} onChange={(e) => setDocForm({ ...docForm, name: e.target.value })} placeholder="e.g. Signed MOU.pdf" />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
-          <Field label="Type"><select className="input" value={docForm.ext || 'PDF'} onChange={(e) => setDocForm({ ...docForm, ext: e.target.value })}><option>PDF</option><option>DOCX</option><option>XLSX</option><option>ZIP</option><option>PNG</option></select></Field>
+          <Field label="Type"><select className="input" value={docForm.ext || 'PDF'} onChange={(e) => setDocForm({ ...docForm, ext: e.target.value })}><option>PDF</option><option>DOCX</option><option>XLSX</option><option>ZIP</option><option>PNG</option><option>JPG</option></select></Field>
           <Field label="Size"><input className="input" value={docForm.size || ''} onChange={(e) => setDocForm({ ...docForm, size: e.target.value })} placeholder="980 KB" /></Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">

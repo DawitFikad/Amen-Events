@@ -12,7 +12,7 @@ function validatePassword(pw) {
 
 // POST /api/portal/auth/register
 router.post('/register', async (req, res) => {
-  const { firstName, lastName, email, phone, password } = req.body
+  const { firstName, lastName, email, phone, password, avatar } = req.body
   if (!firstName || !lastName || !email || !password) {
     return res.status(400).json({ error: 'First name, last name, email, and password are required' })
   }
@@ -32,6 +32,7 @@ router.post('/register', async (req, res) => {
       lastName: lastName.trim(),
       email: normalizedEmail,
       phone: phone || '',
+      avatar: avatar || '',
       passwordHash: hash,
     },
   })
