@@ -2,7 +2,7 @@
 
 const uid = () => Math.random().toString(36).slice(2, 10)
 
-// Generate a mockup profile avatar (SVG data URL) — distinct gradient + initials.
+// Generate a mockup profile avatar (SVG data URL) - distinct gradient + initials.
 export const mockAvatar = (initials, c1 = '#188A2E', c2 = '#0B3B16') =>
   `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs><rect width="96" height="96" rx="16" fill="url(#g)"/><circle cx="48" cy="38" r="16" fill="rgba(255,255,255,0.92)"/><path d="M22 86c4-20 15-32 26-32s22 12 26 32z" fill="rgba(255,255,255,0.92)"/><text x="48" y="91" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="800" fill="#041C0B" text-anchor="middle">${initials}</text></svg>`)}`
 
@@ -32,8 +32,8 @@ export const clientsSeed = [
 // ----------------------------- CONTRACTS -----------------------------
 export const contractsSeed = [
   { id: 'ct1', clientId: 'cl1', eventId: 'ev1', ref: 'CTR-2026-0041', value: 1850000, startDate: '2026-06-10', endDate: '2026-09-30', status: 'signed', notes: 'Full-service conference production with AV and catering.' },
-  { id: 'ct2', clientId: 'cl5', eventId: 'ev3', ref: 'CTR-2026-0055', value: 2400000, startDate: '2026-07-01', endDate: '2026-08-15', status: 'signed', notes: 'Leadership retreat — resort buyout, transport and meals.' },
-  { id: 'ct3', clientId: 'cl7', eventId: 'ev5', ref: 'CTR-2026-0039', value: 520000, startDate: '2026-05-20', endDate: '2026-07-20', status: 'closed', notes: 'Hospitality gala — completed, final invoice settled.' },
+  { id: 'ct2', clientId: 'cl5', eventId: 'ev3', ref: 'CTR-2026-0055', value: 2400000, startDate: '2026-07-01', endDate: '2026-08-15', status: 'signed', notes: 'Leadership retreat - resort buyout, transport and meals.' },
+  { id: 'ct3', clientId: 'cl7', eventId: 'ev5', ref: 'CTR-2026-0039', value: 520000, startDate: '2026-05-20', endDate: '2026-07-20', status: 'closed', notes: 'Hospitality gala - completed, final invoice settled.' },
   { id: 'ct4', clientId: 'cl3', eventId: 'ev4', ref: 'CTR-2026-0061', value: 980000, startDate: '2026-08-01', endDate: '2026-10-15', status: 'draft', notes: 'Expo agreement awaiting legal sign-off.' },
 ]
 
@@ -50,7 +50,7 @@ export const clientDocsSeed = [
 export const venuesSeed = [
   { id: 'vn1', name: 'Millennium Hall', city: 'Addis Ababa', address: 'Africa Avenue, Bole', halls: 4, capacity: 5000, price: 850000, contact: '+251 911 100 001', phone: '+251 911 100 001', email: 'bookings@millenniumhall.com', parking: 400, description: "Addis Ababa's largest convention hall with a main auditorium, breakout rooms and full staging infrastructure.", equipment: ['Stage', 'Sound', 'Lighting', 'VIP Lounge', 'WiFi'], status: 'available', color: 'bg-brand-700', abbr: 'MH', image: '' },
   { id: 'vn2', name: 'Sheraton Skyline Ballroom', city: 'Addis Ababa', address: 'Taitu Street', halls: 2, capacity: 1200, price: 420000, contact: '+251 911 100 002', phone: '+251 911 100 002', email: 'events@sheratonaddis.com', parking: 250, description: 'Iconic ballroom with panoramic city views, ideal for galas and high-profile product launches.', equipment: ['Stage', 'AV', 'Chandeliers', 'WiFi'], status: 'booked', color: 'bg-gold-500', abbr: 'SB', image: '' },
-  { id: 'vn3', name: 'Unity Park Pavilion', city: 'Addis Ababa', address: 'Unity Park, Arat Kilo', halls: 1, capacity: 800, price: 260000, contact: '+251 911 100 003', phone: '+251 911 100 003', email: 'park@unitypark.gov.et', parking: 150, description: 'Open-air ceremonial pavilion surrounded by gardens — outdoor galas and cultural events.', equipment: ['Stage', 'Lighting', 'Garden', 'Outdoor Power'], status: 'available', color: 'bg-brand-500', abbr: 'UP', image: '' },
+  { id: 'vn3', name: 'Unity Park Pavilion', city: 'Addis Ababa', address: 'Unity Park, Arat Kilo', halls: 1, capacity: 800, price: 260000, contact: '+251 911 100 003', phone: '+251 911 100 003', email: 'park@unitypark.gov.et', parking: 150, description: 'Open-air ceremonial pavilion surrounded by gardens - outdoor galas and cultural events.', equipment: ['Stage', 'Lighting', 'Garden', 'Outdoor Power'], status: 'available', color: 'bg-brand-500', abbr: 'UP', image: '' },
   { id: 'vn4', name: 'Bishoftu Resort Gardens', city: 'Bishoftu', address: 'Lakeside, Bishoftu', halls: 3, capacity: 2500, price: 640000, contact: '+251 911 100 004', phone: '+251 911 100 004', email: 'events@bishofturesort.com', parking: 200, description: 'Lakeside retreat venue with gardens, amphitheatre and conference pavilions.', equipment: ['Stage', 'Sound', 'Accommodation', 'WiFi'], status: 'maintenance', color: 'bg-brand-400', abbr: 'BR', image: '' },
   { id: 'vn5', name: 'Hilton Addis Grand Hall', city: 'Addis Ababa', address: 'Menelik II Avenue', halls: 2, capacity: 950, price: 380000, contact: '+251 911 100 005', phone: '+251 911 100 005', email: 'events@hiltonaddis.com', parking: 300, description: 'Grand hotel ballroom with banquet capacity, full AV and catering partners.', equipment: ['Stage', 'AV', 'Catering', 'WiFi'], status: 'booked', color: 'bg-ink', abbr: 'HI', image: '' },
   { id: 'vn6', name: 'Skylight Convention Center', city: 'Addis Ababa', address: 'Meskel Square', halls: 6, capacity: 6000, price: 1100000, contact: '+251 911 100 006', phone: '+251 911 100 006', email: 'info@skylightcc.com', parking: 500, description: 'Purpose-built exhibition and conference venue with 6 halls and a 6000m² exhibition floor.', equipment: ['Booth Grid', 'Stage', 'Sound', 'Lighting', 'WiFi', 'Loading Bay'], status: 'available', color: 'bg-brand-600', abbr: 'SC', image: '' },
@@ -90,7 +90,7 @@ export const vendorsSeed = [
 
 // ----------------------------- EVENTS -----------------------------
 export const eventsSeed = [
-  { id: 'ev1', name: 'EthFinTech Annual Summit 2026', clientId: 'cl1', venueId: 'vn1', category: 'Conference', date: '2026-08-18', time: '09:00', endDate: '2026-08-19', endTime: '17:00', deadline: '2026-08-14', capacity: 1200, price: 12000, published: true, description: "Two days of keynotes, panels and networking on the future of digital finance — Ethiopia's largest fintech gathering.", tags: ['Fintech', 'Conference', 'Networking'], contactName: 'Dr. Meron Ayele', contactPhone: '+251 911 222 000', status: 'upcoming', pmId: 'st2', budget: 1850000, spent: 780000, stage: 8, attendees: null, progress: 64 },
+  { id: 'ev1', name: 'EthFinTech Annual Summit 2026', clientId: 'cl1', venueId: 'vn1', category: 'Conference', date: '2026-08-18', time: '09:00', endDate: '2026-08-19', endTime: '17:00', deadline: '2026-08-14', capacity: 1200, price: 12000, published: true, description: "Two days of keynotes, panels and networking on the future of digital finance - Ethiopia's largest fintech gathering.", tags: ['Fintech', 'Conference', 'Networking'], contactName: 'Dr. Meron Ayele', contactPhone: '+251 911 222 000', status: 'upcoming', pmId: 'st2', budget: 1850000, spent: 780000, stage: 8, attendees: null, progress: 64 },
   { id: 'ev2', name: 'Zemen Pharma Product Launch', clientId: 'cl2', venueId: 'vn2', category: 'Product Launch', date: '2026-08-25', time: '18:30', endDate: '2026-08-25', endTime: '22:00', deadline: '2026-08-22', capacity: 600, price: 0, published: false, description: "Invitation-only unveiling of Zemen Pharmaceuticals' new product line with media and industry guests.", tags: ['Healthcare', 'Launch'], contactName: 'Rahel Getahun', contactPhone: '+251 912 333 111', status: 'upcoming', pmId: 'st3', budget: 640000, spent: 210000, stage: 5, attendees: null, progress: 43 },
   { id: 'ev3', name: 'Abyssinia Bank Leadership Retreat', clientId: 'cl5', venueId: 'vn4', category: 'Retreat', date: '2026-08-02', time: '08:00', endDate: '2026-08-04', endTime: '16:00', deadline: '2026-07-25', capacity: 160, price: 0, published: false, description: 'Two-day leadership retreat covering strategy, risk and branch performance for Abyssinia Bank senior leadership.', tags: ['Banking', 'Retreat', 'Leadership'], contactName: 'Selamawit Desta', contactPhone: '+251 915 666 444', status: 'ongoing', pmId: 'st5', budget: 2400000, spent: 1240000, stage: 11, attendees: 146, progress: 86 },
   { id: 'ev4', name: 'Walia Telecom Partner Expo', clientId: 'cl3', venueId: 'vn6', category: 'Exhibition', date: '2026-09-12', time: '10:00', endDate: '2026-09-13', endTime: '18:00', deadline: '2026-09-05', capacity: 3000, price: 5000, published: true, description: 'Open exhibition showcasing Walia Telecom partner ecosystem, booths, demos and B2B matchmaking.', tags: ['Telecom', 'Exhibition', 'B2B'], contactName: 'Kebede Abebe', contactPhone: '+251 913 444 222', status: 'upcoming', pmId: 'st2', budget: 980000, spent: 340000, stage: 4, attendees: null, progress: 36 },
@@ -162,7 +162,7 @@ export const speakersSeed = [
 
 // ----------------------------- EXHIBITORS -----------------------------
 export const exhibitorsSeed = [
-  { id: 'ex1', company: 'InnovPay', booth: 'A1', size: 'Premium', package: 'Gold Sponsor', paid: 400000, status: 'confirmed', contact: 'Meron Taddesse', email: 'partners@innovpay.et', phone: '+251 911 800 001', website: 'innovpay.et', description: 'Payment gateway booth — live demo of QR payment and instant settlement.', logo: '' },
+  { id: 'ex1', company: 'InnovPay', booth: 'A1', size: 'Premium', package: 'Gold Sponsor', paid: 400000, status: 'confirmed', contact: 'Meron Taddesse', email: 'partners@innovpay.et', phone: '+251 911 800 001', website: 'innovpay.et', description: 'Payment gateway booth - live demo of QR payment and instant settlement.', logo: '' },
   { id: 'ex2', company: 'SavaTech', booth: 'B3', size: 'Standard', package: 'Exhibitor', paid: 150000, status: 'confirmed', contact: 'Kaleb Girma', email: 'hello@savatech.co', phone: '+251 912 800 002', website: 'savatech.co', description: 'SaaS tools for SME banking, compliance dashboards and core integrations.', logo: '' },
   { id: 'ex3', company: 'PayCore', booth: 'A4', size: 'Premium', package: 'Silver Sponsor', paid: 250000, status: 'pending', contact: 'Sara Ayalew', email: 'events@paycore.io', phone: '', website: 'paycore.io', description: 'Cross-border payments and FX-as-a-service for fintechs in the Horn of Africa.', logo: '' },
   { id: 'ex4', company: 'Mulu Hub', booth: 'C2', size: 'Standard', package: 'Exhibitor', paid: 0, status: 'registering', contact: 'Nahom Admasu', email: 'team@muluhub.com', phone: '+251 913 800 003', website: 'muluhub.com', description: 'Community innovation hub recruiting developers and partners.', logo: '' },
@@ -225,7 +225,7 @@ export const notificationsSeed = [
   { id: 'n1', text: 'Budget alert: Event 1850000 approaching 60%', type: 'alert', at: '10 min ago' },
   { id: 'n2', text: 'New client inquiry from Sheba Construction', type: 'crm', at: '1 hr ago' },
   { id: 'n3', text: 'Maintenance due: Moving Head Lights', type: 'inventory', at: '3 hr ago' },
-  { id: 'n4', text: 'Payment received — INV-2026-0141', type: 'finance', at: '5 hr ago' },
+  { id: 'n4', text: 'Payment received - INV-2026-0141', type: 'finance', at: '5 hr ago' },
   { id: 'n5', text: 'Task deadline approaching tomorrow', type: 'task', at: '6 hr ago' },
 ]
 
@@ -284,7 +284,7 @@ export const visitorsSeed = [
   { id: 'vs1', name: 'Samuel Tekle', company: 'Savvy Startups', checkin: '10:02', scanned: true },
   { id: 'vs2', name: 'Hanna Mamo', company: 'Mulu Hub', checkin: '10:14', scanned: true },
   { id: 'vs3', name: 'Yared Teshome', company: 'Addis Innovation', checkin: '10:31', scanned: true },
-  { id: 'vs4', name: 'Bethel Alemu', company: 'Sof Omer', checkin: '—', scanned: false },
+  { id: 'vs4', name: 'Bethel Alemu', company: 'Sof Omer', checkin: '-', scanned: false },
 ]
 
 // ----------------------------- SPONSORSHIP (M14) -----------------------------
@@ -305,16 +305,16 @@ export const sponsorDeliverablesSeed = [
 // ----------------------------- APPROVALS (offline workflows) -----------------------------
 export const approvalsSeed = [
   { id: 'ap1', type: 'purchase_request', entityName: 'Extra moving head lights (12)', amount: 86000, status: 'pending', submittedBy: 'st8', createdAt: '2026-08-04', note: 'Borrowed inventory insufficient for the main stage.' },
-  { id: 'ap2', type: 'budget', entityName: 'Zemen Pharma Launch — budget increase', amount: 120000, status: 'pending', submittedBy: 'st3', createdAt: '2026-08-05', note: 'Catering and décor exceed the original estimate.' },
-  { id: 'ap3', type: 'contract', entityName: 'CTR-2026-0061 — Walia Telecom Expo', amount: 980000, status: 'pending', submittedBy: 'st2', createdAt: '2026-08-03', note: 'Expo agreement awaiting legal sign-off.' },
-  { id: 'ap4', type: 'sponsorship', entityName: 'Dashen Brewery — Silver package', amount: 180000, status: 'revision_requested', submittedBy: 'st7', createdAt: '2026-08-02', note: 'Sponsor asked to swap beverage corner placement.' },
-  { id: 'ap5', type: 'vendor_payment', entityName: 'Abyssinia Bank — second tranche', amount: 720000, status: 'approved', submittedBy: 'st4', createdAt: '2026-07-29', reviewNote: 'Matches milestone 2 of the retreat contract.' },
+  { id: 'ap2', type: 'budget', entityName: 'Zemen Pharma Launch - budget increase', amount: 120000, status: 'pending', submittedBy: 'st3', createdAt: '2026-08-05', note: 'Catering and décor exceed the original estimate.' },
+  { id: 'ap3', type: 'contract', entityName: 'CTR-2026-0061 - Walia Telecom Expo', amount: 980000, status: 'pending', submittedBy: 'st2', createdAt: '2026-08-03', note: 'Expo agreement awaiting legal sign-off.' },
+  { id: 'ap4', type: 'sponsorship', entityName: 'Dashen Brewery - Silver package', amount: 180000, status: 'revision_requested', submittedBy: 'st7', createdAt: '2026-08-02', note: 'Sponsor asked to swap beverage corner placement.' },
+  { id: 'ap5', type: 'vendor_payment', entityName: 'Abyssinia Bank - second tranche', amount: 720000, status: 'approved', submittedBy: 'st4', createdAt: '2026-07-29', reviewNote: 'Matches milestone 2 of the retreat contract.' },
 ]
 
 // ----------------------------- CALENDAR MEETINGS (offline) -----------------------------
 export function calendarEventsSeed() {
   return [
-    { id: 'ce1', title: 'Client kickoff — EthFinTech', type: 'meeting', date: todayISO(0), time: '10:00', location: 'Office HQ', notes: '' },
+    { id: 'ce1', title: 'Client kickoff - EthFinTech', type: 'meeting', date: todayISO(0), time: '10:00', location: 'Office HQ', notes: '' },
     { id: 'ce2', title: 'Catering tasting', type: 'meeting', date: todayISO(1), time: '15:00', location: 'Gourmet Addis', notes: '' },
     { id: 'ce3', title: 'Sponsor pitch review', type: 'meeting', date: todayISO(2), time: '11:30', location: 'Meeting Room B', notes: '' },
     { id: 'ce4', title: 'AV & staging walkthrough', type: 'task', date: todayISO(3), time: '09:00', location: 'Millennium Hall', notes: '' },
@@ -340,7 +340,7 @@ export const lookup = {
 }
 
 export function fmt(n) {
-  if (n == null) return '—'
+  if (n == null) return '-'
   const sign = n < 0 ? '-' : ''
   const a = Math.abs(n)
   const s = a.toLocaleString('en-US')
@@ -348,7 +348,7 @@ export function fmt(n) {
 }
 
 export function fmtCompact(n) {
-  if (n == null) return '—'
+  if (n == null) return '-'
   if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M'
   if (n >= 1000) return (n / 1000).toFixed(0) + 'K'
   return String(n)

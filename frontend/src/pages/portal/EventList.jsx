@@ -67,7 +67,7 @@ export default function PortalEventList() {
         <p className="mt-2 text-sm text-gray-500">Discover and register for events across Ethiopia</p>
       </div>
 
-      {/* Search bar — prominent */}
+      {/* Search bar - prominent */}
       <div className="mb-6 flex gap-2">
         <div className="relative flex-1">
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -88,7 +88,7 @@ export default function PortalEventList() {
 
       {/* Layout: sidebar + grid */}
       <div className="flex gap-8">
-        {/* Filter Sidebar — desktop */}
+        {/* Filter Sidebar - desktop */}
         <aside className={`${showFilters ? 'block' : 'hidden'} w-64 shrink-0 lg:block`}>
           <div className="sticky top-24 space-y-6 rounded-2xl border border-gray-100 bg-white p-5" style={{ boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
             <div className="flex items-center justify-between">

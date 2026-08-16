@@ -1,8 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { BadgeDollarSign, Plus, FileText, CheckCircle2, Megaphone, Pencil, Mail, Phone, CalendarDays } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, Toast, Th, Td, Modal, Field } from '../components/ui'
-import { fmt } from '../store/data'
+import { fmt, todayISO } from '../store/data'
 import { textRequired, nameOnly, numberPositive, emailValid, phoneValid, optional, validate } from '../store/validation'
 
 const packages = [
@@ -12,7 +12,7 @@ const packages = [
 ]
 
 export default function Sponsorship() {
-  const { state, patch, addSponsor, updateSponsor, logActivity } = useData()
+  const { state, patch, addSponsor, updateSponsor, logActivity, intent, clearIntent } = useData()
   const [view, setView] = useState('overview')
   const [toast, setToast] = useState(null)
   const [open, setOpen] = useState(false)
@@ -35,6 +35,20 @@ export default function Sponsorship() {
   }
 
   const openAdd = () => { setEditId(null); setForm({}); setErrors({}); setOpen(true) }
+
+  useEffect(() => {
+    if (intent === 'new-sponsor') {
+      if (state.demo.autoplay) {
+        const seed = { name: 'Walia Telecom', package: 'Gold', amount: '300000', status: 'confirmed', deliverables: 'Main stage branding, Logo on screens', contact: 'Meron Tadesse', email: 'sponsor@waliatelecom.et', phone: '+251 913 555 010', date: todayISO() }
+        setView('overview'); setForm(seed); openAdd(); setErrors({})
+        setTimeout(() => {
+          const rec = addSponsor(seed)
+          show(`${rec?.name || seed.name} added as ${seed.package} sponsor automatically`); setOpen(false); setForm({})
+        }, 1100)
+      } else { setView('overview'); openAdd() }
+      clearIntent()
+    }
+  }, [intent])
 
   const openEdit = (s) => {
     setEditId(s.id)
@@ -143,7 +157,8 @@ export default function Sponsorship() {
 
       {view === 'deliverables' && (
         <div className="card overflow-hidden">
-          <table className="w-full">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px]">
             <thead className="bg-brand-50/50"><tr><Th>Sponsor</Th><Th>Deliverable</Th><Th>Due</Th><Th>Status</Th></tr></thead>
             <tbody className="divide-y divide-brand-50">
               {deliverables.map((d) => (
@@ -156,6 +171,7 @@ export default function Sponsorship() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
@@ -166,7 +182,7 @@ export default function Sponsorship() {
               <p className="text-sm font-bold text-brand-950">{loc}</p>
               <p className="mt-1 text-xs text-ink/45">{by}</p>
               <div className="mt-3 flex items-center justify-between">
-                <span className="text-lg font-black text-brand-800">{val ? fmt(val) : '—'}</span>
+                <span className="text-lg font-black text-brand-800">{val ? fmt(val) : '-'}</span>
                 <button className="btn-outline !py-1 text-xs" onClick={() => { setAllocLoc(loc); setAllocSponsor('') }}>{val ? 'Reallocate' : 'Allocate'}</button>
               </div>
             </div>
@@ -193,11 +209,11 @@ export default function Sponsorship() {
       </Modal>
 
       {/* Allocate branding modal */}
-      <Modal open={!!allocLoc} onClose={() => setAllocLoc(null)} title={`Allocate Branding — ${allocLoc}`} width="max-w-md">
+      <Modal open={!!allocLoc} onClose={() => setAllocLoc(null)} title={`Allocate Branding - ${allocLoc}`} width="max-w-md">
         <Field label="Sponsor">
           <select className="input" value={allocSponsor} onChange={(e) => setAllocSponsor(e.target.value)}>
             <option value="">Select sponsor…</option>
-            {state.sponsors.map((s) => <option key={s.id} value={s.id}>{s.name} — {s.package} ({fmt(s.amount)})</option>)}
+            {state.sponsors.map((s) => <option key={s.id} value={s.id}>{s.name} - {s.package} ({fmt(s.amount)})</option>)}
           </select>
         </Field>
         <div className="mt-5 flex justify-end gap-2">
@@ -210,3 +226,4 @@ export default function Sponsorship() {
     </div>
   )
 }
+

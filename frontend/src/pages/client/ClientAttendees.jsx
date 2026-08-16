@@ -80,7 +80,8 @@ export default function ClientAttendees() {
         {allRegistrations.length === 0 ? (
           <div className="p-8 text-center text-sm text-ink/40">No attendees found.</div>
         ) : (
-          <table className="w-full">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px]">
             <thead className="bg-brand-50/50">
               <tr><Th>Attendee</Th><Th>Email</Th><Th>Event</Th><Th>Type</Th><Th>Amount</Th><Th>Checked In</Th></tr>
             </thead>
@@ -91,7 +92,7 @@ export default function ClientAttendees() {
                   <tr key={r.id} className="hover:bg-brand-50/40">
                     <Td className="font-semibold text-brand-950">{r.name}</Td>
                     <Td className="text-ink/60">{r.email}</Td>
-                    <Td className="text-ink/60">{evt?.name || '—'}</Td>
+                    <Td className="text-ink/60">{evt?.name || '-'}</Td>
                     <Td className="text-ink/60">{r.type}</Td>
                     <Td className="font-semibold text-brand-700">{fmt(r.amount)}</Td>
                     <Td>{r.checkedIn ? <Badge status="active" label="Checked In" /> : <Badge status="pending" label="Pending" />}</Td>
@@ -100,8 +101,10 @@ export default function ClientAttendees() {
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>
   )
 }
+

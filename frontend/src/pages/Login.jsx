@@ -74,7 +74,7 @@ export default function Login() {
       await login(email.trim().toLowerCase(), password)
       navigate('/erp', { replace: true })
     } catch (err) {
-      show(err.message || 'Login failed — check your credentials')
+      show(err.message || 'Login failed - check your credentials')
       setBusy(false)
     }
   }
@@ -87,7 +87,7 @@ export default function Login() {
       const res = await api.auth.forgotPassword(forgotEmail.trim().toLowerCase())
       if (res.resetToken) {
         setResetToken(res.resetToken)
-        show('Reset link generated (demo mode — token shown below)', 'success')
+        show('Reset link generated (demo mode - token shown below)', 'success')
       } else {
         setForgotSent(true)
         show('If the email exists, a reset link has been sent', 'success')
@@ -104,7 +104,7 @@ export default function Login() {
     setForgotBusy(true)
     try {
       await api.auth.resetPassword(resetToken, newPassword)
-      show('Password reset successful — you can now sign in', 'success')
+      show('Password reset successful - you can now sign in', 'success')
       setForgotOpen(false)
       setForgotSent(false)
       setResetToken('')
@@ -122,7 +122,7 @@ export default function Login() {
 
   return (
     <div className="relative flex min-h-screen w-full overflow-y-auto bg-white lg:h-screen lg:overflow-hidden">
-      {/* ==================== LEFT PANEL — HERO ==================== */}
+      {/* ==================== LEFT PANEL - HERO ==================== */}
       <div
         className="relative hidden w-1/2 flex-col justify-between overflow-hidden lg:flex"
         style={{
@@ -284,7 +284,7 @@ export default function Login() {
                 <div className="absolute -right-3 h-6 w-6 rounded-full" style={{ background: '#041C0B', boxShadow: 'inset 0 0 0 1px rgba(57,211,83,0.2)' }} />
               </div>
 
-              {/* Ticket body — QR + info */}
+              {/* Ticket body - QR + info */}
               <div className="relative p-7">
                 <div className="flex items-center gap-5">
                   {/* QR Code */}
@@ -401,20 +401,20 @@ export default function Login() {
             </filter>
           </defs>
 
-          {/* Filled water body — left side (dark green) */}
+          {/* Filled water body - left side (dark green) */}
           <path
             d="M96 0 C 50 60, 142 120, 96 180 C 50 240, 142 300, 96 360 C 50 420, 142 480, 96 540 C 50 600, 142 660, 96 720 C 50 780, 142 840, 96 900 C 50 960, 142 1020, 96 1080 L 0 1080 L 0 0 Z"
             fill="url(#waveFill1)"
           />
 
-          {/* Filled water body — right side (lighter) */}
+          {/* Filled water body - right side (lighter) */}
           <path
             d="M96 0 C 50 60, 142 120, 96 180 C 50 240, 142 300, 96 360 C 50 420, 142 480, 96 540 C 50 600, 142 660, 96 720 C 50 780, 142 840, 96 900 C 50 960, 142 1020, 96 1080 L 192 1080 L 192 0 Z"
             fill="url(#waveFill1)"
             opacity="0.5"
           />
 
-          {/* Outer glow wave — wide amplitude */}
+          {/* Outer glow wave - wide amplitude */}
           <path
             d="M96 0 C 40 60, 152 120, 96 180 C 40 240, 152 300, 96 360 C 40 420, 152 480, 96 540 C 40 600, 152 660, 96 720 C 40 780, 152 840, 96 900 C 40 960, 152 1020, 96 1080"
             stroke="url(#waveStroke1)"
@@ -422,7 +422,7 @@ export default function Login() {
             filter="url(#glow2)"
           />
 
-          {/* Main wave — medium amplitude */}
+          {/* Main wave - medium amplitude */}
           <path
             d="M96 0 C 56 70, 136 140, 96 210 C 56 280, 136 350, 96 420 C 56 490, 136 560, 96 630 C 56 700, 136 770, 96 840 C 56 910, 136 980, 96 1080"
             stroke="url(#waveStroke2)"
@@ -430,7 +430,7 @@ export default function Login() {
             filter="url(#glow)"
           />
 
-          {/* Inner wave — smaller amplitude, offset phase */}
+          {/* Inner wave - smaller amplitude, offset phase */}
           <path
             d="M96 0 C 72 90, 120 180, 96 270 C 72 360, 120 450, 96 540 C 72 630, 120 720, 96 810 C 72 900, 120 990, 96 1080"
             stroke="url(#waveStroke3)"
@@ -455,15 +455,15 @@ export default function Login() {
         </svg>
       </div>
 
-      {/* ==================== RIGHT PANEL — AUTH ==================== */}
-      <div className="relative flex min-h-screen w-full flex-col items-center justify-start overflow-y-auto px-6 pt-6 pb-6 lg:h-full lg:w-1/2 lg:overflow-hidden" style={{ background: 'linear-gradient(180deg, #F8FAF8 0%, #FFFFFF 100%)' }}>
+      {/* ==================== RIGHT PANEL - AUTH ==================== */}
+      <div className="relative flex min-h-screen w-full flex-col items-center justify-start overflow-y-auto px-6 pt-6 pb-6 lg:h-full lg:w-1/2" style={{ background: 'linear-gradient(180deg, #F8FAF8 0%, #FFFFFF 100%)' }}>
         {/* Ambient glow */}
         <div className="pointer-events-none absolute right-0 top-0 h-[400px] w-[400px] rounded-full bg-brand-50/40 blur-[100px]" />
         <div className="pointer-events-none absolute bottom-0 left-0 h-[300px] w-[300px] rounded-full bg-brand-50/30 blur-[80px]" />
 
         {/* Floating glass auth card */}
         <div
-          className="animate-slide-in-right relative z-10 w-full max-w-[440px] rounded-[36px] border border-white/60 bg-white/80 p-7 backdrop-blur-xl sm:p-8"
+          className="animate-slide-in-right relative z-10 w-full max-w-[440px] shrink-0 rounded-[36px] border border-white/60 bg-white/80 p-7 backdrop-blur-xl sm:p-8"
           style={{ boxShadow: '0 30px 80px rgba(4,28,11,0.08), 0 10px 30px rgba(4,28,11,0.04), 0 1px 3px rgba(4,28,11,0.03)' }}
         >
           {/* Mobile brand */}
@@ -483,15 +483,15 @@ export default function Login() {
             <span className="text-[10px] font-bold uppercase tracking-wider text-brand-800">Secure Workspace Sign-In</span>
           </div>
 
-          {/* Title — premium typography */}
+          {/* Title - premium typography */}
           <h2 className="mt-4 text-[28px] font-extrabold leading-tight tracking-tight text-brand-950">Welcome back</h2>
           <p className="mt-1.5 text-[14px] leading-relaxed text-ink/50">
             Sign in to access your enterprise workspace and manage your events efficiently.
           </p>
 
-          {/* Role selection cards — premium */}
+          {/* Role selection cards - premium */}
           <p className="mt-5 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-ink/40">Select your role</p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {roles.map((r) => (
               <button
                 key={r.key}
@@ -525,7 +525,7 @@ export default function Login() {
           </div>
           {!role && (
             <p className="mt-2.5 rounded-xl bg-gold-50 px-3 py-2 text-[11px] font-medium text-gold-800 ring-1 ring-gold-200">
-              Pick your role to auto-fill its demo account — or type any staff email below.
+              Pick your role to auto-fill its demo account - or type any staff email below.
             </p>
           )}
 
@@ -543,6 +543,7 @@ export default function Login() {
                     placeholder="you@amen.et"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(e) } }}
                     autoComplete="username"
                   />
                 </div>
@@ -558,6 +559,7 @@ export default function Login() {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(e) } }}
                     autoComplete="current-password"
                   />
                   <button type="button" onClick={() => setShowPw((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-ink/30 transition hover:bg-gray-50 hover:text-ink/60">
@@ -574,7 +576,7 @@ export default function Login() {
               </button>
             </div>
 
-            {/* Sign in button — luxury */}
+            {/* Sign in button - luxury */}
             <button
               type="submit"
               disabled={busy}
@@ -592,7 +594,7 @@ export default function Login() {
             </button>
           </form>
 
-          {/* Client portal link — separate surface from staff ERP */}
+          {/* Client portal link - separate surface from staff ERP */}
           <p className="mt-3 text-center text-xs text-ink/45">
             Looking for the client dashboard?{' '}
             <Link to="/client-login" className="font-semibold text-brand-700 hover:text-brand-900 hover:underline">Client Portal sign-in →</Link>
@@ -627,7 +629,7 @@ export default function Login() {
 
           {/* Backend status */}
           <p className="mt-3 text-center text-[10px] leading-relaxed text-ink/35">
-            {backendOnline ? 'Secure backend authentication — JWT + bcrypt.' : 'Demo mode — backend offline, using local data. Password: demo@amen'}
+            {backendOnline ? 'Secure backend authentication - JWT + bcrypt.' : 'Demo mode - backend offline, using local data. Password: demo@amen'}
           </p>
 
           {/* Footer */}
@@ -649,7 +651,7 @@ export default function Login() {
             <Field label="Work Email">
               <div className="relative">
                 <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" />
-                <input className="input !pl-9" type="email" placeholder="you@amen.et" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} />
+                <input className="input !pl-9" type="email" placeholder="you@amen.et" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submitForgot() } }} />
               </div>
             </Field>
             <div className="flex justify-end gap-2">
@@ -676,14 +678,14 @@ export default function Login() {
         {resetToken && (
           <div className="space-y-4">
             <div className="rounded-lg bg-gold-50 border border-gold-200 p-3">
-              <p className="text-xs font-bold text-gold-800 mb-1">Demo Mode — Reset Token</p>
+              <p className="text-xs font-bold text-gold-800 mb-1">Demo Mode - Reset Token</p>
               <p className="text-xs text-gold-700 break-all font-mono">{resetToken}</p>
               <p className="text-[11px] text-gold-600 mt-1">In production, this would be sent via email as a link.</p>
             </div>
             <Field label="New Password">
               <div className="relative">
                 <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" />
-                <input className="input !pl-9" type="password" placeholder="At least 6 characters" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                <input className="input !pl-9" type="password" placeholder="At least 6 characters" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submitReset() } }} />
               </div>
             </Field>
             <div className="flex justify-end gap-2">

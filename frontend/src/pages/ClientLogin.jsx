@@ -24,7 +24,7 @@ export default function ClientLogin() {
       await loginClient(form.email.trim().toLowerCase(), form.password)
       navigate('/erp/portal', { replace: true })
     } catch (err) {
-      setError(err.message || 'Login failed — check your credentials')
+      setError(err.message || 'Login failed - check your credentials')
       setBusy(false)
     }
   }
@@ -89,6 +89,7 @@ export default function ClientLogin() {
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(e) } }}
                   placeholder="you@company.com"
                   autoComplete="username"
                 />
@@ -104,6 +105,7 @@ export default function ClientLogin() {
                   type={showPw ? 'text' : 'password'}
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(e) } }}
                   placeholder="••••••••"
                   autoComplete="current-password"
                 />
@@ -127,7 +129,7 @@ export default function ClientLogin() {
           </form>
 
           <p className="mt-3 text-center text-[10px] leading-relaxed text-ink/35">
-            {backendOnline ? 'Secure client authentication.' : 'Demo mode — Client: meron@ethfintech.com · Password: demo@amen'}
+            {backendOnline ? 'Secure client authentication.' : 'Demo mode - Client: meron@ethfintech.com · Password: demo@amen'}
           </p>
 
           <div className="mt-4 space-y-1.5 border-t border-gray-100 pt-3 text-center">

@@ -42,11 +42,11 @@ export default function Reports() {
     const mine = state.tasks.filter((t) => t.assigneeId === m.id)
     const done = mine.filter((t) => t.status === 'done').length
     const myEvents = state.events.filter((e) => e.pmId === m.id || e.team?.includes(m.id)).length
-    return { id: m.id, name: m.name, role: m.role || m.jobTitle || '—', events: myEvents, tasks: mine.length, done, rating: m.rating || 4.0 }
+    return { id: m.id, name: m.name, role: m.role || m.jobTitle || '-', events: myEvents, tasks: mine.length, done, rating: m.rating || 4.0 }
   }).filter((s) => s.tasks > 0 || s.events > 0)
 
-  const clientName = (id) => state.clients.find((c) => c.id === id)?.company || '—'
-  const eventName = (id) => state.events.find((e) => e.id === id)?.name || '—'
+  const clientName = (id) => state.clients.find((c) => c.id === id)?.company || '-'
+  const eventName = (id) => state.events.find((e) => e.id === id)?.name || '-'
 
   const reportRows = {
     'Events Report': state.events.map((e) => [e.name, e.category, clientName(e.clientId), e.date, e.status, e.budget, e.spent, e.attendees || '']),
@@ -61,7 +61,7 @@ export default function Reports() {
     'Staff Performance': state.staff.map((m) => {
       const mine = state.tasks.filter((t) => t.assigneeId === m.id)
       const done = mine.filter((t) => t.status === 'done').length
-      return [m.name, m.role, m.dept, mine.length, done, mine.length ? Math.round((done / mine.length) * 100) + '%' : '—']
+      return [m.name, m.role, m.dept, mine.length, done, mine.length ? Math.round((done / mine.length) * 100) + '%' : '-']
     }),
     'Profitability Report': state.events.map((e) => {
       const rev = state.invoices.filter((i) => i.eventId === e.id).reduce((a, i) => a + i.paid, 0)
@@ -123,10 +123,10 @@ export default function Reports() {
           }[name], reportRows[name]),
           make('Overall Summary', ['Revenue', 'Expenses', 'Net'], [[fmt(revenue), fmt(expenses), fmt(revenue - expenses)]]),
         ]
-    if (exportPDF(`${name} — ${new Date().toLocaleDateString()}`, sections)) {
+    if (exportPDF(`${name} - ${new Date().toLocaleDateString()}`, sections)) {
       show(`${name} downloaded as PDF (.pdf)`, 'success')
     } else {
-      show('PDF export failed — allow downloads to export', 'warn')
+      show('PDF export failed - allow downloads to export', 'warn')
     }
   }
 
@@ -229,7 +229,8 @@ export default function Reports() {
           <p className="font-bold text-brand-950">Staff Performance</p>
           <button className="btn-outline !py-1 text-xs" onClick={() => exportExcel('Staff Performance')}>Export</button>
         </div>
-        <table className="w-full">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[760px]">
           <thead className="bg-brand-50/50"><tr><Th>Team Member</Th><Th>Role</Th><Th>Events</Th><Th>Tasks</Th><Th className="text-right">Completion</Th><Th>Rating</Th></tr></thead>
           <tbody className="divide-y divide-brand-50">
             {staffPerformance.length === 0 ? (
@@ -254,9 +255,11 @@ export default function Reports() {
             })}
           </tbody>
         </table>
+        </div>
       </div>
 
       <Toast toast={toast} />
     </div>
   )
 }
+

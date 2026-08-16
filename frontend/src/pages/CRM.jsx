@@ -34,7 +34,7 @@ const pipelineStages = ['lead', 'opportunity', 'quotation', 'negotiation', 'cont
 const pipelineLabels = { lead: 'Lead', opportunity: 'Opportunity', quotation: 'Quotation', negotiation: 'Negotiation', contract: 'Contract' }
 
 export default function CRM() {
-  const { state, addClient, updateClient, patchBy, patch, logActivity, intent, clearIntent, addContract, updateContractStatus, addClientDoc } = useData()
+  const { state, addClient, updateClient, patchBy, patch, logActivity, intent, clearIntent, addContract, updateContractStatus, addClientDoc, setDemoFlag } = useData()
   const [tab, setTab] = useState('clients')
   const [q, setQ] = useState('')
   const [open, setOpen] = useState(false)
@@ -120,9 +120,9 @@ export default function CRM() {
     const client = await addClient(form)
     const docs = form.docs || []
     for (const d of docs) {
-      await addClientDoc(client.id, d.name, d.ext || 'PDF', d.size || '—', { type: d.type || 'company_doc', sizeBytes: d.sizeBytes, mimeType: d.mimeType })
+      await addClientDoc(client.id, d.name, d.ext || 'PDF', d.size || '-', { type: d.type || 'company_doc', sizeBytes: d.sizeBytes, mimeType: d.mimeType })
     }
-    show(`Client "${form.company}" created — added to pipeline${docs.length ? ` with ${docs.length} document(s)` : ''}`)
+    show(`Client "${form.company}" created - added to pipeline${docs.length ? ` with ${docs.length} document(s)` : ''}`)
     setOpen(false); setForm({}); setErrors({}); clearIntent()
   }
 
@@ -209,6 +209,7 @@ export default function CRM() {
     if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
     setQuotes((q) => [{ id: uid(), ref: 'QUO-' + String(1000 + q.length + 1), company: quoteForm.company, type: quoteForm.type || 'Event', amount: Number(quoteForm.amount) || 0, date: todayISO(), status: quoteForm.status || 'draft' }, ...q])
     setQuoteOpen(false); setQuoteForm({}); setErrors({})
+    setDemoFlag('quoteCreated', true)
     show('Quotation created')
   }
 
@@ -231,13 +232,13 @@ export default function CRM() {
   const signContract = (ct) => {
     updateContractStatus(ct.id, 'signed')
     patchBy('clients', ct.clientId, { stage: 'contract' })
-    show(`Contract ${ct.ref} signed — client moved to Contract`)
+    show(`Contract ${ct.ref} signed - client moved to Contract`)
   }
 
   const submitDoc = () => {
     const res = validate(docForm, docSchema)
     if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
-    addClientDoc(detail.clientId, docForm.name, docForm.ext || 'PDF', docForm.size || '—', { sizeBytes: docForm.sizeBytes, mimeType: docForm.mimeType, type: 'company_doc' })
+    addClientDoc(detail.clientId, docForm.name, docForm.ext || 'PDF', docForm.size || '-', { sizeBytes: docForm.sizeBytes, mimeType: docForm.mimeType, type: 'company_doc' })
     show(`Document "${docForm.name}" attached`)
     setDocOpen(false); setDocForm({}); setErrors({})
   }
@@ -246,7 +247,33 @@ export default function CRM() {
   const detailEvents = state.events.filter((e) => e.clientId === view?.id)
 
   useEffect(() => {
-    if (intent === 'new-client') { setOpen(true); setErrors({}); setTab('clients') }
+    if (!intent) return
+    if (state.demo.autoplay) {
+      if (intent === 'new-client') {
+        const seed = { company: 'Habesha Agro PLC', contactPerson: 'Lensa Tesfaye', phone: '+251 919 220 331', email: 'lensa@habeshaagro.et', industry: 'Construction', city: 'Addis Ababa', stage: 'lead' }
+        setOpen(true); setForm(seed); setErrors({}); setTab('clients')
+        setTimeout(() => { addClient(seed); show('Client profile created automatically'); setOpen(false); setForm({}) }, 1100)
+      }
+      if (intent === 'new-quote') {
+        const company = state.clients.find((c) => c.id === state.demo.lastClientId)?.company || state.clients[0]?.company || 'Amen Client'
+        const seed = { company, type: 'Corporate Gala', amount: '850000', status: 'draft' }
+        setQuoteOpen(true); setQuoteForm(seed); setErrors({}); setTab('quotations')
+        setTimeout(() => {
+          setQuotes((q) => [{ id: 'qtp-' + Math.random().toString(36).slice(2, 8), ref: 'QUO-' + String(1000 + q.length + 1), company, type: seed.type, amount: 850000, date: todayISO(), status: 'draft' }, ...q])
+          setDemoFlag('quoteCreated', true); setQuoteOpen(false); setQuoteForm({})
+        }, 1100)
+      }
+      if (intent === 'new-contract') {
+        const seed = { clientId: state.demo.lastClientId || 'cl1', eventId: '', value: '1250000', startDate: todayISO(), endDate: '2026-12-31', notes: 'Full production & design scope' }
+        setContractOpen(true); setContractForm(seed); setErrors({}); setTab('clients')
+        setTimeout(() => { addContract(seed); show('Contract drafted automatically'); setContractOpen(false); setContractForm({}) }, 1100)
+      }
+    } else {
+      if (intent === 'new-client') { setOpen(true); setErrors({}); setTab('clients') }
+      if (intent === 'new-quote') { setQuoteOpen(true); setQuoteForm({}); setErrors({}); setTab('quotations') }
+      if (intent === 'new-contract') { setContractOpen(true); setContractForm({ clientId: state.demo.lastClientId || '' }); setErrors({}); setTab('clients') }
+    }
+    if (intent) clearIntent()
   }, [intent])
 
   return (
@@ -308,7 +335,7 @@ export default function CRM() {
                     <Td className="text-ink/60">{c.industry}</Td>
                     <Td className="text-ink/60">{c.city}</Td>
                     <Td><Badge status={c.stage} label={pipelineLabels[c.stage]} /></Td>
-                    <Td className="font-semibold text-brand-950">{c.totalValue ? fmt(c.totalValue) : '—'}</Td>
+                    <Td className="font-semibold text-brand-950">{c.totalValue ? fmt(c.totalValue) : '-'}</Td>
                     <Td><Badge status={c.status} label={c.status} /></Td>
                   </tr>
                 ))}
@@ -423,7 +450,7 @@ export default function CRM() {
                     <tr key={ct.id} className="hover:bg-brand-50/40">
                       <Td className="font-mono text-xs font-semibold text-brand-800">{ct.ref}</Td>
                       <Td className="font-semibold text-brand-950">{c?.company}</Td>
-                      <Td className="text-ink/60">{ev?.name || '—'}</Td>
+                      <Td className="text-ink/60">{ev?.name || '-'}</Td>
                       <Td className="text-right font-semibold">{fmt(ct.value)}</Td>
                       <Td className="text-ink/50">{ct.startDate} → {ct.endDate || 'Open'}</Td>
                       <Td><Badge status={ct.status} label={ct.status} /></Td>
@@ -475,7 +502,7 @@ export default function CRM() {
           </div>
           <div className="flex-1">
             <p className="text-sm font-bold text-brand-950">Company Logo / Photo</p>
-            <p className="text-xs text-ink/50">Upload a logo or representative image for this client (JPG, PNG — max 5MB).</p>
+            <p className="text-xs text-ink/50">Upload a logo or representative image for this client (JPG, PNG - max 5MB).</p>
             <div className="mt-2 flex gap-2">
               <label className="btn-outline !py-1.5 cursor-pointer text-xs">
                 <Upload size={14} /> Choose image
@@ -544,7 +571,7 @@ export default function CRM() {
           </div>
           <div className="flex-1">
             <p className="text-sm font-bold text-brand-950">Company Logo / Photo</p>
-            <p className="text-xs text-ink/50">Update the logo or representative image (JPG, PNG — max 5MB).</p>
+            <p className="text-xs text-ink/50">Update the logo or representative image (JPG, PNG - max 5MB).</p>
             <div className="mt-2 flex gap-2">
               <label className="btn-outline !py-1.5 cursor-pointer text-xs">
                 <Upload size={14} /> Change image
@@ -698,7 +725,7 @@ export default function CRM() {
           </Field>
           <Field label="Event">
             <select className="input" value={contractForm.eventId || ''} onChange={(e) => setContractForm({ ...contractForm, eventId: e.target.value })}>
-              <option value="">—</option>
+              <option value="">-</option>
               {state.events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
             </select>
           </Field>
@@ -714,7 +741,7 @@ export default function CRM() {
       </Modal>
 
       {/* Upload document modal */}
-      <Modal open={docOpen} onClose={() => setDocOpen(false)} title={`Upload Document — ${detail?.company || ''}`} width="max-w-md">
+      <Modal open={docOpen} onClose={() => setDocOpen(false)} title={`Upload Document - ${detail?.company || ''}`} width="max-w-md">
         <div className="grid grid-cols-2 gap-3">
           <label className="col-span-2 flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-brand-200 bg-brand-50/40 py-5 text-center transition hover:border-brand-400 hover:bg-brand-50">
             <Upload size={18} className="text-brand-500" />
@@ -765,7 +792,7 @@ export default function CRM() {
       </Modal>
 
       {/* Communication history modal */}
-      <Modal open={commOpen} onClose={() => setCommOpen(false)} title={`Communication History${commClient ? ` — ${commClient}` : ''}`} width="max-w-lg">
+      <Modal open={commOpen} onClose={() => setCommOpen(false)} title={`Communication History${commClient ? ` - ${commClient}` : ''}`} width="max-w-lg">
         <div className="divide-y divide-brand-50">
           {(commClient ? commLog.filter((c) => c.client === commClient) : commLog).map((c) => (
             <div key={c.id} className="flex items-center gap-4 p-4">

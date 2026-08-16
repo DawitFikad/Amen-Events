@@ -9,7 +9,7 @@ function todayISO(offset = 0) {
   return d.toISOString().slice(0, 10)
 }
 
-// Permission matrix — mirrors frontend permissions.js
+// Permission matrix - mirrors frontend permissions.js
 const MODULES = [
   'dashboard', 'reports', 'crm', 'events', 'projects',
   'venues', 'resources', 'vendors', 'staff', 'finance',
@@ -161,11 +161,11 @@ async function main() {
     }
   }
 
-  // 3b. Create client role (no module permissions — portal uses separate routes)
+  // 3b. Create client role (no module permissions - portal uses separate routes)
   const clientRole = await prisma.role.upsert({
     where: { key: 'client' },
     update: {},
-    create: { key: 'client', label: 'Client', description: 'Client portal access — limited to own data' },
+    create: { key: 'client', label: 'Client', description: 'Client portal access - limited to own data' },
   })
   roleMap['client'] = clientRole
 
@@ -263,7 +263,7 @@ async function main() {
   // 8. Seed events
   const eventMap = {}
   const eventsData = [
-    { name: 'EthFinTech Annual Summit 2026', clientId: 'cl1', venueId: 'vn1', category: 'Conference', date: '2026-08-18', time: '09:00', endDate: '2026-08-19', endTime: '17:00', deadline: '2026-08-14', capacity: 1200, price: 12000, published: true, description: "Two days of keynotes, panels and networking on the future of digital finance — Ethiopia's largest fintech gathering.", tags: ['Fintech', 'Conference', 'Networking'], contactName: 'Dr. Meron Ayele', contactPhone: '+251 911 222 000', status: 'upcoming', pmId: 'st2', budget: 1850000, spent: 780000, stage: 8, attendees: null, progress: 64 },
+    { name: 'EthFinTech Annual Summit 2026', clientId: 'cl1', venueId: 'vn1', category: 'Conference', date: '2026-08-18', time: '09:00', endDate: '2026-08-19', endTime: '17:00', deadline: '2026-08-14', capacity: 1200, price: 12000, published: true, description: "Two days of keynotes, panels and networking on the future of digital finance - Ethiopia's largest fintech gathering.", tags: ['Fintech', 'Conference', 'Networking'], contactName: 'Dr. Meron Ayele', contactPhone: '+251 911 222 000', status: 'upcoming', pmId: 'st2', budget: 1850000, spent: 780000, stage: 8, attendees: null, progress: 64 },
     { name: 'Zemen Pharma Product Launch', clientId: 'cl2', venueId: 'vn2', category: 'Product Launch', date: '2026-08-25', time: '18:30', endDate: '2026-08-25', endTime: '22:00', deadline: '2026-08-22', capacity: 600, price: 0, published: false, description: 'Invitation-only unveiling of Zemen Pharmaceuticals\' new product line with media and industry guests.', tags: ['Healthcare', 'Launch'], contactName: 'Rahel Getahun', contactPhone: '+251 912 333 111', status: 'upcoming', pmId: 'st3', budget: 640000, spent: 210000, stage: 5, attendees: null, progress: 43 },
     { name: 'Abyssinia Bank Leadership Retreat', clientId: 'cl5', venueId: 'vn4', category: 'Retreat', date: '2026-08-02', time: '08:00', endDate: '2026-08-04', endTime: '16:00', deadline: '2026-07-25', capacity: 160, price: 0, published: false, description: 'Two-day leadership retreat covering strategy, risk and branch performance for Abyssinia Bank senior leadership.', tags: ['Banking', 'Retreat', 'Leadership'], contactName: 'Selamawit Desta', contactPhone: '+251 915 666 444', status: 'ongoing', pmId: 'st5', budget: 2400000, spent: 1240000, stage: 11, attendees: 146, progress: 86 },
     { name: 'Walia Telecom Partner Expo', clientId: 'cl3', venueId: 'vn6', category: 'Exhibition', date: '2026-09-12', time: '10:00', endDate: '2026-09-13', endTime: '18:00', deadline: '2026-09-05', capacity: 3000, price: 5000, published: true, description: 'Open exhibition showcasing Walia Telecom partner ecosystem, booths, demos and B2B matchmaking.', tags: ['Telecom', 'Exhibition', 'B2B'], contactName: 'Kebede Abebe', contactPhone: '+251 913 444 222', status: 'upcoming', pmId: 'st2', budget: 980000, spent: 340000, stage: 4, attendees: null, progress: 36 },
@@ -413,7 +413,7 @@ async function main() {
     { text: 'Budget alert: Event 1850000 approaching 60%', type: 'alert', at: '10 min ago' },
     { text: 'New client inquiry from Sheba Construction', type: 'crm', at: '1 hr ago' },
     { text: 'Maintenance due: Moving Head Lights', type: 'inventory', at: '3 hr ago' },
-    { text: 'Payment received — INV-2026-0141', type: 'finance', at: '5 hr ago' },
+    { text: 'Payment received - INV-2026-0141', type: 'finance', at: '5 hr ago' },
     { text: 'Task deadline approaching tomorrow', type: 'task', at: '6 hr ago' },
   ]) {
     await prisma.notification.create({ data: n })
@@ -453,7 +453,7 @@ async function main() {
           stage: s,
           stageName: STAGE_NAMES[s] || `Stage ${s}`,
           action: s === currentStage ? 'set' : 'advanced',
-          note: s === 0 ? 'Workflow started — client created' : `Advanced to ${STAGE_NAMES[s]}`,
+          note: s === 0 ? 'Workflow started - client created' : `Advanced to ${STAGE_NAMES[s]}`,
           userId: userMap[event.pmId]?.id || userMap['st1']?.id,
           createdAt: new Date(Date.now() - (currentStage - s) * 24 * 60 * 60 * 1000),
         },
@@ -466,7 +466,7 @@ async function main() {
     { type: 'budget', entityId: eventMap['ev1']?.id || '', entityName: 'EthFinTech Annual Summit 2026', amount: 1850000, status: 'pending', submittedBy: userMap['st2']?.id, note: 'Budget for venue, catering, AV, and marketing' },
     { type: 'contract', entityId: eventMap['ev2']?.id || '', entityName: 'Zemen Pharma Product Launch', amount: 640000, status: 'pending', submittedBy: userMap['st3']?.id, note: 'Sponsorship contract with Zemen Pharma' },
     { type: 'vendor_payment', entityId: eventMap['ev3']?.id || '', entityName: 'Abyssinia Bank Leadership Retreat', amount: 320000, status: 'pending', submittedBy: userMap['st5']?.id, note: 'Payment to Gourmet Addis Catering' },
-    { type: 'purchase_request', entityId: eventMap['ev4']?.id || '', entityName: 'Walia Telecom Partner Expo', amount: 180000, status: 'approved', submittedBy: userMap['st2']?.id, reviewedBy: userMap['st1']?.id, note: 'AV equipment rental', reviewNote: 'Approved — within budget' },
+    { type: 'purchase_request', entityId: eventMap['ev4']?.id || '', entityName: 'Walia Telecom Partner Expo', amount: 180000, status: 'approved', submittedBy: userMap['st2']?.id, reviewedBy: userMap['st1']?.id, note: 'AV equipment rental', reviewNote: 'Approved - within budget' },
     { type: 'sponsorship', entityId: eventMap['ev5']?.id || '', entityName: 'Sof Omer Hospitality Gala', amount: 250000, status: 'rejected', submittedBy: userMap['st3']?.id, reviewedBy: userMap['st1']?.id, note: 'Gold sponsorship package', reviewNote: 'Exceeds sponsorship cap for this event type' },
     { type: 'budget', entityId: eventMap['ev6']?.id || '', entityName: 'Koka University Graduation Day', amount: 450000, status: 'revision_requested', submittedBy: userMap['st5']?.id, reviewedBy: userMap['st1']?.id, note: 'Additional budget for stage setup', reviewNote: 'Need detailed breakdown of stage costs' },
   ]
@@ -505,14 +505,14 @@ async function main() {
     { userId: userMap['st5']?.id, text: 'Budget updated for Abyssinia Bank Leadership Retreat: ETB 2,400,000', type: 'budget', at: '1 hr ago', link: '/finance' },
     { userId: userMap['st3']?.id, text: 'Workflow: Sof Omer Hospitality Gala advanced to Completed', type: 'workflow', at: '2 hr ago', link: '/workflow' },
     { text: 'Maintenance due: Moving Head Lights', type: 'inventory', at: '3 hr ago' },
-    { text: 'Payment received — INV-2026-0141', type: 'finance', at: '5 hr ago' },
+    { text: 'Payment received - INV-2026-0141', type: 'finance', at: '5 hr ago' },
   ]
   for (const n of notifData) {
     await prisma.notification.create({ data: n })
   }
 
   console.log('Seed complete!')
-  console.log('Demo users — email: [name]@amen.et, password: demo@amen')
+  console.log('Demo users - email: [name]@amen.et, password: demo@amen')
 }
 
 main()

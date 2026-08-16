@@ -118,7 +118,7 @@ export default function ClientDashboard() {
                   <div key={e.id} className="flex items-center gap-4 rounded-xl border border-brand-100 p-4 transition hover:border-brand-300 hover:shadow-sm">
                     <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-lg bg-brand-50 text-brand-700">
                       <span className="text-[10px] font-bold uppercase">{e.date ? new Date(e.date).toLocaleDateString('en', { month: 'short' }) : 'TBD'}</span>
-                      <span className="text-lg font-black leading-none">{e.date ? new Date(e.date).getDate() : '—'}</span>
+                      <span className="text-lg font-black leading-none">{e.date ? new Date(e.date).getDate() : '-'}</span>
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-bold text-brand-950">{e.name}</p>
@@ -194,7 +194,7 @@ export default function ClientDashboard() {
                   <AlertCircle size={16} className="shrink-0 text-gold-600" />
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-semibold text-brand-950">Invoice {inv.ref} due</p>
-                    <p className="text-[11px] text-ink/45">{evt?.name || '—'}</p>
+                    <p className="text-[11px] text-ink/45">{evt?.name || '-'}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-xs font-bold text-gold-700">ETB {fmtCompact(inv.amount - (inv.paid || 0))}</p>

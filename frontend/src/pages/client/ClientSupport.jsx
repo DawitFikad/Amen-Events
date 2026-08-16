@@ -49,7 +49,7 @@ export default function ClientSupport() {
           <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-700"><Phone size={22} /></span>
           <p className="mt-3 font-bold text-brand-950">Call Us</p>
           <p className="text-sm text-ink/60">+251 911 220 445</p>
-          <p className="text-[11px] text-ink/40">Mon–Fri, 9am–6pm EAT</p>
+          <p className="text-[11px] text-ink/40">Mon-Fri, 9am-6pm EAT</p>
         </div>
         <div className="card p-5 text-center">
           <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-700"><Mail size={22} /></span>

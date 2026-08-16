@@ -102,7 +102,8 @@ export default function ClientInvoices() {
         {myInvoices.length === 0 ? (
           <div className="p-8 text-center text-sm text-ink/40">No invoices found.</div>
         ) : (
-          <table className="w-full">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px]">
             <thead className="bg-brand-50/50">
               <tr><Th>Invoice #</Th><Th>Event</Th><Th>Amount</Th><Th>Paid</Th><Th>Outstanding</Th><Th>Status</Th><Th>Due Date</Th><Th></Th></tr>
             </thead>
@@ -113,7 +114,7 @@ export default function ClientInvoices() {
                 return (
                   <tr key={inv.id} className="hover:bg-brand-50/40">
                     <Td><span className="font-mono text-sm font-bold text-brand-950">{inv.ref}</span></Td>
-                    <Td className="text-ink/60">{evt?.name || '—'}</Td>
+                    <Td className="text-ink/60">{evt?.name || '-'}</Td>
                     <Td className="font-semibold text-brand-950">{fmt(inv.amount)}</Td>
                     <Td className="text-brand-700">{fmt(inv.paid || 0)}</Td>
                     <Td className="text-gold-700">{fmt(remaining)}</Td>
@@ -130,7 +131,7 @@ export default function ClientInvoices() {
                           </button>
                         )}
                         <button className="flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-900" onClick={() => exportPDF(`Invoice ${inv.ref}`, [
-                          { title: 'Invoice', text: `${inv.ref} — ${evt?.name || 'Event'}` },
+                          { title: 'Invoice', text: `${inv.ref} - ${evt?.name || 'Event'}` },
                           { title: 'Amounts', rows: { headers: ['Description', 'Amount (ETB)'], rows: [['Total invoiced', inv.amount], ['Paid', inv.paid || 0], ['Outstanding', remaining]] } },
                         ])}>
                           <Download size={13} /> PDF
@@ -142,6 +143,7 @@ export default function ClientInvoices() {
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
@@ -156,7 +158,7 @@ export default function ClientInvoices() {
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-700"><CheckCircle2 size={15} /></span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-brand-950">Payment for {inv.ref}</p>
-                  <p className="text-[11px] text-ink/45">{evt?.name || '—'} · {inv.dueDate}</p>
+                  <p className="text-[11px] text-ink/45">{evt?.name || '-'} · {inv.dueDate}</p>
                 </div>
                 <span className="font-bold text-brand-700">{fmt(inv.paid || 0)}</span>
               </div>
@@ -214,3 +216,4 @@ export default function ClientInvoices() {
     </div>
   )
 }
+

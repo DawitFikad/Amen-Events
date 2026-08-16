@@ -32,11 +32,16 @@ const emptyState = {
   currentUserId: null, currentUser: null,
   lastLogin: null, intent: null,
   demo: {
-    open: false, done: [0],
+    open: false, autoplay: false, done: [0],
     lastClientId: null, lastEventId: null, lastRegId: null,
     lastCheckinId: null, lastQrId: null,
     financeAction: 0, qrViewed: false, budgetSet: false,
     allocated: false, teamAssigned: false, visitedReports: false,
+    quoteCreated: false, contractCreated: false, venueAdded: false,
+    resourceAdded: false, vendorAdded: false, staffAdded: false,
+    taskCreated: false, speakerAdded: false, exhibitorAdded: false,
+    sponsorAdded: false, campaignCreated: false, couponCreated: false,
+    adminAction: false,
   },
 }
 
@@ -139,7 +144,7 @@ export function DataProvider({ children }) {
     return /credential|invalid|locked|for [a-z ]* minutes|sign in through|client portal|not found|staff accounts/i.test(m)
   }
 
-  // Local (seed) staff login — used offline or as a fallback when the backend
+  // Local (seed) staff login - used offline or as a fallback when the backend
   // is unreachable / rate-limited (keeps the demo working without a DB).
   const loginOffline = useCallback(async (email) => {
     const member = staffSeed.find((s) => s.email === email)
@@ -397,8 +402,9 @@ export function DataProvider({ children }) {
     }
     const rec = { id: 'tk-' + Math.random().toString(36).slice(2, 8), ...data, status: data.status || 'todo', comments: 0 }
     patch('tasks', (a) => [rec, ...a])
+    setDemoFlag('taskCreated', true)
     logActivity(`Task created: ${data.title}`, 'task')
-  }, [backendOnline, patch, logActivity])
+  }, [backendOnline, patch, logActivity, setDemoFlag])
 
   const updateTask = useCallback((id, updater) => {
     const target = state.tasks.find((t) => t.id === id)
@@ -432,8 +438,8 @@ export function DataProvider({ children }) {
     const parsed = decodeTicket(value)
     const code = parsed ? parsed.code : String(value || '').trim()
     const ci = (s) => String(s || '').trim().toLowerCase()
-    // Match the ticket within ONE event's entry roll only — by ticket code,
-    // internal id, attendee name, or email — so typing a name also works.
+    // Match the ticket within ONE event's entry roll only - by ticket code,
+    // internal id, attendee name, or email - so typing a name also works.
     const matchIn = (list, v) => {
       const c = ci(v)
       return list.find((r) => (r.qr && ci(r.qr) === c) || (r.id && ci(r.id) === c) || (r.name && ci(r.name) === c) || (r.email && ci(r.email) === c))
@@ -499,11 +505,12 @@ export function DataProvider({ children }) {
   const addVenue = useCallback(async (data) => {
     if (backendOnline) { try { const { venue } = await api.venues.create(data); setState((s) => ({ ...s, venues: [venue, ...s.venues] })); return venue } catch (e) {} }
 const equipment = typeof data.equipment === 'string' ? data.equipment.split(',').map((s) => s.trim()).filter(Boolean) : Array.isArray(data.equipment) ? data.equipment : []
-  const rec = { id: 'vn-' + Math.random().toString(36).slice(2, 8), abbr: (data.name || 'VN').replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase() || 'VN', capacity: Number(data.capacity) || 100, price: Number(data.price) || 0, equipment, status: 'available', color: 'bg-brand-600', halls: Number(data.halls) || 1, contact: data.contact || '—', image: data.image || '', address: data.address || '', description: data.description || '', contactPhone: data.contactPhone || '', contactEmail: data.contactEmail || '' }
+  const rec = { id: 'vn-' + Math.random().toString(36).slice(2, 8), abbr: (data.name || 'VN').replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase() || 'VN', capacity: Number(data.capacity) || 100, price: Number(data.price) || 0, equipment, status: 'available', color: 'bg-brand-600', halls: Number(data.halls) || 1, contact: data.contact || '-', image: data.image || '', address: data.address || '', description: data.description || '', contactPhone: data.contactPhone || '', contactEmail: data.contactEmail || '' }
   patch('venues', (a) => [rec, ...a])
+  setDemoFlag('venueAdded', true)
   logActivity(`Venue added: ${data.name}`, 'venue')
   return rec
-}, [backendOnline, patch, logActivity])
+}, [backendOnline, patch, logActivity, setDemoFlag])
 
 const updateVenue = useCallback(async (id, data) => {
   const equipment = typeof data.equipment === 'string' ? data.equipment.split(',').map((s) => s.trim()).filter(Boolean) : Array.isArray(data.equipment) ? data.equipment : []
@@ -518,9 +525,10 @@ const updateVenue = useCallback(async (id, data) => {
     if (backendOnline) { try { const { resource } = await api.resources.create(data); setState((s) => ({ ...s, resources: [resource, ...s.resources] })); return resource } catch (e) {} }
     const rec = { id: 'rc-' + Math.random().toString(36).slice(2, 8), qty: Number(data.qty) || 1, allocated: 0, maintenance: 0, status: 'available', location: data.location || 'Main Warehouse', ...data }
     patch('resources', (a) => [rec, ...a])
+    setDemoFlag('resourceAdded', true)
     logActivity(`Asset added: ${data.name}`, 'inventory')
     return rec
-  }, [backendOnline, patch, logActivity])
+  }, [backendOnline, patch, logActivity, setDemoFlag])
 
   const updateResource = useCallback(async (id, data) => {
     const payload = { ...data, qty: Number(data.qty) || 1, unitCost: Number(data.unitCost) || 0, allocated: Number(data.allocated) || 0, maintenance: Number(data.maintenance) || 0 }
@@ -534,18 +542,20 @@ const updateVenue = useCallback(async (id, data) => {
     if (backendOnline) { try { const { vendor } = await api.vendors.create(data); setState((s) => ({ ...s, vendors: [vendor, ...s.vendors] })); return vendor } catch (e) {} }
     const rec = { id: 'vd-' + Math.random().toString(36).slice(2, 8), rating: 4.0, contracts: 0, status: 'active', ...data }
     patch('vendors', (a) => [rec, ...a])
+    setDemoFlag('vendorAdded', true)
     logActivity(`Vendor added: ${data.name} (${data.type})`, 'vendor')
     return rec
-  }, [backendOnline, patch, logActivity])
+  }, [backendOnline, patch, logActivity, setDemoFlag])
 
   const addStaffMember = useCallback(async (data) => {
     if (backendOnline) { try { const { user } = await api.users.create(data); setState((s) => ({ ...s, staff: [user, ...s.staff] })); return user } catch (e) {} }
 const name = data.name || 'New Member'
-  const rec = { id: 'st-' + Math.random().toString(36).slice(2, 8), name, role: data.role || data.jobTitle || 'Coordinator', dept: data.dept || 'Operations', phone: data.phone || '—', email: data.email || '', type: data.type || 'Employee', status: 'active', color: 'bg-brand-500', initials: name.split(' ').map((p) => p[0]).slice(0, 2).join(''), avatar: data.avatar || '', salary: Number(data.salary) || 0, joinedDate: data.joinedDate || '', contractEnd: data.contractEnd || '', address: data.address || '', bio: data.bio || '' }
+  const rec = { id: 'st-' + Math.random().toString(36).slice(2, 8), name, role: data.role || data.jobTitle || 'Coordinator', dept: data.dept || 'Operations', phone: data.phone || '-', email: data.email || '', type: data.type || 'Employee', status: 'active', color: 'bg-brand-500', initials: name.split(' ').map((p) => p[0]).slice(0, 2).join(''), avatar: data.avatar || '', salary: Number(data.salary) || 0, joinedDate: data.joinedDate || '', contractEnd: data.contractEnd || '', address: data.address || '', bio: data.bio || '' }
   patch('staff', (a) => [rec, ...a])
+  setDemoFlag('staffAdded', true)
   logActivity(`Team member added: ${name}`, 'staff')
   return rec
-}, [backendOnline, patch, logActivity])
+}, [backendOnline, patch, logActivity, setDemoFlag])
 
 const updateStaffMember = useCallback(async (id, data) => {
   const payload = { ...data, role: data.role || data.jobTitle || data.role || '', initials: data.initials || (data.name || '').split(' ').map((p) => p[0]).slice(0, 2).join('') }
@@ -560,9 +570,10 @@ const updateStaffMember = useCallback(async (id, data) => {
     const name = data.name || 'Speaker'
     const rec = { id: 'sp-' + Math.random().toString(36).slice(2, 8), name, initials: name.split(' ').map((p) => p[0]).slice(0, 2).join(''), color: 'bg-gold-500', topic: data.topic || 'TBD', company: data.company || '', email: data.email || '', phone: data.phone || '', bio: data.bio || '', eventId: data.eventId || 'ev1', time: data.time || '12:00', status: data.status || 'pending' }
     patch('speakers', (a) => [rec, ...a])
+    setDemoFlag('speakerAdded', true)
     logActivity(`Speaker added: ${name}`, 'speaker')
     return rec
-  }, [backendOnline, patch, logActivity])
+  }, [backendOnline, patch, logActivity, setDemoFlag])
 
   const updateSpeaker = useCallback(async (id, data) => {
     if (backendOnline && id && !String(id).startsWith('sp-')) { try { await api.modules.updateSpeaker(id, data) } catch (e) { /* keep local */ } }
@@ -573,11 +584,12 @@ const updateStaffMember = useCallback(async (id, data) => {
 
   const addExhibitor = useCallback(async (data) => {
     if (backendOnline) { try { const { exhibitor } = await api.modules.createExhibitor(data); setState((s) => ({ ...s, exhibitors: [exhibitor, ...s.exhibitors] })); return exhibitor } catch (e) {} }
-    const rec = { id: 'ex-' + Math.random().toString(36).slice(2, 8), booth: data.booth || '—', size: data.size || 'Standard', package: data.package || 'Exhibitor', paid: Number(data.paid) || 0, status: data.status || 'registering', ...data }
+    const rec = { id: 'ex-' + Math.random().toString(36).slice(2, 8), booth: data.booth || '-', size: data.size || 'Standard', package: data.package || 'Exhibitor', paid: Number(data.paid) || 0, status: data.status || 'registering', ...data }
     patch('exhibitors', (a) => [rec, ...a])
+    setDemoFlag('exhibitorAdded', true)
     logActivity(`Exhibitor added: ${data.company} (${data.booth || 'booth TBD'})`, 'exhibition')
     return rec
-  }, [backendOnline, patch, logActivity])
+  }, [backendOnline, patch, logActivity, setDemoFlag])
 
   const updateExhibitor = useCallback(async (id, data) => {
     const payload = { ...data, paid: Number(data.paid) || 0 }
@@ -591,9 +603,10 @@ const updateStaffMember = useCallback(async (id, data) => {
     if (backendOnline) { try { const { sponsor } = await api.modules.createSponsor(data); setState((s) => ({ ...s, sponsors: [sponsor, ...s.sponsors] })); return sponsor } catch (e) {} }
     const rec = { id: 'spn-' + Math.random().toString(36).slice(2, 8), name: data.name || 'Sponsor', package: data.package || 'Silver', amount: Number(data.amount) || 0, status: data.status || 'pending', deliverables: typeof data.deliverables === 'string' ? data.deliverables.split(',').map((x) => x.trim()).filter(Boolean) : Array.isArray(data.deliverables) ? data.deliverables : data.deliverables ? [data.deliverables] : [], contact: data.contact || '', email: data.email || '', phone: data.phone || '', date: data.date || '' }
     patch('sponsors', (a) => [rec, ...a])
+    setDemoFlag('sponsorAdded', true)
     logActivity(`Sponsor added: ${rec.name} (${rec.package})`, 'sponsorship')
     return rec
-  }, [backendOnline, patch, logActivity])
+  }, [backendOnline, patch, logActivity, setDemoFlag])
 
   const updateSponsor = useCallback(async (id, data) => {
     const payload = { ...data, amount: Number(data.amount) || 0, deliverables: typeof data.deliverables === 'string' ? data.deliverables.split(',').map((x) => x.trim()).filter(Boolean) : Array.isArray(data.deliverables) ? data.deliverables : data.deliverables ? [data.deliverables] : [] }
@@ -607,9 +620,10 @@ const updateStaffMember = useCallback(async (id, data) => {
     if (backendOnline) { try { const { campaign } = await api.modules.createCampaign(data); setState((s) => ({ ...s, campaigns: [campaign, ...s.campaigns] })); return campaign } catch (e) {} }
     const rec = { id: 'cm-' + Math.random().toString(36).slice(2, 8), name: data.name || 'New Campaign', channel: data.channel || 'Email', audience: Number(data.audience) || 0, sent: 0, opens: 0, clicks: 0, status: data.status || 'draft', schedule: data.schedule || '', description: data.description || '' }
     patch('campaigns', (a) => [rec, ...a])
+    setDemoFlag('campaignCreated', true)
     logActivity(`Campaign created: ${rec.name}`, 'marketing')
     return rec
-  }, [backendOnline, patch, logActivity])
+  }, [backendOnline, patch, logActivity, setDemoFlag])
 
   const updateCampaign = useCallback(async (id, data) => {
     if (backendOnline && id && !String(id).startsWith('cm-')) { try { await api.modules.updateCampaign(id, data) } catch (e) { /* keep local */ } }
@@ -622,9 +636,10 @@ const updateStaffMember = useCallback(async (id, data) => {
     if (backendOnline) { try { const { coupon } = await api.modules.createCoupon(data); setState((s) => ({ ...s, coupons: [coupon, ...s.coupons] })); return coupon } catch (e) {} }
     const rec = { id: 'cp-' + Math.random().toString(36).slice(2, 8), usage: 0, status: 'active', max: Number(data.max) || 500, ...data }
     patch('coupons', (a) => [rec, ...a])
+    setDemoFlag('couponCreated', true)
     logActivity(`Coupon ${data.code} generated (${data.value})`, 'marketing')
     return rec
-  }, [backendOnline, patch, logActivity])
+  }, [backendOnline, patch, logActivity, setDemoFlag])
 
   // ─── EVENT SUPPLIERS & CHECKLISTS ──────────────────────────
 
@@ -660,17 +675,18 @@ const updateStaffMember = useCallback(async (id, data) => {
     const rec = { id: 'ct-' + Math.random().toString(36).slice(2, 8), ref: 'CTR-2026-' + String(1000 + Math.floor(Math.random() * 9000)), status: 'draft', ...data, value: Number(data.value) || 0 }
     if (backendOnline) { try { const { contract } = await api.modules.createContract?.(data); return contract } catch (e) {} }
     patch('contracts', (a) => [rec, ...a])
+    setDemoFlag('contractCreated', true)
     const clientName = state.clients.find((c) => c.id === rec.clientId)?.company || 'client'
     logActivity(`Contract ${rec.ref} drafted for ${clientName}`, 'crm')
     return rec
-  }, [backendOnline, patch, logActivity, state.clients])
+  }, [backendOnline, patch, logActivity, setDemoFlag, state.clients])
 
   const updateContractStatus = useCallback((id, status) => {
     patchBy('contracts', id, { status })
     logActivity(`Contract moved to ${status}`, 'crm')
   }, [patchBy, logActivity])
 
-  const addClientDoc = useCallback(async (clientId, name, ext = 'PDF', size = '—', opts = {}) => {
+  const addClientDoc = useCallback(async (clientId, name, ext = 'PDF', size = '-', opts = {}) => {
     const rec = { id: 'cd-' + Math.random().toString(36).slice(2, 8), clientId, name, ext, size }
     patch('clientDocs', (a) => [rec, ...a])
     const clientName = state.clients.find((c) => c.id === clientId)?.company || 'client'
@@ -691,7 +707,7 @@ const updateStaffMember = useCallback(async (id, data) => {
     return rec
   }, [backendOnline, patch, logActivity, state.clients])
 
-  const addEventDoc = useCallback(async (eventId, name, ext = 'PDF', size = '—', opts = {}) => {
+  const addEventDoc = useCallback(async (eventId, name, ext = 'PDF', size = '-', opts = {}) => {
     const rec = { id: 'ed-' + Math.random().toString(36).slice(2, 8), eventId, name, ext, size }
     patch('eventDocs', (a) => [rec, ...a])
     const eventName = state.events.find((e) => e.id === eventId)?.name || 'event'
@@ -832,9 +848,9 @@ export const useData = () => {
 }
 
 export const LOOKUP_HELPERS = {
-  clientName: (s, id) => s.clients.find((c) => c.id === id)?.company || '—',
-  eventName: (s, id) => s.events.find((e) => e.id === id)?.name || '—',
-  venueName: (s, id) => s.venues.find((v) => v.id === id)?.name || '—',
-  staffName: (s, id) => s.staff.find((m) => m.id === id)?.name || '—',
-  vendorName: (s, id) => s.vendors.find((v) => v.id === id)?.name || '—',
+  clientName: (s, id) => s.clients.find((c) => c.id === id)?.company || '-',
+  eventName: (s, id) => s.events.find((e) => e.id === id)?.name || '-',
+  venueName: (s, id) => s.venues.find((v) => v.id === id)?.name || '-',
+  staffName: (s, id) => s.staff.find((m) => m.id === id)?.name || '-',
+  vendorName: (s, id) => s.vendors.find((v) => v.id === id)?.name || '-',
 }

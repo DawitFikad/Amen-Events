@@ -4,7 +4,7 @@ import { authRequired } from '../middleware/auth.js'
 
 const router = Router()
 
-// GET /api/calendar — aggregate all calendar items
+// GET /api/calendar - aggregate all calendar items
 router.get('/', authRequired, async (req, res) => {
   const { month, year } = req.query
   const isAdmin = req.user.userRoles?.some((ur) => ur.role.key === 'admin')
@@ -63,7 +63,7 @@ router.get('/', authRequired, async (req, res) => {
   res.json({ events: filtered })
 })
 
-// POST /api/calendar — create a custom calendar event (meeting, etc.)
+// POST /api/calendar - create a custom calendar event (meeting, etc.)
 router.post('/', authRequired, async (req, res) => {
   const { title, type, date, endDate, time, endTime, location, notes, color } = req.body
   const calEvent = await prisma.calendarEvent.create({

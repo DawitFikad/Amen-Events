@@ -196,7 +196,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/client-login" element={<ClientLogin />} />
-        {/* Public Portal — attendee-facing, separate from ERP */}
+        {/* Public Portal - attendee-facing, separate from ERP */}
         <Route element={<AttendeeProvider><PortalLayout /></AttendeeProvider>}>
           <Route path="/" element={<PortalLanding />} />
           <Route path="/events" element={<PortalEventList />} />
@@ -213,7 +213,7 @@ export default function App() {
           <Route path="/about" element={<PortalAbout />} />
           <Route path="/contact" element={<PortalContact />} />
         </Route>
-        {/* Client Portal — separate layout & login, still requires auth */}
+        {/* Client Portal - separate layout & login, still requires auth */}
         <Route path="/erp/portal" element={<RequireAuth loginTo="/client-login"><RequireClient><ClientShell /></RequireClient></RequireAuth>}>
           <Route index element={<ClientDashboard />} />
           <Route path="/erp/portal/browse" element={<ClientBrowseEvents />} />
@@ -231,7 +231,7 @@ export default function App() {
           <Route path="/erp/portal/profile" element={<ClientProfile />} />
           <Route path="/erp/portal/support" element={<ClientSupport />} />
         </Route>
-        {/* ERP — staff only */}
+        {/* ERP - staff only */}
         <Route path="/erp" element={<RequireAuth><RequireStaff><Shell /></RequireStaff></RequireAuth>}>
           <Route index element={<HomeRedirect />} />
           <Route path="/erp/workflow" element={<RequirePermission module="events"><WorkflowPage /></RequirePermission>} />

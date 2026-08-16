@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Handshake, Plus, Star, Phone, FileText, CheckCircle2 } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, SearchBox, Toast, EmptyState, Th, Td, Avatar, Modal, Field } from '../components/ui'
@@ -7,7 +7,7 @@ import { nameOnly, phoneValid, textRequired, numberPositive, validate } from '..
 const typeIcon = { Caterer: '🍽️', Decorator: '🌸', Security: '🛡️', Photographer: '📷', Videographer: '🎥', Entertainment: '🎤', Printing: '🖨️', Transportation: '🚚' }
 
 export default function Vendors() {
-  const { state, addVendor } = useData()
+  const { state, addVendor, intent, clearIntent } = useData()
   const [q, setQ] = useState('')
   const [detail, setDetail] = useState(null)
   const [toast, setToast] = useState(null)
@@ -18,6 +18,20 @@ export default function Vendors() {
   const [errors, setErrors] = useState({})
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
+
+  useEffect(() => {
+    if (intent === 'new-vendor') {
+      if (state.demo.autoplay) {
+        const seed = { name: 'Addis Flower Co.', type: 'Decorator', contact: 'Yordanos Bekele', phone: '+251 918 111 222', rating: '4.5' }
+        setOpen(true); setForm(seed); setErrors({})
+        setTimeout(() => {
+          addVendor(seed)
+          show(`Vendor "${seed.name}" added automatically`); setOpen(false); setForm({})
+        }, 1100)
+      } else { setOpen(true); setErrors({}) }
+      clearIntent()
+    }
+  }, [intent])
 
   const filtered = state.vendors.filter((v) => (v.name + v.type + v.contact).toLowerCase().includes(q.toLowerCase()))
 
@@ -90,7 +104,7 @@ export default function Vendors() {
                 ) : state.expenses.filter((e) => e.vendorId).slice(0, 8).map((p) => (
                   <tr key={p.id}>
                     <Td className="font-mono text-xs text-brand-800">EXP-{p.id.slice(-6)}</Td>
-                    <Td className="text-ink/70">{state.vendors.find((v) => v.id === p.vendorId)?.name || '—'}</Td>
+                    <Td className="text-ink/70">{state.vendors.find((v) => v.id === p.vendorId)?.name || '-'}</Td>
                     <Td className="text-right font-semibold text-brand-950">{p.amount.toLocaleString()}</Td>
                     <Td><Badge status={p.status === 'paid' ? 'paid' : 'pending'} label={p.status} /></Td>
                   </tr>

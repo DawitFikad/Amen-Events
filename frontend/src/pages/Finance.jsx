@@ -21,8 +21,8 @@ export default function Finance() {
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
 
   const exportAll = () => {
-    const cName = (id) => state.clients.find((c) => c.id === id)?.company || '—'
-    const eName = (id) => state.events.find((e) => e.id === id)?.name || '—'
+    const cName = (id) => state.clients.find((c) => c.id === id)?.company || '-'
+    const eName = (id) => state.events.find((e) => e.id === id)?.name || '-'
     downloadCSV('finance-invoices.csv',
       ['Ref', 'Client', 'Event', 'Amount', 'Paid', 'Outstanding', 'Status'],
       state.invoices.map((i) => [i.ref, cName(i.clientId), eName(i.eventId), i.amount, i.paid, i.amount - i.paid, i.status]))
@@ -34,10 +34,18 @@ export default function Finance() {
 
   useEffect(() => {
     if (intent === 'finance') {
+      const seed = { eventId: state.demo.lastEventId || 'ev1', category: 'Venue Rental', amount: '250000' }
       setTab('overview')
-      setForm({ eventId: state.demo.lastEventId || 'ev1', category: 'Venue Rental' })
-      setOpen('expense')
-      setErrors({})
+      if (state.demo.autoplay) {
+        setForm(seed); setOpen('expense'); setErrors({})
+        setTimeout(() => {
+          recordExpense({ eventId: seed.eventId, category: seed.category, amount: 250000, date: new Date().toISOString().slice(0, 10) })
+          show('Expense recorded automatically'); setOpen(null); setForm({}); setErrors({})
+        }, 1100)
+      } else {
+        setForm({ eventId: state.demo.lastEventId || 'ev1', category: 'Venue Rental' })
+        setOpen('expense'); setErrors({})
+      }
       clearIntent()
     }
   }, [intent])
@@ -220,7 +228,8 @@ export default function Finance() {
             <span className="text-xs text-ink/45">{purchaseRequests.filter((p) => p.status === 'pending').length} awaiting approval · {fmt(purchaseRequests.reduce((a, p) => a + (p.status === 'pending' ? p.amount : 0), 0))} pending</span>
             <button className="btn-primary !py-1.5 text-xs" onClick={() => { setErrors({}); setOpen('purchase') }}><Plus size={14} /> New Request</button>
           </div>
-          <table className="w-full">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px]">
             <thead className="bg-brand-50/50"><tr><Th>Item</Th><Th>Category</Th><Th>Requested By</Th><Th>Event</Th><Th>Date</Th><Th className="text-right">Amount</Th><Th>Status</Th><Th></Th></tr></thead>
             <tbody className="divide-y divide-brand-50">
               {purchaseRequests.length === 0 ? (
@@ -232,8 +241,8 @@ export default function Finance() {
                   <tr key={p.id} className="hover:bg-brand-50/40">
                     <Td className="font-semibold text-brand-950">{p.item}</Td>
                     <Td className="text-ink/60">{p.category}</Td>
-                    <Td className="text-ink/60">{m?.name || '—'}</Td>
-                    <Td className="text-ink/60">{ev?.name || '—'}</Td>
+                    <Td className="text-ink/60">{m?.name || '-'}</Td>
+                    <Td className="text-ink/60">{ev?.name || '-'}</Td>
                     <Td className="text-ink/50">{p.date}</Td>
                     <Td className="text-right font-semibold">{fmt(p.amount)}</Td>
                     <Td><Badge status={p.status} label={p.status} /></Td>
@@ -250,6 +259,7 @@ export default function Finance() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
@@ -259,7 +269,7 @@ export default function Finance() {
           <Field label="Event"><select className="input" value={form.eventId || ''} onChange={(e) => setForm({ ...form, eventId: e.target.value })}><option value="">Select…</option>{state.events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}</select></Field>
           <Field label="Category"><select className="input" value={form.category || 'General'} onChange={(e) => setForm({ ...form, category: e.target.value })}><option>Venue Rental</option><option>Catering</option><option>Technical</option><option>Decoration</option><option>Transport</option><option>Marketing</option><option>General</option></select></Field>
           <Field label="Amount (ETB) *"><input type="number" className="input" value={form.amount || ''} onChange={(e) => setForm({ ...form, amount: e.target.value })} />{errors.amount && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.amount}</p>}</Field>
-          <Field label="Vendor"><select className="input" value={form.vendorId || ''} onChange={(e) => setForm({ ...form, vendorId: e.target.value })}><option value="">—</option>{state.vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></Field>
+          <Field label="Vendor"><select className="input" value={form.vendorId || ''} onChange={(e) => setForm({ ...form, vendorId: e.target.value })}><option value="">-</option>{state.vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button className="btn-outline" onClick={() => setOpen(null)}>Cancel</button>
@@ -274,7 +284,7 @@ export default function Finance() {
             <select className="input" value={form.invoiceId || ''} onChange={(e) => setForm({ ...form, invoiceId: e.target.value })}>
               <option value="">Select invoice…</option>
               {state.invoices.filter((i) => i.status !== 'paid').map((inv) => (
-                <option key={inv.id} value={inv.id}>{inv.ref} — {fmt(inv.amount - inv.paid)} due</option>
+                <option key={inv.id} value={inv.id}>{inv.ref} - {fmt(inv.amount - inv.paid)} due</option>
               ))}
             </select>
           </Field>
@@ -312,7 +322,7 @@ export default function Finance() {
           <Field label="Item / Description *" className="col-span-2"><input className="input" value={prForm.item || ''} onChange={(e) => setPrForm({ ...prForm, item: e.target.value })} placeholder="e.g. Extra moving head lights (12)" />{errors.item && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.item}</p>}</Field>
           <Field label="Category"><select className="input" value={prForm.category || 'Technical'} onChange={(e) => setPrForm({ ...prForm, category: e.target.value })}><option>Technical</option><option>Catering</option><option>Decoration</option><option>Logistics</option><option>Marketing</option><option>Branding</option><option>General</option></select></Field>
           <Field label="Amount (ETB) *"><input type="number" className="input" value={prForm.amount || ''} onChange={(e) => setPrForm({ ...prForm, amount: e.target.value })} />{errors.prAmount && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.prAmount}</p>}</Field>
-          <Field label="Event"><select className="input" value={prForm.eventId || ''} onChange={(e) => setPrForm({ ...prForm, eventId: e.target.value })}><option value="">—</option>{state.events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}</select></Field>
+          <Field label="Event"><select className="input" value={prForm.eventId || ''} onChange={(e) => setPrForm({ ...prForm, eventId: e.target.value })}><option value="">-</option>{state.events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}</select></Field>
           <Field label="Requested By"><select className="input" value={prForm.requestedBy || state.currentUserId || 'st2'} onChange={(e) => setPrForm({ ...prForm, requestedBy: e.target.value })}>{state.staff.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select></Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
@@ -335,3 +345,4 @@ export default function Finance() {
     </div>
   )
 }
+

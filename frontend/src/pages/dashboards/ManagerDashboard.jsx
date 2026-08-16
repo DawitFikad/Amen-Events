@@ -13,7 +13,7 @@ export default function ManagerDashboard() {
   const navigate = useNavigate()
   const userId = state.currentUser?.id || state.currentUserId
 
-  // My events — events where I'm PM or on the team
+  // My events - events where I'm PM or on the team
   const myEvents = state.events.filter((e) =>
     e.pmId === userId || (e.team && e.team.includes(userId))
   )
@@ -21,7 +21,7 @@ export default function ManagerDashboard() {
   const myOngoing = myEvents.filter((e) => e.status === 'ongoing')
   const myCompleted = myEvents.filter((e) => e.status === 'completed')
 
-  // My tasks — tasks assigned to me or on my events
+  // My tasks - tasks assigned to me or on my events
   const myEventIds = new Set(myEvents.map((e) => e.id))
   const myTasks = state.tasks.filter((t) =>
     t.assigneeId === userId || myEventIds.has(t.eventId)
@@ -41,7 +41,7 @@ export default function ManagerDashboard() {
     { label: 'Overdue', value: overdueTasks.length, icon: AlertCircle, tone: 'red', sub: 'needs attention', delta: null },
   ]
 
-  // Event timeline — sorted by date
+  // Event timeline - sorted by date
   const eventTimeline = [...myEvents].sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999'))
 
   // Team members on my events
@@ -52,7 +52,7 @@ export default function ManagerDashboard() {
   })
   const teamMembers = state.staff.filter((s) => teamMemberIds.has(s.id))
 
-  // Upcoming deadlines — tasks due in next 7 days
+  // Upcoming deadlines - tasks due in next 7 days
   const upcomingDeadlines = myTasks
     .filter((t) => t.status !== 'done' && t.due)
     .filter((t) => {
@@ -113,7 +113,7 @@ export default function ManagerDashboard() {
                   <div key={e.id} className="flex items-center gap-4 rounded-xl border border-brand-100 p-3.5 hover:border-brand-300 hover:shadow-card">
                     <span className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-lg bg-brand-50 text-brand-800">
                       <span className="text-[9px] font-bold uppercase">{e.date ? new Date(e.date + 'T00:00').toLocaleDateString('en', { month: 'short' }) : 'TBD'}</span>
-                      <span className="text-base font-black leading-none">{e.date ? new Date(e.date + 'T00:00').getDate() : '—'}</span>
+                      <span className="text-base font-black leading-none">{e.date ? new Date(e.date + 'T00:00').getDate() : '-'}</span>
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">

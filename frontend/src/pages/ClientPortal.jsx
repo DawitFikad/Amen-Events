@@ -82,7 +82,7 @@ export default function ClientPortal() {
     const ticket = TICKET_TYPES.find((t) => t.id === selectedTicket)
     const total = ticket.price * qty
     setCheckoutBusy(true)
-    // Simulate checkout — in demo mode, register directly
+    // Simulate checkout - in demo mode, register directly
     setTimeout(() => {
       if (registerAttendee) {
         registerAttendee({
@@ -219,7 +219,7 @@ export default function ClientPortal() {
                       <div className="mb-3 space-y-1.5 text-sm text-ink/55">
                         <div className="flex items-center gap-2"><CalendarDays size={14} className="text-brand-600" /> {e.date || 'TBD'} · {e.time || '09:00'}</div>
                         <div className="flex items-center gap-2"><MapPin size={14} className="text-brand-600" /> {venue?.name || 'TBA'}{venue?.city && `, ${venue.city}`}</div>
-                        <div className="flex items-center gap-2"><Users size={14} className="text-brand-600" /> {e.attendees ? e.attendees.toLocaleString() : '—'} attendees</div>
+                        <div className="flex items-center gap-2"><Users size={14} className="text-brand-600" /> {e.attendees ? e.attendees.toLocaleString() : '-'} attendees</div>
                       </div>
                       <div className="flex items-center justify-between border-t border-brand-50 pt-3">
                         <span className="text-xs font-semibold text-ink/50">{isMyEvent ? 'Your event' : 'Available'}</span>
@@ -303,7 +303,8 @@ export default function ClientPortal() {
           {displayEvents.length === 0 ? (
             <div className="p-8 text-center text-ink/40">No events yet. <button onClick={() => setView('browse')} className="font-bold text-brand-700 hover:underline">Browse events →</button></div>
           ) : (
-            <table className="w-full">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px]">
               <thead className="bg-brand-50/50">
                 <tr><Th>Event</Th><Th>Date</Th><Th>Venue</Th><Th>Status</Th><Th>Budget</Th></tr>
               </thead>
@@ -312,13 +313,14 @@ export default function ClientPortal() {
                   <tr key={e.id} className="hover:bg-brand-50/40">
                     <Td><span className="font-semibold text-brand-950">{e.name}</span></Td>
                     <Td className="text-ink/60">{e.date || 'TBD'}</Td>
-                    <Td className="text-ink/60">{e.venue?.name || state.venues.find((v) => v.id === e.venueId)?.name || '—'}</Td>
+                    <Td className="text-ink/60">{e.venue?.name || state.venues.find((v) => v.id === e.venueId)?.name || '-'}</Td>
                     <Td><Badge status={e.status} label={e.status} /></Td>
                     <Td className="text-ink/60">ETB {(e.budget || 0).toLocaleString()}</Td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )
@@ -330,7 +332,8 @@ export default function ClientPortal() {
           {displayInvoices.length === 0 ? (
             <div className="p-8 text-center text-ink/40">No invoices yet.</div>
           ) : (
-            <table className="w-full">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px]">
               <thead className="bg-brand-50/50">
                 <tr><Th>Invoice #</Th><Th>Amount</Th><Th>Status</Th><Th>Date</Th></tr>
               </thead>
@@ -340,11 +343,12 @@ export default function ClientPortal() {
                     <Td><span className="font-mono text-sm text-brand-950">{inv.number || inv.id.slice(-8)}</span></Td>
                     <Td className="font-semibold text-brand-950">ETB {(inv.amount || 0).toLocaleString()}</Td>
                     <Td><Badge status={inv.status} label={inv.status} /></Td>
-                    <Td className="text-ink/50">{inv.createdAt ? new Date(inv.createdAt).toLocaleDateString() : '—'}</Td>
+                    <Td className="text-ink/50">{inv.createdAt ? new Date(inv.createdAt).toLocaleDateString() : '-'}</Td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )
@@ -356,7 +360,8 @@ export default function ClientPortal() {
           {displayRegistrations.length === 0 ? (
             <div className="p-8 text-center text-ink/40">No registrations yet. <button onClick={() => setView('browse')} className="font-bold text-brand-700 hover:underline">Buy tickets →</button></div>
           ) : (
-            <table className="w-full">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px]">
               <thead className="bg-brand-50/50">
                 <tr><Th>Attendee</Th><Th>Event</Th><Th>Type</Th><Th>Qty</Th><Th>Amount</Th><Th>Checked In</Th></tr>
               </thead>
@@ -364,7 +369,7 @@ export default function ClientPortal() {
                 {displayRegistrations.map((r) => (
                   <tr key={r.id} className="hover:bg-brand-50/40">
                     <Td><span className="font-semibold text-brand-950">{r.name}</span></Td>
-                    <Td className="text-ink/60">{r.event?.name || state.events.find((e) => e.id === r.eventId)?.name || '—'}</Td>
+                    <Td className="text-ink/60">{r.event?.name || state.events.find((e) => e.id === r.eventId)?.name || '-'}</Td>
                     <Td className="text-ink/60">{r.type || 'Standard'}</Td>
                     <Td className="text-ink/60">{r.qty || 1}</Td>
                     <Td className="text-ink/60">ETB {(r.amount || 0).toLocaleString()}</Td>
@@ -373,6 +378,7 @@ export default function ClientPortal() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )
@@ -382,3 +388,4 @@ export default function ClientPortal() {
     </div>
   )
 }
+

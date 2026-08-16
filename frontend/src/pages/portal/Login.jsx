@@ -51,11 +51,11 @@ export default function PortalLogin() {
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           <div>
             <label className="label">Email</label>
-            <input className="input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@example.com" required />
+            <input className="input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSubmit(e) } }} placeholder="you@example.com" required />
           </div>
           <div>
             <label className="label">Password</label>
-            <input className="input" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Your password" required />
+            <input className="input" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSubmit(e) } }} placeholder="Your password" required />
           </div>
           <button type="submit" disabled={loading} className="btn-primary w-full">
             {loading ? 'Logging in…' : 'Login'} <ArrowRight size={16} />

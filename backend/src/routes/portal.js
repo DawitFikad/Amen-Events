@@ -12,7 +12,7 @@ function requireClient(req, res, next) {
   next()
 }
 
-// GET /api/portal/dashboard — client's events, invoices, registrations
+// GET /api/portal/dashboard - client's events, invoices, registrations
 router.get('/dashboard', authRequired, requireClient, async (req, res) => {
   const clientId = req.user.clientId
 
@@ -57,7 +57,7 @@ router.get('/dashboard', authRequired, requireClient, async (req, res) => {
   })
 })
 
-// GET /api/portal/events — client's events only
+// GET /api/portal/events - client's events only
 router.get('/events', authRequired, requireClient, async (req, res) => {
   const events = await prisma.event.findMany({
     where: { clientId: req.user.clientId },
@@ -67,7 +67,7 @@ router.get('/events', authRequired, requireClient, async (req, res) => {
   res.json({ events })
 })
 
-// GET /api/portal/invoices — client's invoices only
+// GET /api/portal/invoices - client's invoices only
 router.get('/invoices', authRequired, requireClient, async (req, res) => {
   const invoices = await prisma.invoice.findMany({
     where: { clientId: req.user.clientId },
@@ -76,7 +76,7 @@ router.get('/invoices', authRequired, requireClient, async (req, res) => {
   res.json({ invoices })
 })
 
-// GET /api/portal/registrations — client's event registrations
+// GET /api/portal/registrations - client's event registrations
 router.get('/registrations', authRequired, requireClient, async (req, res) => {
   const registrations = await prisma.registration.findMany({
     where: { event: { clientId: req.user.clientId } },

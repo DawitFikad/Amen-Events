@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { UserCog, Plus, CalendarDays, Award, Clock3, ShieldCheck, Upload, Trash2, Info, MapPin, Wallet } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, SearchBox, Toast, Th, Td, Avatar, Segmented, Modal, Field } from '../components/ui'
@@ -15,7 +15,7 @@ const attendance = [
 const departments = ['Management', 'Operations', 'Finance', 'Procurement', 'Marketing', 'Technical']
 
 export default function Staff() {
-  const { state, addStaffMember, updateStaffMember } = useData()
+  const { state, addStaffMember, updateStaffMember, intent, clearIntent } = useData()
   const [q, setQ] = useState('')
   const [view, setView] = useState('directory')
   const [toast, setToast] = useState(null)
@@ -27,6 +27,20 @@ export default function Staff() {
   const [errors, setErrors] = useState({})
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
+
+  useEffect(() => {
+    if (intent === 'new-staff') {
+      if (state.demo.autoplay) {
+        const seed = { name: 'Elias Bekele', role: 'Project Manager', dept: 'Operations', phone: '+251 919 445 667', email: 'elias@amen.et', type: 'Employee', salary: '65000', joinedDate: '2026-08-01' }
+        setOpen(true); setForm(seed); setErrors({})
+        setTimeout(() => {
+          addStaffMember(seed)
+          show(`${seed.name} added to team automatically`); setOpen(false); setForm({})
+        }, 1100)
+      } else { setOpen(true); setErrors({}) }
+      clearIntent()
+    }
+  }, [intent])
 
   const schema = { name: [nameOnly('Full name')], phone: [phoneValid('Phone number')], email: [emailValid('Email')], salary: [optional(numberPositive('Salary'))], joinedDate: [optional(dateRequired('Joined date'))], contractEnd: [optional(dateRequired('Contract end'))] }
 
@@ -86,7 +100,7 @@ export default function Staff() {
         </div>
         <div className="flex-1">
           <p className="text-sm font-bold text-brand-950">Profile Photo</p>
-          <p className="text-xs text-ink/50">Used on the directory, team pickers and badges (JPG, PNG — max 5MB).</p>
+          <p className="text-xs text-ink/50">Used on the directory, team pickers and badges (JPG, PNG - max 5MB).</p>
           {f.avatar && <button className="btn-ghost mt-1 !py-1 text-xs !text-red-600" onClick={() => setFn((x) => ({ ...x, avatar: '' }))}><Trash2 size={13} /> Remove photo</button>}
         </div>
       </div>
@@ -159,9 +173,10 @@ export default function Staff() {
         <div className="card overflow-hidden">
           <div className="flex items-center gap-2 border-b border-brand-100 p-4">
             <CalendarDays size={15} className="text-brand-600" />
-            <span className="text-sm font-semibold text-brand-950">Abyssinia Bank Leadership Retreat — Day 1 attendance</span>
+            <span className="text-sm font-semibold text-brand-950">Abyssinia Bank Leadership Retreat - Day 1 attendance</span>
           </div>
-          <table className="w-full">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px]">
             <thead className="bg-brand-50/50"><tr><Th>Member</Th><Th>Role</Th><Th>Hours</Th><Th>Status</Th></tr></thead>
             <tbody className="divide-y divide-brand-50">
               {attendance.map((a) => {
@@ -177,6 +192,7 @@ export default function Staff() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

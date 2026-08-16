@@ -45,7 +45,7 @@ const checklists = {
 const eventTimeline = {
   ev1: [
     { at: '2026-06-10', title: 'Event brief received', by: 'Dawit', type: 'created' },
-    { at: '2026-06-24', title: 'Venue allocated — Millennium Hall', by: 'Sara', type: 'venue' },
+    { at: '2026-06-24', title: 'Venue allocated - Millennium Hall', by: 'Sara', type: 'venue' },
     { at: '2026-07-15', title: 'Invoice #0141 paid (50%)', by: 'Yonas', type: 'finance' },
     { at: '2026-07-28', title: 'Catering contract signed', by: 'Sara', type: 'vendor' },
     { at: '2026-08-01', title: 'Marketing campaign launched', by: 'Liya', type: 'marketing' },
@@ -55,7 +55,7 @@ const eventTimeline = {
     { at: '2026-07-01', title: 'Event brief received', by: 'Sara', type: 'created' },
     { at: '2026-07-08', title: 'Resort venue blocked', by: 'Sara', type: 'venue' },
     { at: '2026-07-22', title: 'Transport & accommodation booked', by: 'Sara', type: 'vendor' },
-    { at: '2026-08-01', title: 'Event started — day 1', by: 'Dawit', type: 'status' },
+    { at: '2026-08-01', title: 'Event started - day 1', by: 'Dawit', type: 'status' },
   ],
   ev4: [
     { at: '2026-07-20', title: 'Event brief received', by: 'Dawit', type: 'created' },
@@ -98,16 +98,59 @@ export default function Events() {
   // Demo intents
   useEffect(() => {
     if (!intent) return
-    if (intent === 'new-event') { setOpen(true); setTab('all'); clearIntent() }
-    if (intent === 'event-team') { setViewId(state.demo.lastEventId); setDetailTab('overview'); setTeamOpen(true); clearIntent() }
-    if (intent === 'event-resources') { setViewId(state.demo.lastEventId); setDetailTab('overview'); setResOpen(true); clearIntent() }
-    if (intent === 'event-budget') {
-      const target = state.events.find((e) => e.id === state.demo.lastEventId)
-      setViewId(state.demo.lastEventId); setDetailTab('budget'); setBudgetOpen(true)
-      setBudgetEvent(target || state.events[0])
-      setBudgetVal(String(target?.budget || '')); clearIntent()
+    const lastEventId = state.demo.lastEventId
+    if (state.demo.autoplay) {
+      if (intent === 'new-event') {
+        const seed = {
+          name: 'Amen Staff Summit 2026', date: '2026-09-24',
+          clientId: state.demo.lastClientId || 'cl1', category: 'Conference',
+          status: 'upcoming', pmId: 'st2', time: '09:00', capacity: '400',
+          budget: '750000', published: true, tags: 'Internal, Summit',
+        }
+        setOpen(true); setForm(seed); setErrors({}); setTab('all')
+        setTimeout(async () => {
+          const rec = await addEvent(seed)
+          setViewId(rec.id); setOpen(false); setForm({}); show('Event created automatically')
+        }, 1100)
+      }
+      if (intent === 'event-team' && lastEventId) {
+        setTimeout(() => {
+          setEventTeam(lastEventId, ['st2', 'st3', 'st5', 'st7'])
+          show('Team assigned automatically'); setTeamOpen(false)
+        }, 1100)
+      }
+      if (intent === 'event-resources' && lastEventId) {
+        setTimeout(() => {
+          allocateResources(lastEventId, [{ resourceId: 'rc1', qty: 2 }, { resourceId: 'rc5', qty: 120 }])
+          show('Resources allocated automatically'); setResOpen(false)
+        }, 1100)
+      }
+      if (intent === 'event-budget' && lastEventId) {
+        setTimeout(() => {
+          setEventBudget(lastEventId, '1500000')
+          show('Budget set automatically'); setBudgetOpen(false)
+        }, 1100)
+      }
+      if (intent === 'event-complete' && lastEventId) {
+        setTimeout(() => {
+          const ev = state.events.find((e) => e.id === lastEventId)
+          patchBy('events', lastEventId, { status: 'completed' })
+          show(`Event ${ev?.name || ''} completed automatically`); setCompleteOpen(false)
+        }, 1100)
+      }
+    } else {
+      if (intent === 'new-event') { setOpen(true); setTab('all') }
+      if (intent === 'event-team') { setViewId(state.demo.lastEventId); setDetailTab('overview'); setTeamOpen(true) }
+      if (intent === 'event-resources') { setViewId(state.demo.lastEventId); setDetailTab('overview'); setResOpen(true) }
+      if (intent === 'event-budget') {
+        const target = state.events.find((e) => e.id === state.demo.lastEventId)
+        setViewId(state.demo.lastEventId); setDetailTab('budget'); setBudgetOpen(true)
+        setBudgetEvent(target || state.events[0])
+        setBudgetVal(String(target?.budget || ''))
+      }
+      if (intent === 'event-complete') { setViewId(state.demo.lastEventId); setDetailTab('overview'); setCompleteOpen(true) }
     }
-    if (intent === 'event-complete') { setViewId(state.demo.lastEventId); setDetailTab('overview'); setCompleteOpen(true); clearIntent() }
+    clearIntent()
   }, [intent])
 
   let events = state.events
@@ -133,7 +176,7 @@ export default function Events() {
     const rec = await addEvent(payload)
     const docs = form.docs || []
     for (const d of docs) {
-      await addEventDoc(rec.id, d.name, d.ext || 'PDF', d.size || '—', { type: d.type || 'file', sizeBytes: d.sizeBytes, mimeType: d.mimeType })
+      await addEventDoc(rec.id, d.name, d.ext || 'PDF', d.size || '-', { type: d.type || 'file', sizeBytes: d.sizeBytes, mimeType: d.mimeType })
     }
     show(`Event "${form.name}" created${docs.length ? ` with ${docs.length} document(s)` : ''}`)
     setOpen(false); setForm({}); setErrors({})
@@ -280,7 +323,7 @@ export default function Events() {
                       })}
                       {team.length > 4 && <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-50 text-[10px] font-bold text-brand-800 ring-2 ring-white">+{team.length - 4}</span>}
                     </div>
-                    <span className="inline-flex items-center gap-1 text-xs font-bold text-brand-700 opacity-0 transition group-hover:opacity-100">Open <ChevronRight size={14} /></span>
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-brand-700 sm:opacity-0 sm:transition sm:group-hover:opacity-100">Open <ChevronRight size={14} /></span>
                   </div>
                 </button>
               )
@@ -356,7 +399,7 @@ export default function Events() {
           </div>
           <div className="flex-1">
             <p className="text-sm font-bold text-brand-950">Event Image / Banner</p>
-            <p className="text-xs text-ink/50">Upload the event banner used on the public site and cards (JPG, PNG — max 5MB).</p>
+            <p className="text-xs text-ink/50">Upload the event banner used on the public site and cards (JPG, PNG - max 5MB).</p>
             <div className="mt-2 flex gap-2">
               <label className="btn-outline !py-1.5 cursor-pointer text-xs">
                 <Upload size={14} /> Choose image
@@ -567,7 +610,7 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
             <Info label="Date" value={event.date ? `${event.date} · ${event.time || ''}` : 'TBD'} />
             <Info label="Ends" value={event.endDate ? `${event.endDate}${event.endTime ? ' · ' + event.endTime : ''}` : 'One day event'} />
             <Info label="Venue" value={venue?.name || 'TBD'} />
-            <Info label="Project Manager" value={state.staff.find((m) => m.id === event.pmId)?.name || '—'} />
+            <Info label="Project Manager" value={state.staff.find((m) => m.id === event.pmId)?.name || '-'} />
             <Info label="Attendees" value={event.capacity ? `${event.capacity} capacity` : 'Open capacity'} />
             <Info label="Reg. deadline" value={event.deadline || 'No deadline'} />
             <Info label="Tickets from" value={event.price > 0 ? `ETB ${event.price.toLocaleString()}` : 'Free entry'} />
@@ -677,12 +720,12 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
                   <p className="mb-3 font-bold text-brand-950">Event Details</p>
                   <dl className="space-y-2.5 text-sm">
                     {[
-                      ['Client', client?.company], ['Venue', venue?.name], ['City', venue?.city || '—'],
-                      ['Category', event.category], ['Date', event.date], ['Time', event.time || '—'],
-                      ['End', event.endDate ? `${event.endDate}${event.endTime ? ' · ' + event.endTime : ''}` : '—'],
-                      ['Reg. deadline', event.deadline || '—'], ['Capacity', event.capacity ? `${event.capacity} people` : 'Open'],
+                      ['Client', client?.company], ['Venue', venue?.name], ['City', venue?.city || '-'],
+                      ['Category', event.category], ['Date', event.date], ['Time', event.time || '-'],
+                      ['End', event.endDate ? `${event.endDate}${event.endTime ? ' · ' + event.endTime : ''}` : '-'],
+                      ['Reg. deadline', event.deadline || '-'], ['Capacity', event.capacity ? `${event.capacity} people` : 'Open'],
                       ['Status', event.status], ['Published', event.published ? 'Yes' : 'No'],
-                      ['Contact', event.contactName ? `${event.contactName}${event.contactPhone ? ' · ' + event.contactPhone : ''}` : '—'],
+                      ['Contact', event.contactName ? `${event.contactName}${event.contactPhone ? ' · ' + event.contactPhone : ''}` : '-'],
                     ].map(([k, v]) => (
                       <div key={k} className="flex items-center justify-between">
                         <dt className="text-ink/45">{k}</dt>
@@ -742,7 +785,7 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
                     <span className={`text-sm ${c.done ? 'text-ink/40 line-through' : 'text-ink/80'}`}>{c.label}</span>
                   </label>
                 ))}
-                {myCheck.length === 0 && <p className="rounded-lg border border-dashed border-brand-200 p-4 text-center text-xs text-ink/35">No checklist items yet — add one below.</p>}
+                {myCheck.length === 0 && <p className="rounded-lg border border-dashed border-brand-200 p-4 text-center text-xs text-ink/35">No checklist items yet - add one below.</p>}
               </div>
               <div className="mt-4 flex items-center gap-2">
                 <input
@@ -888,24 +931,24 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
       </Modal>
 
       {/* Assign team modal */}
-      <Modal open={teamOpen} onClose={() => setTeamOpen(false)} title={`Assign Team — ${event.name}`} width="max-w-lg">
+      <Modal open={teamOpen} onClose={() => setTeamOpen(false)} title={`Assign Team - ${event.name}`} width="max-w-lg">
         <TeamPicker event={event} state={state} onClose={() => setTeamOpen(false)} onSave={setEventTeam} show={show} />
       </Modal>
 
       {/* Allocate resources modal */}
-      <Modal open={resOpen} onClose={() => setResOpen(false)} title={`Allocate Resources — ${event.name}`} width="max-w-lg">
+      <Modal open={resOpen} onClose={() => setResOpen(false)} title={`Allocate Resources - ${event.name}`} width="max-w-lg">
         <ResourcePicker event={event} state={state} onClose={() => setResOpen(false)} onAllocate={allocateResources} show={show} />
       </Modal>
 
       {/* Manage suppliers modal */}
-      <Modal open={supplierOpen} onClose={() => setSupplierOpen(false)} title={`Suppliers — ${event.name}`} width="max-w-lg">
+      <Modal open={supplierOpen} onClose={() => setSupplierOpen(false)} title={`Suppliers - ${event.name}`} width="max-w-lg">
         <SupplierPicker event={event} state={state} onClose={() => setSupplierOpen(false)} onSave={setEventSuppliers} show={show} />
       </Modal>
 
       {/* Set budget modal */}
-      <Modal open={budgetOpen} onClose={() => setBudgetOpen(false)} title={`Event Budget — ${(budgetEvent || event).name}`} width="max-w-md">
+      <Modal open={budgetOpen} onClose={() => setBudgetOpen(false)} title={`Event Budget - ${(budgetEvent || event).name}`} width="max-w-md">
         <div>
-          <p className="mb-3 text-sm text-ink/60">Set the total budget for this event. The budget powers the dashboard, finance and reporting views — edits update everywhere instantly.</p>
+          <p className="mb-3 text-sm text-ink/60">Set the total budget for this event. The budget powers the dashboard, finance and reporting views - edits update everywhere instantly.</p>
           <Field label="Budget (ETB) *">
             <input type="number" className="input" value={budgetVal} onChange={(e) => { setBudgetVal(e.target.value); if (budgetErr) setBudgetErr('') }} placeholder="850000" />
             {budgetErr && <p className="mt-1 text-[11px] font-medium text-red-600">{budgetErr}</p>}
@@ -1064,7 +1107,7 @@ function SupplierPicker({ event, state, onClose, onSave, show }) {
   }
   return (
     <div>
-      <p className="mb-3 text-sm text-ink/60">Link the vendors supplying this event — catering, security, AV, transport, etc.</p>
+      <p className="mb-3 text-sm text-ink/60">Link the vendors supplying this event - catering, security, AV, transport, etc.</p>
       <div className="grid grid-cols-1 gap-2">
         {state.vendors.map((v) => {
           const on = selected.has(v.id)
@@ -1136,7 +1179,7 @@ function BudgetView({ event, state, openBudgetModal }) {
         <button className="btn-primary !py-2 text-xs" onClick={() => openBudgetModal(event)}><Wallet size={14} /> Edit Budget</button>
       </div>
 
-      {/* All event budgets — admin can create/edit any budget here */}
+      {/* All event budgets - admin can create/edit any budget here */}
       <div className="rounded-xl border border-brand-100 overflow-hidden">
         <div className="flex items-center justify-between border-b border-brand-100 p-4">
           <div>
@@ -1144,7 +1187,8 @@ function BudgetView({ event, state, openBudgetModal }) {
             <p className="text-xs text-ink/45">Total budget {fmt(totalBudget)} · {fmt(totalSpent)} committed across all events</p>
           </div>
         </div>
-        <table className="w-full">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px]">
           <thead className="bg-brand-50/50"><tr><Th>Event</Th><Th className="text-right">Budget</Th><Th className="text-right">Spent</Th><Th className="text-right">Remaining</Th><Th>Utilization</Th><Th></Th></tr></thead>
           <tbody className="divide-y divide-brand-50">
             {state.events.map((e) => {
@@ -1162,6 +1206,7 @@ function BudgetView({ event, state, openBudgetModal }) {
             })}
           </tbody>
         </table>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -1188,7 +1233,8 @@ function BudgetView({ event, state, openBudgetModal }) {
             <p className="font-bold text-brand-950">Expense Log</p>
             <button className="btn-primary !py-1.5 text-xs" onClick={() => setExpOpen(true)}>+ Record Expense</button>
           </div>
-          <table className="w-full">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px]">
             <thead className="bg-brand-50/50"><tr><Th>Category</Th><Th>Date</Th><Th className="text-right">Amount</Th></tr></thead>
             <tbody className="divide-y divide-brand-50">
               {related.map((e) => (
@@ -1196,15 +1242,16 @@ function BudgetView({ event, state, openBudgetModal }) {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
 
-      <Modal open={expOpen} onClose={() => setExpOpen(false)} title={`Record Expense — ${event.name}`}>
+      <Modal open={expOpen} onClose={() => setExpOpen(false)} title={`Record Expense - ${event.name}`}>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Category"><select className="input" value={expForm.category || 'General'} onChange={(e) => setExpForm({ ...expForm, category: e.target.value })}><option>Venue Rental</option><option>Catering</option><option>Technical</option><option>Decoration</option><option>Transport</option><option>Marketing</option><option>General</option></select></Field>
           <Field label="Amount (ETB) *"><input type="number" className="input" value={expForm.amount || ''} onChange={(e) => { setExpForm({ ...expForm, amount: e.target.value }); if (errors.amount) setErrors({ ...errors, amount: undefined }) }} />{errors.amount && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.amount}</p>}</Field>
           <Field label="Date"><input type="date" className="input" value={expForm.date || ''} onChange={(e) => setExpForm({ ...expForm, date: e.target.value })} /></Field>
-          <Field label="Vendor"><select className="input" value={expForm.vendorId || ''} onChange={(e) => setExpForm({ ...expForm, vendorId: e.target.value })}><option value="">—</option>{state.vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></Field>
+          <Field label="Vendor"><select className="input" value={expForm.vendorId || ''} onChange={(e) => setExpForm({ ...expForm, vendorId: e.target.value })}><option value="">-</option>{state.vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button className="btn-outline" onClick={() => setExpOpen(false)}>Cancel</button>
@@ -1224,3 +1271,4 @@ function MiniStat({ label, value, tone = '' }) {
     </div>
   )
 }
+

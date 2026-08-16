@@ -6,7 +6,7 @@ const router = Router()
 
 // ─── PUBLIC EVENT ROUTES ───────────────────────────────────────
 
-// GET /api/portal/events — list events with filters
+// GET /api/portal/events - list events with filters
 router.get('/events', async (req, res) => {
   const { category, search, sort, city } = req.query
   const where = { status: { in: ['upcoming', 'ongoing'] } }
@@ -46,7 +46,7 @@ router.get('/events', async (req, res) => {
   res.json({ events: filtered })
 })
 
-// GET /api/portal/events/:id — single event detail
+// GET /api/portal/events/:id - single event detail
 router.get('/events/:id', async (req, res) => {
   try {
     const event = await prisma.event.findUnique({
@@ -67,7 +67,7 @@ router.get('/events/:id', async (req, res) => {
   }
 })
 
-// GET /api/portal/categories — unique categories
+// GET /api/portal/categories - unique categories
 router.get('/categories', async (req, res) => {
   const events = await prisma.event.findMany({
     where: { status: { in: ['upcoming', 'ongoing'] } },
@@ -170,7 +170,7 @@ router.post('/orders', attendeeRequired, async (req, res) => {
   res.json({ order })
 })
 
-// POST /api/portal/orders/:id/pay — mock payment
+// POST /api/portal/orders/:id/pay - mock payment
 router.post('/orders/:id/pay', attendeeRequired, async (req, res) => {
   const { method } = req.body
   const order = await prisma.order.findUnique({
@@ -314,7 +314,7 @@ router.get('/notifications', attendeeRequired, async (req, res) => {
       id: 'order-' + order.id,
       type: 'order',
       title: `Order ${order.status === 'paid' ? 'confirmed' : 'pending'}`,
-      message: `${order.event.name} — ETB ${order.total.toLocaleString()}`,
+      message: `${order.event.name} - ETB ${order.total.toLocaleString()}`,
       date: order.createdAt,
       read: false,
     })
@@ -324,7 +324,7 @@ router.get('/notifications', attendeeRequired, async (req, res) => {
       id: 'reg-' + reg.id,
       type: 'registration',
       title: `Registration ${reg.checkedIn ? 'checked in' : 'confirmed'}`,
-      message: `${reg.event.name} — QR: ${reg.qr}`,
+      message: `${reg.event.name} - QR: ${reg.qr}`,
       date: reg.createdAt,
       read: false,
     })

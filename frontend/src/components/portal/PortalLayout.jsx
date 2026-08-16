@@ -34,7 +34,7 @@ export default function PortalLayout() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Top Nav — premium, spacious */}
+      {/* Top Nav - premium, spacious */}
       <header className="sticky top-0 z-50 border-b border-gray-100 bg-white/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3.5 sm:px-8">
           {/* Logo */}
@@ -157,7 +157,7 @@ export default function PortalLayout() {
         <Outlet />
       </main>
 
-      {/* Footer — premium */}
+      {/* Footer - premium */}
       <footer className="hidden border-t border-gray-100 bg-gray-50/50 md:block">
         <div className="mx-auto max-w-7xl px-8 py-12">
           <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">

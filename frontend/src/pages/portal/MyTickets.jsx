@@ -67,7 +67,7 @@ export default function MyTickets() {
         </div>
       )}
 
-      {/* QR Modal — premium */}
+      {/* QR Modal - premium */}
       {selected && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={() => setSelected(null)}>
           <div className="animate-portal-scale-in w-full max-w-sm rounded-[24px] border border-gray-100 bg-white p-7 text-center" style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }} onClick={(e) => e.stopPropagation()}>
@@ -78,11 +78,11 @@ export default function MyTickets() {
                 <QRCodeCanvas ref={qrCanvasRef} value={qrValue} size={112} level="M" includeMargin={false} fgColor="#1b4332" bgColor="#ffffff" />
               </div>
               <p className="mt-4 text-lg font-bold tracking-wider text-gray-900">{selected.qr}</p>
-              <p className="mt-1 text-xs text-gray-400">QR embeds your full ticket details — present at the entrance</p>
+              <p className="mt-1 text-xs text-gray-400">QR embeds your full ticket details - present at the entrance</p>
             </div>
             <div className="mt-4 space-y-2 text-left text-sm">
-              <div className="flex justify-between py-1"><span className="text-gray-400">Attendee</span><span className="font-semibold text-gray-900">{attendee?.name || '—'}</span></div>
-              <div className="flex justify-between py-1"><span className="text-gray-400">Email</span><span className="font-semibold text-gray-900">{attendee?.email || '—'}</span></div>
+              <div className="flex justify-between py-1"><span className="text-gray-400">Attendee</span><span className="font-semibold text-gray-900">{attendee?.name || '-'}</span></div>
+              <div className="flex justify-between py-1"><span className="text-gray-400">Email</span><span className="font-semibold text-gray-900">{attendee?.email || '-'}</span></div>
               <div className="flex justify-between py-1.5"><span className="text-gray-400">Type</span><span className="font-semibold text-gray-900">{selected.type}</span></div>
               <div className="flex justify-between py-1.5"><span className="text-gray-400">Amount</span><span className="font-semibold text-gray-900">ETB {(selected.amount || 0).toLocaleString()}</span></div>
               <div className="flex justify-between py-1.5"><span className="text-gray-400">Payment</span><span className="font-semibold text-gray-900">{selected.paymentMethod || 'Cash'}</span></div>

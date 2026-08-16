@@ -73,7 +73,7 @@ export default function CheckIn() {
       return
     }
 
-    // Match by unique ticket code, attendee id, attendee name, or email — scoped
+    // Match by unique ticket code, attendee id, attendee name, or email - scoped
     // to this event's entry roll, so typing a name or code both work.
     const c = String(code).trim().toLowerCase()
     const reg = regsRef.current.find((r) =>
@@ -81,27 +81,27 @@ export default function CheckIn() {
       (r.name && r.name.toLowerCase() === c) || (r.email && r.email.toLowerCase() === c))
     if (!reg) {
       // A valid QR payload carries the attendee's full details even if not yet in
-      // this event's local list — surface them instead of a blank "not found".
+      // this event's local list - surface them instead of a blank "not found".
       if (parsed && parsed.payload) {
         const p = parsed.payload
         setResult({ ok: false, payload: p })
-        show(`Ticket found for ${p.name || 'attendee'} — not on this event's roll`, 'warn')
+        show(`Ticket found for ${p.name || 'attendee'} - not on this event's roll`, 'warn')
       } else {
         setResult({ ok: false })
-        show('Ticket not found — check the code or attendee name', 'error')
+        show('Ticket not found - check the code or attendee name', 'error')
       }
       return
     }
     if (reg.checkedIn) {
       setResult({ ok: false, dup: true, name: reg.name, type: reg.type, email: reg.email })
-      show('Already checked in — duplicate detected', 'warn')
+      show('Already checked in - duplicate detected', 'warn')
       return
     }
     if (offlineRef.current) {
       queueRef.current = [...queueRef.current, { code: reg.qr, eventId: activeEvent.id, name: reg.name, type: reg.type, email: reg.email, phone: reg.phone }]
       setQueue(queueRef.current)
       setResult({ ok: true, queued: true, full: reg, name: reg.name, type: reg.type, email: reg.email, phone: reg.phone })
-      show('Saved offline — will sync when back online', 'success')
+      show('Saved offline - will sync when back online', 'success')
       return
     }
     const res = await checkInRef.current(reg.qr, activeEvent.id)
@@ -112,17 +112,17 @@ export default function CheckIn() {
       show(`Welcome, ${full.name}! Checked in`)
     } else if (res.reason === 'duplicate') {
       setResult({ ok: false, dup: true, name: res.reg.name, type: res.reg.type })
-      show('Already checked in — duplicate detected', 'warn')
+      show('Already checked in - duplicate detected', 'warn')
     } else if (res.reason === 'wrong-event') {
       setResult({ ok: false, payload: { name: res.reg?.name, event: res.reg && regsRef.current.length ? undefined : undefined }, wrongEvent: true })
-      show(`This ticket belongs to another event — check-in is for "${activeEvent.name}"`, 'error')
+      show(`This ticket belongs to another event - check-in is for "${activeEvent.name}"`, 'error')
     } else {
       setResult({ ok: false })
-      show('Ticket not found — check the code or attendee name', 'error')
+      show('Ticket not found - check the code or attendee name', 'error')
     }
   }
 
-  // Simulated scanner — one guest per scan. Entering scan mode does NOT bulk
+  // Simulated scanner - one guest per scan. Entering scan mode does NOT bulk
   // check everyone in; each scan validates exactly one ticket.
   const [scanning, setScanning] = useState(false)
   const scanningRef = useRef(false)
@@ -156,7 +156,7 @@ export default function CheckIn() {
       setCameraOn(true)
       scanningRef.current = true
       setScanning(true)
-      show('Camera active — point at a QR ticket to check in', 'success')
+      show('Camera active - point at a QR ticket to check in', 'success')
       scanLoop()
     } catch (e) {
       // No camera / permission denied → fall back to simulated manual scanner
@@ -164,7 +164,7 @@ export default function CheckIn() {
       setCameraOn(false)
       scanningRef.current = true
       setScanning(true)
-      show('Camera unavailable — using simulated scanner', 'warn')
+      show('Camera unavailable - using simulated scanner', 'warn')
     }
   }
 
@@ -221,10 +221,10 @@ export default function CheckIn() {
     offlineRef.current = next
     logActivity(`Offline sync mode ${next ? 'enabled' : 'disabled'}`, 'checkin')
     if (next) {
-      addNotification('Offline sync enabled — scans queue locally until reconnection', 'checkin')
-      show('Offline mode active — scans saved locally and synced when back online', 'success')
+      addNotification('Offline sync enabled - scans queue locally until reconnection', 'checkin')
+      show('Offline mode active - scans saved locally and synced when back online', 'success')
     } else {
-      show('Back online — syncing queued scans…', 'success')
+      show('Back online - syncing queued scans…', 'success')
       setTimeout(flushQueue, 300)
     }
   }
@@ -250,7 +250,7 @@ export default function CheckIn() {
             addNotification(`QR image decoded: ${code.data}`, 'checkin')
           } else {
             setResult({ ok: false, decodeError: true })
-            show('No QR code found in image — try a clearer photo', 'error')
+            show('No QR code found in image - try a clearer photo', 'error')
           }
         } catch (e) {
           show('Could not read this image', 'error')
@@ -375,7 +375,7 @@ export default function CheckIn() {
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gold-500 text-white"><WifiOff size={20} /></span>
                 <div className="min-w-0 flex-1">
                   <p className="font-bold text-gold-800">{result.name}</p>
-                  <p className="text-xs text-gold-700">{result.type} ticket · Saved offline — {result.email ? `${result.email} · ` : ''}queued for sync</p>
+                  <p className="text-xs text-gold-700">{result.type} ticket · Saved offline - {result.email ? `${result.email} · ` : ''}queued for sync</p>
                   <button onClick={() => setTicketView({ ...result.full, event: activeEvent, venue: activeEvent ? state.venues.find((v) => v.id === activeEvent.venueId) : null })} className="btn-outline !py-1 mt-2 text-xs"><TicketIcon size={12} /> View Full Ticket</button>
                 </div>
               </div>
@@ -393,7 +393,7 @@ export default function CheckIn() {
               <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500 text-white"><XCircle size={20} /></span>
                 <div className="min-w-0">
-                  <p className="font-bold text-red-700">{result.payload?.name || 'Ticket'} — another event</p>
+                  <p className="font-bold text-red-700">{result.payload?.name || 'Ticket'} - another event</p>
                   <p className="text-xs text-red-600">This ticket is for a different event. The check-in gate is for "{activeEvent.name}".</p>
                 </div>
               </div>
@@ -405,14 +405,14 @@ export default function CheckIn() {
                   <p className="text-xs text-gold-700">
                     {[result.payload.type, result.payload.event, result.payload.email, result.payload.phone, result.payload.amount != null ? `ETB ${Number(result.payload.amount).toLocaleString()}` : ''].filter(Boolean).join(' · ')}
                   </p>
-                  <p className="text-[11px] font-semibold text-gold-700">Valid QR — not on this event's entry list</p>
+                  <p className="text-[11px] font-semibold text-gold-700">Valid QR - not on this event's entry list</p>
                 </div>
               </div>
             ) : result.dup ? (
               <div className="flex items-center gap-3 rounded-xl border border-gold-300 bg-gold-50 p-4">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gold-500 text-white"><AlertTriangle size={20} /></span>
                 <div>
-                  <p className="font-bold text-gold-800">{result.name} — duplicate</p>
+                  <p className="font-bold text-gold-800">{result.name} - duplicate</p>
                   <p className="text-xs text-gold-700">Ticket already used. Re-entry blocked.</p>
                 </div>
               </div>
@@ -493,7 +493,7 @@ export default function CheckIn() {
                 />
               </div>
               <p className="font-mono text-sm font-bold tracking-widest text-brand-900">{ticketView.qr}</p>
-              <p className="mt-1 text-xs text-ink/45">Unique ticket code — cannot be re-used after entry</p>
+              <p className="mt-1 text-xs text-ink/45">Unique ticket code - cannot be re-used after entry</p>
             </div>
             <div className="px-6 py-4">
               <div className="mb-3 flex items-center justify-between rounded-xl bg-brand-50 px-3 py-2">
@@ -515,16 +515,16 @@ export default function CheckIn() {
               </div>
               <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-brand-50/60 p-3 text-sm">
                 {[
-                  ['Event', ticketView.event?.name || '—'],
-                  ['Category', ticketView.event?.category || '—'],
-                  ['Date & Time', ticketView.event ? `${ticketView.event.date} · ${ticketView.event.time}` : '—'],
-                  ['Venue', ticketView.venue?.name || '—'],
-                  ['Ticket Type', ticketView.type || '—'],
+                  ['Event', ticketView.event?.name || '-'],
+                  ['Category', ticketView.event?.category || '-'],
+                  ['Date & Time', ticketView.event ? `${ticketView.event.date} · ${ticketView.event.time}` : '-'],
+                  ['Venue', ticketView.venue?.name || '-'],
+                  ['Ticket Type', ticketView.type || '-'],
                   ['Amount', fmt(ticketView.amount)],
                   ['Payment Method', ticketView.paymentMethod || 'Cash'],
                   ['Payment', ticketView.paid ? 'Paid' : 'Unpaid'],
-                  ['Ticket Code', ticketView.qr || '—'],
-                  ['Entry Time', ticketView.checkedInAt || '—'],
+                  ['Ticket Code', ticketView.qr || '-'],
+                  ['Entry Time', ticketView.checkedInAt || '-'],
                 ].map(([k, val]) => (
                   <div key={k} className="flex items-center justify-between gap-2">
                     <span className="text-[11px] font-semibold text-ink/45">{k}</span>

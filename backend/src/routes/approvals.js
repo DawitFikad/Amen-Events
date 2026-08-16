@@ -6,7 +6,7 @@ import { notify, notifyRole } from './notifications.js'
 
 const router = Router()
 
-// GET /api/approvals — list approval requests
+// GET /api/approvals - list approval requests
 router.get('/', authRequired, async (req, res) => {
   const isAdmin = req.user.userRoles?.some((ur) => ur.role.key === 'admin')
   const isFinance = req.user.userRoles?.some((ur) => ur.role.key === 'finance')
@@ -22,13 +22,13 @@ router.get('/', authRequired, async (req, res) => {
   res.json({ approvals })
 })
 
-// GET /api/approvals/pending — count of pending approvals
+// GET /api/approvals/pending - count of pending approvals
 router.get('/pending', authRequired, async (req, res) => {
   const count = await prisma.approvalRequest.count({ where: { status: 'pending' } })
   res.json({ count })
 })
 
-// POST /api/approvals — submit a new approval request
+// POST /api/approvals - submit a new approval request
 router.post('/', authRequired, async (req, res) => {
   const { type, entityId, entityName, amount, note } = req.body
   const approval = await prisma.approvalRequest.create({
@@ -52,7 +52,7 @@ router.post('/', authRequired, async (req, res) => {
   res.json({ approval })
 })
 
-// POST /api/approvals/:id/approve — approve a request
+// POST /api/approvals/:id/approve - approve a request
 router.post('/:id/approve', authRequired, async (req, res) => {
   const { reviewNote } = req.body
   const approval = await prisma.approvalRequest.findUnique({ where: { id: req.params.id } })
@@ -76,7 +76,7 @@ router.post('/:id/approve', authRequired, async (req, res) => {
   res.json({ approval: updated })
 })
 
-// POST /api/approvals/:id/reject — reject a request
+// POST /api/approvals/:id/reject - reject a request
 router.post('/:id/reject', authRequired, async (req, res) => {
   const { reviewNote } = req.body
   const approval = await prisma.approvalRequest.findUnique({ where: { id: req.params.id } })
@@ -99,7 +99,7 @@ router.post('/:id/reject', authRequired, async (req, res) => {
   res.json({ approval: updated })
 })
 
-// POST /api/approvals/:id/revision — request revision
+// POST /api/approvals/:id/revision - request revision
 router.post('/:id/revision', authRequired, async (req, res) => {
   const { reviewNote } = req.body
   const approval = await prisma.approvalRequest.findUnique({ where: { id: req.params.id } })

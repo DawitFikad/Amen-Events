@@ -8,7 +8,7 @@ export default function About() {
       <div className="text-center">
         <h1 className="text-3xl font-bold text-brand-950">About Amen Events</h1>
         <p className="mx-auto mt-4 max-w-2xl text-ink/60">
-          Amen Events helps organizers and attendees across Ethiopia — from conferences and product launches to retreats and exhibitions. One platform handles registration, ticketing and entry.
+          Amen Events helps organizers and attendees across Ethiopia - from conferences and product launches to retreats and exhibitions. One platform handles registration, ticketing and entry.
         </p>
       </div>
 
@@ -29,7 +29,7 @@ export default function About() {
       <div className="mt-10 card p-8">
         <h2 className="font-bold text-brand-950 text-lg">What We Do</h2>
         <p className="mt-3 text-sm text-ink/65 leading-relaxed">
-          Organizers use Amen Events to publish events, sell tickets, manage sponsors and run guest check-in at the door. Attendees use it to find events, buy their tickets and keep a clean digital pass in their profile — no paper, no queues.
+          Organizers use Amen Events to publish events, sell tickets, manage sponsors and run guest check-in at the door. Attendees use it to find events, buy their tickets and keep a clean digital pass in their profile - no paper, no queues.
         </p>
       </div>
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { MapPin, Plus, CalendarDays, Users, LayoutTemplate, Phone, Mail, Image, Upload, Trash2, Info, Globe, Building2 } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, SearchBox, Toast, Modal, Field } from '../components/ui'
@@ -13,13 +13,13 @@ const bookings = [
 ]
 
 const seatLayouts = {
-  vn1: 'Theatre — 5000 seats · Main stage · 2 VIP tiers',
-  vn2: 'Banquet — 1200 · Round tables of 10',
-  vn6: 'Exhibition — 6000 · Booth grid A–D',
+  vn1: 'Theatre - 5000 seats · Main stage · 2 VIP tiers',
+  vn2: 'Banquet - 1200 · Round tables of 10',
+  vn6: 'Exhibition - 6000 · Booth grid A-D',
 }
 
 export default function Venues() {
-  const { state, addVenue, updateVenue, patchBy, logActivity } = useData()
+  const { state, addVenue, updateVenue, patchBy, logActivity, intent, clearIntent } = useData()
   const [q, setQ] = useState('')
   const [detail, setDetail] = useState(null)
   const [toast, setToast] = useState(null)
@@ -30,6 +30,20 @@ export default function Venues() {
   const [errors, setErrors] = useState({})
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
+
+  useEffect(() => {
+    if (intent === 'new-venue') {
+      if (state.demo.autoplay) {
+        const seed = { name: 'Friendship Park Hall', city: 'Addis Ababa', address: 'Africa Avenue', halls: 2, capacity: '850', price: '240000', parking: '150', equipment: 'Stage, Sound, WiFi' }
+        setOpen(true); setForm(seed); setErrors({})
+        setTimeout(() => {
+          const rec = addVenue(seed)
+          show(`Venue "${rec?.name || seed.name}" added automatically`); setOpen(false); setForm({})
+        }, 1100)
+      } else { setOpen(true); setErrors({}) }
+      clearIntent()
+    }
+  }, [intent])
 
   const filtered = state.venues.filter((v) => v.name.toLowerCase().includes(q.toLowerCase()))
 
@@ -106,7 +120,7 @@ export default function Venues() {
         </div>
         <div className="flex-1">
           <p className="text-sm font-bold text-brand-950">Venue Image / Photos</p>
-          <p className="text-xs text-ink/50">Upload the main venue photo shown on cards and booking pages (JPG, PNG — max 5MB).</p>
+          <p className="text-xs text-ink/50">Upload the main venue photo shown on cards and booking pages (JPG, PNG - max 5MB).</p>
           <div className="mt-2 flex gap-2">
             <label className="btn-outline !py-1.5 cursor-pointer text-xs">
               <Upload size={14} /> Choose image
@@ -250,7 +264,7 @@ export default function Venues() {
               <div className="space-y-2">
                 <div className="flex items-center gap-3 rounded-xl border border-brand-100 p-3">
                   <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-100 text-brand-700"><Phone size={16} /></span>
-                  <div><p className="text-sm font-semibold">{detail.contact || detail.phone || '—'}</p><p className="text-[11px] text-ink/40">Booking office</p></div>
+                  <div><p className="text-sm font-semibold">{detail.contact || detail.phone || '-'}</p><p className="text-[11px] text-ink/40">Booking office</p></div>
                 </div>
                 {detail.email && <div className="flex items-center gap-3 rounded-xl border border-brand-100 p-3">
                   <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-100 text-brand-700"><Mail size={16} /></span>

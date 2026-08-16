@@ -39,7 +39,7 @@ export default function LiveKpiBar({ scope = 'staff' }) {
   const { state, rbac } = useData()
   const [now, setNow] = useState(() => new Date())
 
-  // Live clock tick — re-renders the strip every second for a "live" feel
+  // Live clock tick - re-renders the strip every second for a "live" feel
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(t)

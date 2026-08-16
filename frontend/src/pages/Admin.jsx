@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Settings, ShieldCheck, Users, DatabaseBackup, Activity, Bell, Globe, Lock, KeyRound, Smartphone, Mail, Download, Plus, X } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { ROLE_DEFINITIONS, MODULES, PERMISSIONS } from '../store/permissions'
@@ -26,7 +26,7 @@ const securityDefaults = {
 }
 
 export default function Admin() {
-  const { state, patch, patchBy, logActivity, addNotification, rbac } = useData()
+  const { state, patch, patchBy, logActivity, addNotification, rbac, intent, clearIntent, setDemoFlag } = useData()
   const [view, setView] = useState(rbac?.roleKey === 'admin' ? 'users' : 'settings')
   const [toast, setToast] = useState(null)
   const [twoStep, setTwoStep] = useState(state.twoStepVerification || false)
@@ -76,18 +76,34 @@ export default function Admin() {
   const sendInvite = () => {
     const res = validate(inviteForm, { name: [nameOnly('Full name')], email: [emailValid('Work email')] })
     if (!res.ok) { show(res.first, 'warn'); return }
+    inlineInvite(inviteForm.name.trim(), inviteForm.email.trim(), inviteForm.role)
+  }
+
+  const inlineInvite = (name, email, role) => {
     const uid = 'st' + (state.staff.length + 10)
     patch('staff', (arr) => [...arr, {
-      id: uid, name: inviteForm.name.trim(), role: 'New Hire', dept: 'Operations',
-      phone: '', email: inviteForm.email.trim(), type: 'Employee', status: 'invited',
-      color: 'bg-brand-500', initials: inviteForm.name.trim().split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase(),
-      userRoles: [{ role: { key: inviteForm.role } }],
+      id: uid, name, role: 'New Hire', dept: 'Operations',
+      phone: '', email, type: 'Employee', status: 'invited',
+      color: 'bg-brand-500', initials: name.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase(),
+      userRoles: [{ role: { key: role } }],
     }])
-    logActivity(`Invitation sent to ${inviteForm.email.trim()} (${inviteForm.role})`, 'admin')
-    addNotification(`Invitation sent to ${inviteForm.email.trim()}`)
+    logActivity(`Invitation sent to ${email} (${role})`, 'admin')
+    addNotification(`Invitation sent to ${email}`)
     setInviteOpen(false); setInviteForm({ name: '', email: '', role: 'manager' })
-    show(`Invitation sent to ${inviteForm.email.trim()}`)
+    setDemoFlag('adminAction', true)
+    show(`Invitation sent to ${email}`)
   }
+
+  useEffect(() => {
+    if (intent === 'invite-user' && isAdmin) {
+      setView('users'); setPermRole(null)
+      if (state.demo.autoplay) {
+        setInviteForm({ name: 'Samrawit Hailu', email: 'samrawit@amen.et', role: 'manager' }); setInviteOpen(true)
+        setTimeout(() => inlineInvite('Samrawit Hailu', 'samrawit@amen.et', 'manager'), 1100)
+      } else setInviteOpen(true)
+      clearIntent()
+    }
+  }, [intent])
 
   const openPermissions = (roleId) => {
     setPermRole(roleId)
@@ -123,7 +139,7 @@ export default function Admin() {
     patch('lastBackupAt', now)
     logActivity(`Backup created at ${now}`, 'admin')
     addNotification('Backup created successfully')
-    show(`Backup created — ${now}`)
+    show(`Backup created - ${now}`)
   }
 
   const downloadBackup = () => {
@@ -162,7 +178,8 @@ export default function Admin() {
 
       {view === 'users' && (
         <div className="card overflow-hidden">
-          <table className="w-full">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px]">
             <thead className="bg-brand-50/50"><tr><Th>User</Th><Th>Role</Th><Th>Status</Th></tr></thead>
             <tbody className="divide-y divide-brand-50">
               {users.map((u) => (
@@ -179,6 +196,7 @@ export default function Admin() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
@@ -204,7 +222,7 @@ export default function Admin() {
 
       {view === 'settings' && (
         <div className="max-w-2xl space-y-4">
-          {/* Personal Security — visible to all roles */}
+          {/* Personal Security - visible to all roles */}
           <div className="card p-5 border-l-4 border-l-brand-600">
             <div className="mb-4 flex items-center gap-2">
               <Smartphone size={18} className="text-brand-600" />
@@ -377,7 +395,7 @@ export default function Admin() {
       </Modal>
 
       {/* Permissions modal */}
-      <Modal open={!!permRole} onClose={() => setPermRole(null)} title={`Manage Permissions — ${permRole ? ROLE_DEFINITIONS[permRole].label : ''}`} width="max-w-2xl">
+      <Modal open={!!permRole} onClose={() => setPermRole(null)} title={`Manage Permissions - ${permRole ? ROLE_DEFINITIONS[permRole].label : ''}`} width="max-w-2xl">
         {permDraft && (
           <div className="max-h-[60vh] overflow-y-auto pr-1">
             {Object.entries(permDraft).map(([mod, perms]) => (
@@ -422,3 +440,4 @@ export default function Admin() {
     </div>
   )
 }
+

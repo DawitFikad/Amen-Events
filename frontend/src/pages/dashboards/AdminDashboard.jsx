@@ -102,7 +102,7 @@ export default function AdminDashboard() {
     <div>
       <PageHeader
         title="Company Overview"
-        subtitle="Full-system visibility — revenue, events, staff and resource health."
+        subtitle="Full-system visibility - revenue, events, staff and resource health."
         icon={Sparkles}
         actions={
           <>

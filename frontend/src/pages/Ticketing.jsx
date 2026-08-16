@@ -34,7 +34,7 @@ export default function Ticketing() {
   const exportList = () => {
     downloadCSV('ticket-registrations.csv',
       ['Event', 'Attendee', 'Type', 'Amount', 'Paid', 'QR Code', 'Status'],
-      regs.map((r) => [activeEvent?.name || '—', r.name, r.type, r.amount, r.paid ? 'Paid' : 'Unpaid', r.qr, r.checkedIn ? 'Checked in' : 'Pending']))
+      regs.map((r) => [activeEvent?.name || '-', r.name, r.type, r.amount, r.paid ? 'Paid' : 'Unpaid', r.qr, r.checkedIn ? 'Checked in' : 'Pending']))
     show('Registration list exported to Excel')
   }
 
@@ -55,7 +55,19 @@ export default function Ticketing() {
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
 
   useEffect(() => {
-    if (intent === 'new-registration') { setOpen(true); setErrors({}); setView('registrations'); clearIntent() }
+    if (intent === 'new-registration') {
+      if (state.demo.autoplay) {
+        const seed = { name: 'Mahlet Abay', email: 'mahlet@example.et', phone: '+251 917 262 636', type: 'Standard', paymentMethod: 'Cash', paid: true }
+        setOpen(true); setForm(seed); setErrors({}); setView('registrations')
+        setTimeout(async () => {
+          const rec = await registerAttendee({ ...seed, eventId: activeEvent.id, amount: ticketTypes.find((t) => t.name === seed.type)?.price || 6000 })
+          show('Attendee registered automatically')
+          if (rec) setQrView(rec)
+          setOpen(false); setForm({}); setErrors({})
+        }, 1100)
+      } else { setOpen(true); setErrors({}); setView('registrations') }
+      clearIntent()
+    }
     if (intent === 'view-qr') {
       const lastReg = state.registrations.find((r) => r.id === state.demo.lastRegId) || state.registrations.find((r) => r.eventId === activeEvent.id)
       if (lastReg) { setQrView(lastReg); viewQr() }
@@ -82,7 +94,7 @@ export default function Ticketing() {
     if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
     const amount = ticketTypes.find((t) => t.name === form.type)?.price || 6000
     const rec = await registerAttendee({ ...form, eventId: activeEvent.id, amount, paid: true, paymentMethod: form.paymentMethod || 'Cash' })
-    show(`Attendee registered — payment collected via ${form.paymentMethod || 'Cash'}`)
+    show(`Attendee registered - payment collected via ${form.paymentMethod || 'Cash'}`)
     setQrView(rec)
     setOpen(false); setForm({}); setErrors({})
   }
@@ -239,9 +251,9 @@ export default function Ticketing() {
           <Field label="Full Name *" className="col-span-2"><input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
           <Field label="Email" className="col-span-2"><input className="input" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} />{errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}</Field>
           <Field label="Phone" className="col-span-2"><input className="input" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+251 9XX XXX XXX" />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</Field>
-          <Field label="Ticket Type"><select className="input" value={form.type || 'Standard'} onChange={(e) => setForm({ ...form, type: e.target.value })}>{ticketTypes.map((t) => <option key={t.id} value={t.name}>{t.name} — {fmt(t.price)}</option>)}</select></Field>
+          <Field label="Ticket Type"><select className="input" value={form.type || 'Standard'} onChange={(e) => setForm({ ...form, type: e.target.value })}>{ticketTypes.map((t) => <option key={t.id} value={t.name}>{t.name} - {fmt(t.price)}</option>)}</select></Field>
 
-          {/* Payment section — manual collection for this demo */}
+          {/* Payment section - manual collection for this demo */}
           <div className="rounded-xl border border-brand-100 bg-brand-50/40 p-3">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-xs font-bold uppercase tracking-wide text-brand-800">Payment</p>
@@ -252,7 +264,7 @@ export default function Ticketing() {
             </select>
             <p className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-brand-700">
               <span className="flex h-4 w-4 items-center justify-center rounded-full bg-brand-600 text-white text-[9px]"><CheckCircle2 size={9} /></span>
-              Collected manually at registration — QR ticket issued after payment
+              Collected manually at registration - QR ticket issued after payment
             </p>
           </div>
         </div>
@@ -289,7 +301,7 @@ export default function Ticketing() {
                 />
               </div>
               <p className="font-mono text-sm font-bold tracking-widest text-brand-900">{qrView.qr || 'AE-REG-0012'}</p>
-              <p className="mt-1 text-xs text-ink/45">This QR embeds the attendee's full details — scan at the entrance to validate instantly.</p>
+              <p className="mt-1 text-xs text-ink/45">This QR embeds the attendee's full details - scan at the entrance to validate instantly.</p>
             </div>
             <div className="px-6 py-4">
               <div className="flex items-center justify-between">
@@ -303,14 +315,14 @@ export default function Ticketing() {
 
               <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-brand-50/60 p-3 text-sm">
                 {[
-                  ['Event', activeEvent?.name || '—'],
-                  ['Date & Time', activeEvent ? `${activeEvent.date} · ${activeEvent.time}` : '—'],
-                  ['Venue', activeVenue?.name || '—'],
-                  ['Ticket Type', qrView.type || '—'],
+                  ['Event', activeEvent?.name || '-'],
+                  ['Date & Time', activeEvent ? `${activeEvent.date} · ${activeEvent.time}` : '-'],
+                  ['Venue', activeVenue?.name || '-'],
+                  ['Ticket Type', qrView.type || '-'],
                   ['Amount', fmt(qrView.amount)],
                   ['Payment Method', qrView.paymentMethod || 'Cash'],
                   ['Payment', qrView.paid ? 'Paid' : 'Unpaid'],
-                  ['Ticket Code', qrView.qr || '—'],
+                  ['Ticket Code', qrView.qr || '-'],
                   ['Check-in', qrView.checkedIn ? (qrView.checkedInAt || 'Checked in') : 'Not checked in'],
                   ['Status', qrView.checkedIn ? 'Used' : 'Valid'],
                 ].map(([k, val]) => (

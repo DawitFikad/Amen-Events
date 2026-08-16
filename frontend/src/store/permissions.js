@@ -1,4 +1,4 @@
-// Permission classification — 5 roles × 17 modules × 9 permissions
+// Permission classification - 5 roles × 17 modules × 9 permissions
 // Roles: admin, manager, operations, finance, marketing
 
 export const MODULES = [
@@ -23,7 +23,7 @@ export const ROLE_DEFINITIONS = {
     modules: MODULES.reduce((acc, m) => { acc[m] = all(); return acc }, {}),
   },
 
-  // Event Manager — event execution only + own settings
+  // Event Manager - event execution only + own settings
   manager: {
     label: 'Event Manager',
     description: 'Plan, assign & run events, tasks, speakers & exhibition.',
@@ -48,7 +48,7 @@ export const ROLE_DEFINITIONS = {
     },
   },
 
-  // Operations — logistics only: venues, resources, vendors
+  // Operations - logistics only: venues, resources, vendors
   operations: {
     label: 'Operations',
     description: 'Venues, resources, vendors & event logistics.',
@@ -73,7 +73,7 @@ export const ROLE_DEFINITIONS = {
     },
   },
 
-  // Finance — money only: finance module, reports, client info for invoicing
+  // Finance - money only: finance module, reports, client info for invoicing
   finance: {
     label: 'Finance',
     description: 'Budgets, expenses, revenue, invoices & payments.',
@@ -98,7 +98,7 @@ export const ROLE_DEFINITIONS = {
     },
   },
 
-  // Marketing — promotions only: campaigns, sponsors, tickets
+  // Marketing - promotions only: campaigns, sponsors, tickets
   marketing: {
     label: 'Marketing',
     description: 'Campaigns, sponsors, tickets & promotions.',

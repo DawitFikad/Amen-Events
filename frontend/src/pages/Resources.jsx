@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Package, Plus, Wrench, Truck, Boxes, AlertTriangle, CheckCircle2, Upload, Trash2, Image, Info, CircleDollarSign, Store, CalendarClock } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, SearchBox, Toast, EmptyState, Th, Td, Avatar, Modal, Field } from '../components/ui'
@@ -15,7 +15,7 @@ const allocations = [
 const statuses = ['available', 'in-use', 'maintenance']
 
 export default function Resources() {
-  const { state, addResource, updateResource, scheduleMaintenance, completeMaintenance } = useData()
+  const { state, addResource, updateResource, scheduleMaintenance, completeMaintenance, intent, clearIntent } = useData()
   const [q, setQ] = useState('')
   const [toast, setToast] = useState(null)
   const [cat, setCat] = useState('All')
@@ -30,13 +30,27 @@ export default function Resources() {
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
 
+  useEffect(() => {
+    if (intent === 'new-resource') {
+      if (state.demo.autoplay) {
+        const seed = { name: 'Par LED Lights (10)', category: 'Lighting', qty: '20', unitCost: '85000', location: 'Main Warehouse', supplier: 'Beam Lights Co', purchaseDate: '2026-08-01' }
+        setOpen(true); setForm(seed); setErrors({})
+        setTimeout(() => {
+          const rec = addResource(seed)
+          show(`Asset "${rec?.name || seed.name}" added automatically`); setOpen(false); setForm({})
+        }, 1100)
+      } else { setOpen(true); setErrors({}) }
+      clearIntent()
+    }
+  }, [intent])
+
   const mtSchema = { resourceId: [required('Asset')], task: [optional(textRequired('Task', { min: 3, max: 100 }))], date: [optional(dateRequired('Date'))] }
 
   const submitMaintenance = () => {
     const res = validate(mtForm, mtSchema)
     if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
     scheduleMaintenance(mtForm.resourceId, mtForm.date || new Date().toISOString().slice(0, 10), mtForm.task || 'Routine maintenance')
-    show('Maintenance scheduled — asset moved to maintenance')
+    show('Maintenance scheduled - asset moved to maintenance')
     setMtOpen(false); setMtForm({}); setErrors({})
   }
 
@@ -106,7 +120,7 @@ export default function Resources() {
         </div>
         <div className="flex-1">
           <p className="text-sm font-bold text-brand-950">Asset Photo</p>
-          <p className="text-xs text-ink/50">Show the item on inventory and allocation views (JPG, PNG — max 5MB).</p>
+          <p className="text-xs text-ink/50">Show the item on inventory and allocation views (JPG, PNG - max 5MB).</p>
           <div className="mt-2 flex gap-2">
             <label className="btn-outline !py-1.5 cursor-pointer text-xs">
               <Upload size={14} /> Choose image
@@ -242,7 +256,7 @@ export default function Resources() {
               <div key={mt.id} className="flex flex-wrap items-center gap-3 rounded-lg border border-brand-100 p-3">
                 <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${mt.status === 'done' ? 'bg-brand-100 text-brand-700' : 'bg-gold-100 text-gold-700'}`}><Wrench size={16} /></span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-brand-950">{r?.name} — {mt.task}</p>
+                  <p className="text-sm font-semibold text-brand-950">{r?.name} - {mt.task}</p>
                   <p className="text-[11px] text-ink/45">{r?.code} · scheduled {mt.date}{overdue ? ' · overdue' : ''}</p>
                 </div>
                 <Badge status={mt.status === 'done' ? 'done' : 'scheduled'} label={mt.status} />

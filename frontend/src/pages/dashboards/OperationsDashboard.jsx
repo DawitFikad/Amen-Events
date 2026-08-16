@@ -31,7 +31,7 @@ export default function OperationsDashboard() {
   const activeVendors = vendors.filter((v) => v.status === 'active')
   const avgRating = activeVendors.length > 0
     ? (activeVendors.reduce((a, v) => a + (v.rating || 0), 0) / activeVendors.length).toFixed(1)
-    : '—'
+    : '-'
 
   // Upcoming events needing logistics
   const upcomingEvents = events
@@ -185,7 +185,7 @@ export default function OperationsDashboard() {
                   <p className="truncate text-[11px] text-ink/45">{v.type} · {v.contact}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-bold text-gold-700">★ {v.rating || '—'}</p>
+                  <p className="text-sm font-bold text-gold-700">★ {v.rating || '-'}</p>
                   <Badge status={v.status} label={v.status} />
                 </div>
               </div>

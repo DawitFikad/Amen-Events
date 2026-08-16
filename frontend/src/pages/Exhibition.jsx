@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Building2, Plus, LayoutGrid, Users, QrCode, CheckCircle2, XCircle, Pencil, Image as ImageIcon } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, Toast, Th, Td, EmptyState, Modal, Field, Avatar } from '../components/ui'
@@ -12,7 +12,7 @@ const tierStyle = {
 }
 
 export default function Exhibition() {
-  const { state, patch, addExhibitor, updateExhibitor, logActivity } = useData()
+  const { state, patch, addExhibitor, updateExhibitor, logActivity, intent, clearIntent } = useData()
   const [view, setView] = useState('floor')
   const [toast, setToast] = useState(null)
   const [open, setOpen] = useState(false)
@@ -39,6 +39,21 @@ export default function Exhibition() {
 
   const openCreate = () => { setEditingId(null); setForm({}); setErrors({}); setOpen(true) }
   const openEdit = (e) => { setEditingId(e.id); setForm({ company: e.company || '', contact: e.contact || '', email: e.email || '', phone: e.phone || '', website: e.website || '', booth: e.booth || '', size: e.size || 'Standard', package: e.package || 'Exhibitor', paid: e.paid || 0, status: e.status || 'registering', description: e.description || '', logo: e.logo || '' }); setErrors({}); setOpen(true) }
+
+  useEffect(() => {
+    if (intent === 'new-exhibitor') {
+      if (state.demo.autoplay) {
+        const seed = { company: 'Habesha Tech Hub', contact: 'Nahom Girma', email: 'booths@habeshatech.et', phone: '+251 912 808 909', website: 'habeshatech.et', booth: 'B-04', size: 'Premium', package: 'Exhibitor', paid: '150000', status: 'confirmed' }
+        setForm(seed); openCreate(); setErrors({})
+        setTimeout(() => {
+          const rec = addExhibitor(seed)
+          if (seed.booth) patch('exhibitionBooths', (bs) => bs.map((b) => (b.booth === seed.booth ? { ...b, company: seed.company, status: seed.status || 'registering', tier: 'gold' } : b)))
+          show(`${rec?.company || seed.company} registered automatically`); setOpen(false); setForm({})
+        }, 1100)
+      } else openCreate()
+      clearIntent()
+    }
+  }, [intent])
 
   const onLogo = (file) => {
     if (!file) return
@@ -78,7 +93,7 @@ export default function Exhibition() {
     const res = validate(visitorForm, { name: [nameOnly('Full name')], company: [optional(textRequired('Company', { min: 2, max: 80 }))] })
     if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
     const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    patch('visitors', (vs) => [{ id: 'vs' + (vs.length + 1), name: visitorForm.name, company: visitorForm.company || '—', checkin: now, scanned: true }, ...vs])
+    patch('visitors', (vs) => [{ id: 'vs' + (vs.length + 1), name: visitorForm.name, company: visitorForm.company || '-', checkin: now, scanned: true }, ...vs])
     logActivity(`${visitorForm.name} registered at the exhibition entrance`, 'exhibition')
     setVisitorOpen(false); setVisitorForm({}); setErrors({})
     show(`${visitorForm.name} checked in`)
@@ -111,7 +126,7 @@ export default function Exhibition() {
       {view === 'floor' && (
         <div className="card p-6">
           <div className="mb-4 flex items-center justify-between">
-            <p className="font-bold text-brand-950">Hall A — Booth Floor Plan</p>
+            <p className="font-bold text-brand-950">Hall A - Booth Floor Plan</p>
             <div className="flex gap-3 text-xs text-ink/50">
               <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm border border-gold-400 bg-gold-50" /> Gold</span>
               <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm border border-brand-300 bg-brand-50" /> Silver</span>
@@ -128,7 +143,7 @@ export default function Exhibition() {
                 key={b.booth}
                 onClick={() => {
                   if (b.status === 'free') { setErrors({}); setForm({ booth: b.booth }); setOpen(true); return }
-                  show(`Booth ${b.booth} — ${b.company}`)
+                  show(`Booth ${b.booth} - ${b.company}`)
                 }}
                 className={`aspect-square rounded-xl border-2 p-2 text-left transition hover:scale-[1.02] ${b.status === 'free' ? 'border-dashed border-brand-200 bg-transparent hover:border-brand-400' : tierStyle[b.tier]}`}
               >
@@ -168,8 +183,8 @@ export default function Exhibition() {
                     <Td className="text-ink/60">{e.size}</Td>
                     <Td>
                       {e.contact || e.email || e.phone ? (
-                        <span className="block text-ink/70">{e.contact || '—'}</span>
-                      ) : <span className="text-ink/35">—</span>}
+                        <span className="block text-ink/70">{e.contact || '-'}</span>
+                      ) : <span className="text-ink/35">-</span>}
                       <span className="text-[11px] text-ink/45">{e.email}{e.email && e.phone ? ' · ' : ''}{e.phone}</span>
                     </Td>
                     <Td className="text-right font-semibold">{e.paid ? fmt(e.paid) : <span className="text-red-500">Unpaid</span>}</Td>
@@ -189,7 +204,8 @@ export default function Exhibition() {
             <span className="text-sm text-ink/55">{visitors.filter((v) => v.scanned).length} scanned today</span>
             <button className="btn-primary !py-1.5 text-xs" onClick={() => { setErrors({}); setVisitorOpen(true) }}><QrCode size={14} /> Register Visitor</button>
           </div>
-          <table className="w-full">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px]">
             <thead className="bg-brand-50/50"><tr><Th>Name</Th><Th>Company</Th><Th>Check-in</Th><Th>Status</Th></tr></thead>
             <tbody className="divide-y divide-brand-50">
               {visitors.map((v) => (
@@ -202,6 +218,7 @@ export default function Exhibition() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

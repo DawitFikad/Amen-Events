@@ -264,7 +264,8 @@ export default function ClientEventDetail() {
             {eventExpenses.length === 0 ? (
               <div className="p-8 text-center text-sm text-ink/40">No expenses recorded.</div>
             ) : (
-              <table className="w-full">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[760px]">
                 <thead className="bg-brand-50/50">
                   <tr><Th>Category</Th><Th>Amount</Th><Th>Date</Th><Th>Vendor</Th></tr>
                 </thead>
@@ -276,12 +277,13 @@ export default function ClientEventDetail() {
                         <Td className="font-semibold text-brand-950">{ex.category}</Td>
                         <Td className="font-bold text-brand-700">{fmt(ex.amount)}</Td>
                         <Td className="text-ink/60">{ex.date}</Td>
-                        <Td className="text-ink/60">{vendor?.name || '—'}</Td>
+                        <Td className="text-ink/60">{vendor?.name || '-'}</Td>
                       </tr>
                     )
                   })}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         </div>
@@ -298,7 +300,8 @@ export default function ClientEventDetail() {
           {eventInvoices.length === 0 ? (
             <div className="p-8 text-center text-sm text-ink/40">No invoices for this event.</div>
           ) : (
-            <table className="w-full">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px]">
               <thead className="bg-brand-50/50">
                 <tr><Th>Invoice #</Th><Th>Amount</Th><Th>Paid</Th><Th>Outstanding</Th><Th>Status</Th><Th>Due Date</Th></tr>
               </thead>
@@ -315,6 +318,7 @@ export default function ClientEventDetail() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )}
@@ -332,7 +336,8 @@ export default function ClientEventDetail() {
             {eventRegistrations.length === 0 ? (
               <div className="p-8 text-center text-sm text-ink/40">No registrations yet.</div>
             ) : (
-              <table className="w-full">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[760px]">
                 <thead className="bg-brand-50/50">
                   <tr><Th>Attendee</Th><Th>Email</Th><Th>Type</Th><Th>Amount</Th><Th>Checked In</Th></tr>
                 </thead>
@@ -348,6 +353,7 @@ export default function ClientEventDetail() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         </div>
@@ -359,8 +365,8 @@ export default function ClientEventDetail() {
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div className="card p-4 text-center"><p className="text-2xl font-black text-brand-950">{eventRegistrations.length}</p><p className="text-[11px] text-ink/50">Tickets Sold</p></div>
             <div className="card p-4 text-center"><p className="text-2xl font-black text-brand-700">{fmtCompact(eventRegistrations.reduce((a, r) => a + (r.amount || 0), 0))}</p><p className="text-[11px] text-ink/50">Revenue (ETB)</p></div>
-            <div className="card p-4 text-center"><p className="text-2xl font-black text-brand-950">{venue?.capacity ? venue.capacity - eventRegistrations.length : '—'}</p><p className="text-[11px] text-ink/50">Remaining</p></div>
-            <div className="card p-4 text-center"><p className="text-2xl font-black text-brand-950">{venue?.capacity || '—'}</p><p className="text-[11px] text-ink/50">Capacity</p></div>
+            <div className="card p-4 text-center"><p className="text-2xl font-black text-brand-950">{venue?.capacity ? venue.capacity - eventRegistrations.length : '-'}</p><p className="text-[11px] text-ink/50">Remaining</p></div>
+            <div className="card p-4 text-center"><p className="text-2xl font-black text-brand-950">{venue?.capacity || '-'}</p><p className="text-[11px] text-ink/50">Capacity</p></div>
           </div>
           <div className="card p-5">
             <p className="mb-4 font-bold text-brand-950">Ticket Types</p>
@@ -427,3 +433,4 @@ export default function ClientEventDetail() {
     </div>
   )
 }
+

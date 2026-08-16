@@ -28,7 +28,7 @@ export default function MarketingDashboard() {
   const openRate = totalSent > 0 ? Math.round((totalOpens / totalSent) * 100) : 0
   const clickRate = totalSent > 0 ? Math.round((totalClicks / totalSent) * 100) : 0
 
-  // Leads — clients in early stages
+  // Leads - clients in early stages
   const leads = clients.filter((c) => c.stage === 'lead' || c.stage === 'opportunity' || c.stage === 'quotation')
   const leadValue = leads.reduce((a, c) => a + (c.totalValue || 0), 0)
 

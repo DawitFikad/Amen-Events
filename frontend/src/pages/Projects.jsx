@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   KanbanSquare, Plus, CalendarDays, Calendar, Grid3x3, Users, MessageSquare,
   Paperclip, Clock3, ChevronRight, ArrowRight, LayoutGrid,
@@ -23,7 +23,7 @@ const milestones = [
 ]
 
 export default function Projects() {
-  const { state, updateTask, addTask } = useData()
+  const { state, updateTask, addTask, intent, clearIntent } = useData()
   const [view, setView] = useState('board')
   const [open, setOpen] = useState(false)
   const [toast, setToast] = useState(null)
@@ -33,6 +33,20 @@ export default function Projects() {
   const [workloadOpen, setWorkloadOpen] = useState(false)
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
+
+  useEffect(() => {
+    if (intent === 'new-task') {
+      if (state.demo.autoplay) {
+        const seed = { title: 'Arrange VIP transport', eventId: state.demo.lastEventId || 'ev1', assigneeId: 'st2', priority: 'medium', due: '2026-08-22', status: 'todo', progress: '0' }
+        setOpen(true); setForm(seed); setErrors({})
+        setTimeout(() => {
+          addTask(seed)
+          show(`Task "${seed.title}" created automatically`); setOpen(false); setForm({})
+        }, 1100)
+      } else { setOpen(true); setForm({}); setErrors({}) }
+      clearIntent()
+    }
+  }, [intent])
 
   const workload = state.staff
     .map((m) => ({ member: m, count: state.tasks.filter((t) => t.assigneeId === m.id && t.status !== 'done').length }))
@@ -51,7 +65,7 @@ export default function Projects() {
   }
 
 const submit = () => {
-    const res = validate(form, { title: [textRequired('Task title', { min: 3, max: 120 })], due: [optional(dateRequired('Due date'))], progress: [optional((v) => { const n = Number(v); if (v === '' || v === null || v === undefined) return ''; if (isNaN(n) || n < 0 || n > 100) return 'Progress must be 0–100'; return '' })] })
+    const res = validate(form, { title: [textRequired('Task title', { min: 3, max: 120 })], due: [optional(dateRequired('Due date'))], progress: [optional((v) => { const n = Number(v); if (v === '' || v === null || v === undefined) return ''; if (isNaN(n) || n < 0 || n > 100) return 'Progress must be 0-100'; return '' })] })
     if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
     addTask({ ...form, assigneeId: form.assigneeId || 'st2', priority: form.priority || 'medium', status: form.status || 'todo', eventId: form.eventId || 'ev1', progress: Number(form.progress) || 0, description: form.description || '' })
     show(`${form.title} added to board`)
@@ -163,7 +177,8 @@ const submit = () => {
 
       {view === 'list' && (
         <div className="card">
-          <table className="w-full">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px]">
             <thead className="bg-brand-50/50"><tr><Th>Task</Th><Th>Event</Th><Th>Priority</Th><Th>Assignee</Th><Th>Status</Th><Th>Progress</Th><Th>Due</Th></tr></thead>
             <tbody className="divide-y divide-brand-50">
               {state.tasks.map((t) => {
@@ -187,12 +202,13 @@ const submit = () => {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
       {view === 'calendar' && (
         <div className="card p-5">
-          <p className="mb-4 text-xs font-semibold text-ink/45">Tasks grouped by due date — click a task to open it.</p>
+          <p className="mb-4 text-xs font-semibold text-ink/45">Tasks grouped by due date - click a task to open it.</p>
           <div className="grid grid-cols-7 gap-1.5">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
               <div key={d} className="pb-1 text-center text-[10px] font-bold uppercase tracking-wide text-ink/40">{d}</div>
@@ -301,7 +317,7 @@ function TaskModal({ task, state, onClose, show, updateTask }) {
   const [edit, setEdit] = useState({ title: task.title || '', eventId: task.eventId || 'ev1', assigneeId: task.assigneeId || '', priority: task.priority || 'medium', status: task.status || 'todo', due: task.due || '', progress: task.progress || 0, description: task.description || '' })
   const [comments, setComments] = useState([
     'Locking stage layout with client this week.',
-    'Confirmed — tracker updated.',
+    'Confirmed - tracker updated.',
   ])
   const [draft, setDraft] = useState('')
   const addComment = () => {

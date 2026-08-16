@@ -262,7 +262,7 @@ export default function ClientBrowseEvents() {
               <div className="rounded-lg bg-brand-50 p-3"><p className="text-[10px] text-ink/50">Date</p><p className="font-bold text-brand-950">{selectedEvent.date || 'TBD'}</p></div>
               <div className="rounded-lg bg-brand-50 p-3"><p className="text-[10px] text-ink/50">Time</p><p className="font-bold text-brand-950">{selectedEvent.time || '09:00'}</p></div>
               <div className="rounded-lg bg-brand-50 p-3"><p className="text-[10px] text-ink/50">Venue</p><p className="font-bold text-brand-950 truncate">{venue?.name || 'TBA'}</p></div>
-              <div className="rounded-lg bg-brand-50 p-3"><p className="text-[10px] text-ink/50">Capacity</p><p className="font-bold text-brand-950">{venue?.capacity.toLocaleString() || '—'}</p></div>
+              <div className="rounded-lg bg-brand-50 p-3"><p className="text-[10px] text-ink/50">Capacity</p><p className="font-bold text-brand-950">{venue?.capacity.toLocaleString() || '-'}</p></div>
             </div>
 
             {seatsLeft !== null && (

@@ -1,11 +1,11 @@
-// RBAC middleware — checks if the authenticated user has the required permission
+// RBAC middleware - checks if the authenticated user has the required permission
 // Usage: router.get('/finance', requirePermission('finance', 'view'), handler)
 
 export function requirePermission(module, permission = 'view') {
   return (req, res, next) => {
     if (!req.user) return res.status(401).json({ error: 'Authentication required' })
 
-    // Admin bypass — admin role has all permissions
+    // Admin bypass - admin role has all permissions
     const isAdmin = req.user.userRoles?.some(
       (ur) => ur.role.key === 'admin'
     )

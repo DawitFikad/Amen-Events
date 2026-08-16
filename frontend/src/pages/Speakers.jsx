@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Mic2, Plus, CalendarDays, Award, Upload, Clock3, Video, UserCheck, Pencil, Phone, Mail } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, Toast, EmptyState, Th, Td, Avatar, Segmented, Modal, Field } from '../components/ui'
@@ -6,7 +6,7 @@ import { downloadCSV } from '../store/exportUtils'
 import { nameOnly, textRequired, emailValid, phoneValid, optional, validate } from '../store/validation'
 
 export default function Speakers() {
-  const { state, patch, addSpeaker, updateSpeaker, logActivity } = useData()
+  const { state, patch, addSpeaker, updateSpeaker, logActivity, intent, clearIntent } = useData()
   const [view, setView] = useState('speakers')
   const [toast, setToast] = useState(null)
   const [open, setOpen] = useState(false)
@@ -31,6 +31,20 @@ export default function Speakers() {
   }
 
   const openAdd = () => { setEditId(null); setForm({}); setErrors({}); setOpen(true) }
+
+  useEffect(() => {
+    if (intent === 'new-speaker') {
+      if (state.demo.autoplay) {
+        const seed = { name: 'Dr. Hanna Tesfaye', company: 'Addis Insight Analytics', topic: 'Future of Event Tech', eventId: state.demo.lastEventId || 'ev1', time: '10:00', status: 'confirmed', email: 'hanna@addisinsight.et', phone: '+251 911 303 444', bio: 'Industry analyst and keynote speaker' }
+        setForm(seed); openAdd(); setErrors({})
+        setTimeout(() => {
+          const rec = addSpeaker(seed)
+          show(`${rec?.name || seed.name} added as speaker automatically`); setOpen(false); setForm({})
+        }, 1100)
+      } else openAdd()
+      clearIntent()
+    }
+  }, [intent])
 
   const openEdit = (s) => { setEditId(s.id); setForm({ name: s.name || '', company: s.company || '', topic: s.topic || '', eventId: s.eventId || 'ev1', time: s.time || '12:00', status: s.status || 'pending', email: s.email || '', phone: s.phone || '', bio: s.bio || '' }); setErrors({}); setOpen(true) }
 
@@ -126,7 +140,7 @@ export default function Speakers() {
       {view === 'agenda' && (
         <div className="card p-5">
           <div className="mb-4 flex items-center justify-between">
-            <p className="font-bold text-brand-950">EthFinTech Summit — Agenda</p>
+            <p className="font-bold text-brand-950">EthFinTech Summit - Agenda</p>
             <button className="btn-outline !py-1.5 text-xs" onClick={() => { setErrors({}); setSessionOpen(true) }}><Plus size={14} /> Add Session</button>
           </div>
           <div className="relative ml-4 space-y-4 border-l-2 border-brand-100 pl-6">
@@ -140,7 +154,7 @@ export default function Speakers() {
                     <div>
                       <p className="font-semibold text-brand-950">{a.session}</p>
                       <p className="text-xs text-ink/45">{a.venue} · {a.type}</p>
-                      <p className="mt-1 text-xs font-semibold text-brand-700">{s ? `🎤 ${s.name}` : a.speakerIds ? 'Multi-speaker' : '—'}</p>
+                      <p className="mt-1 text-xs font-semibold text-brand-700">{s ? `🎤 ${s.name}` : a.speakerIds ? 'Multi-speaker' : '-'}</p>
                     </div>
                     <Badge status="done" label={a.type} />
                   </div>
@@ -153,7 +167,8 @@ export default function Speakers() {
 
       {view === 'sessions' && (
         <div className="card overflow-hidden">
-          <table className="w-full">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px]">
             <thead className="bg-brand-50/50"><tr><Th>Session</Th><Th className="text-right">Registered</Th><Th className="text-right">Attended</Th><Th>Attend Rate</Th></tr></thead>
             <tbody className="divide-y divide-brand-50">
               {sessionAttendance.map((sa) => (
@@ -171,6 +186,7 @@ export default function Speakers() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

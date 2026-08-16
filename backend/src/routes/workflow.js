@@ -23,12 +23,12 @@ export const STAGES = [
   { id: 13, name: 'Completed',       key: 'completed',       module: 'events',    perm: 'edit' },
 ]
 
-// GET /api/workflow/stages — return the 14-stage pipeline definition
+// GET /api/workflow/stages - return the 14-stage pipeline definition
 router.get('/stages', authRequired, (req, res) => {
   res.json({ stages: STAGES })
 })
 
-// GET /api/workflow — list all events with their workflow progress
+// GET /api/workflow - list all events with their workflow progress
 router.get('/', authRequired, async (req, res) => {
   const isAdmin = req.user.userRoles?.some((ur) => ur.role.key === 'admin')
   const where = isAdmin ? {} : {
@@ -68,7 +68,7 @@ router.get('/', authRequired, async (req, res) => {
   res.json({ events: enriched, stages: STAGES })
 })
 
-// GET /api/workflow/:eventId — get detailed workflow for a single event
+// GET /api/workflow/:eventId - get detailed workflow for a single event
 router.get('/:eventId', authRequired, async (req, res) => {
   const event = await prisma.event.findUnique({
     where: { id: req.params.eventId },
@@ -101,7 +101,7 @@ router.get('/:eventId', authRequired, async (req, res) => {
   })
 })
 
-// POST /api/workflow/:eventId/advance — advance event to next stage
+// POST /api/workflow/:eventId/advance - advance event to next stage
 router.post('/:eventId/advance', authRequired, async (req, res) => {
   const { note } = req.body
   const event = await prisma.event.findUnique({
@@ -157,7 +157,7 @@ router.post('/:eventId/advance', authRequired, async (req, res) => {
   res.json({ event: updated, stage: nextStage })
 })
 
-// POST /api/workflow/:eventId/revert — revert event to previous stage
+// POST /api/workflow/:eventId/revert - revert event to previous stage
 router.post('/:eventId/revert', authRequired, async (req, res) => {
   const { note } = req.body
   const event = await prisma.event.findUnique({ where: { id: req.params.eventId } })
@@ -192,7 +192,7 @@ router.post('/:eventId/revert', authRequired, async (req, res) => {
   res.json({ event: updated, stage: prevStage })
 })
 
-// POST /api/workflow/:eventId/set-stage — jump to a specific stage
+// POST /api/workflow/:eventId/set-stage - jump to a specific stage
 router.post('/:eventId/set-stage', authRequired, async (req, res) => {
   const { stageId, note } = req.body
   if (stageId < 0 || stageId >= STAGES.length) {
@@ -226,7 +226,7 @@ router.post('/:eventId/set-stage', authRequired, async (req, res) => {
   res.json({ event: updated, stage: targetStage })
 })
 
-// GET /api/workflow/:eventId/logs — get workflow transition history
+// GET /api/workflow/:eventId/logs - get workflow transition history
 router.get('/:eventId/logs', authRequired, async (req, res) => {
   const logs = await prisma.workflowLog.findMany({
     where: { eventId: req.params.eventId },

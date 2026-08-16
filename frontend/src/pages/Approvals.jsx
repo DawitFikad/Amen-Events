@@ -108,7 +108,7 @@ export default function Approvals() {
     <div>
       <PageHeader
         title="Approval Workflows"
-        subtitle={`${pendingCount} pending approval${pendingCount !== 1 ? 's' : ''} — budget, contracts, sponsorships, vendor payments, purchase requests`}
+        subtitle={`${pendingCount} pending approval${pendingCount !== 1 ? 's' : ''} - budget, contracts, sponsorships, vendor payments, purchase requests`}
         icon={FileText}
       />
 

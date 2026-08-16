@@ -5,7 +5,7 @@ import { userAccessibleModules, userCan } from '../middleware/rbac.js'
 
 const router = Router()
 
-// GET /api/dashboard — aggregated data for the dashboard (ownership-filtered)
+// GET /api/dashboard - aggregated data for the dashboard (ownership-filtered)
 router.get('/', authRequired, async (req, res) => {
   const isAdmin = req.user.userRoles?.some((ur) => ur.role.key === 'admin')
   const userId = req.user.id

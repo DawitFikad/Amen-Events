@@ -36,7 +36,7 @@ export function optionalAuth(req, res, next) {
       const payload = verifyAccessToken(header.slice(7))
       req.userId = payload.userId
     } catch (err) {
-      // ignore — optional
+      // ignore - optional
     }
   }
   next()

@@ -92,7 +92,7 @@ export default function Profile() {
     try {
       if (backendOnline) {
         await api.auth.updatePassword(pwForm.currentPassword, pwForm.newPassword)
-        show('Password changed — you will need to re-login on other devices')
+        show('Password changed - you will need to re-login on other devices')
         setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
       } else {
         show('Password changed (offline mode)')
@@ -319,7 +319,8 @@ export default function Profile() {
               {backendOnline ? 'No login history yet.' : 'Login history requires backend connection.'}
             </div>
           ) : (
-            <table className="w-full">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px]">
               <thead className="bg-brand-50/50">
                 <tr>
                   <Th>Status</Th>
@@ -344,13 +345,13 @@ export default function Profile() {
                       )}
                     </Td>
                     <Td><span className="text-sm text-ink/70">{h.email}</span></Td>
-                    <Td><span className="text-xs text-ink/50 font-mono">{h.ipAddress || '—'}</span></Td>
+                    <Td><span className="text-xs text-ink/50 font-mono">{h.ipAddress || '-'}</span></Td>
                     <Td>
                       <span className="text-xs text-ink/55">
                         {h.reason === 'success' ? 'Successful login' :
                          h.reason === 'wrong_password' ? 'Wrong password' :
                          h.reason === 'user_not_found' ? 'User not found' :
-                         h.reason === 'account_locked' ? 'Account locked' : h.reason || '—'}
+                         h.reason === 'account_locked' ? 'Account locked' : h.reason || '-'}
                       </span>
                     </Td>
                     <Td><span className="text-xs text-ink/45">{new Date(h.createdAt).toLocaleString()}</span></Td>
@@ -358,6 +359,7 @@ export default function Profile() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )}
@@ -366,3 +368,4 @@ export default function Profile() {
     </div>
   )
 }
+

@@ -27,13 +27,13 @@ export default function FinanceDashboard() {
   const profit = totalRevenue - totalExpenses
   const margin = totalRevenue > 0 ? Math.round((profit / totalRevenue) * 100) : 0
 
-  // Budget approval queue — expenses that are high value
+  // Budget approval queue - expenses that are high value
   const budgetApprovals = expenses
     .filter((e) => e.amount > 100000)
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 5)
 
-  // Cash flow data — revenue vs expenses by month
+  // Cash flow data - revenue vs expenses by month
   const cashFlowData = revenueTrend.map((r) => ({
     m: r.m,
     revenue: r.v,

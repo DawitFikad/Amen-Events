@@ -101,7 +101,7 @@ router.post('/login', async (req, res) => {
     })
   }
 
-  // Success — reset failed attempts
+  // Success - reset failed attempts
   await prisma.user.update({
     where: { id: user.id },
     data: { failedAttempts: 0, lockedUntil: null },
@@ -165,7 +165,7 @@ router.get('/me', authRequired, async (req, res) => {
   res.json({ user: userWithoutHash })
 })
 
-// PUT /api/auth/profile — update own profile
+// PUT /api/auth/profile - update own profile
 router.put('/profile', authRequired, async (req, res) => {
   const { name, phone, dept, jobTitle, bio, avatar } = req.body
   const data = {}
@@ -187,7 +187,7 @@ router.put('/profile', authRequired, async (req, res) => {
   res.json({ user: updated })
 })
 
-// PUT /api/auth/password — change password
+// PUT /api/auth/password - change password
 router.put('/password', authRequired, async (req, res) => {
   const { currentPassword, newPassword } = req.body
   if (!currentPassword || !newPassword) {
@@ -217,7 +217,7 @@ router.put('/password', authRequired, async (req, res) => {
   res.json({ success: true })
 })
 
-// PUT /api/auth/two-step — toggle 2-step verification
+// PUT /api/auth/two-step - toggle 2-step verification
 router.put('/two-step', authRequired, async (req, res) => {
   const { enabled } = req.body
   await prisma.user.update({
@@ -230,7 +230,7 @@ router.put('/two-step', authRequired, async (req, res) => {
   res.json({ success: true, twoStepEnabled: !!enabled })
 })
 
-// GET /api/auth/login-history — get own login history
+// GET /api/auth/login-history - get own login history
 router.get('/login-history', authRequired, async (req, res) => {
   const history = await prisma.loginHistory.findMany({
     where: { userId: req.user.id },
@@ -240,7 +240,7 @@ router.get('/login-history', authRequired, async (req, res) => {
   res.json({ history })
 })
 
-// POST /api/auth/forgot-password — request password reset
+// POST /api/auth/forgot-password - request password reset
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body
   if (!email) return res.status(400).json({ error: 'Email is required' })
@@ -268,7 +268,7 @@ router.post('/forgot-password', async (req, res) => {
   res.json({ success: true, resetToken: token })
 })
 
-// POST /api/auth/reset-password — reset password with token
+// POST /api/auth/reset-password - reset password with token
 router.post('/reset-password', async (req, res) => {
   const { token, newPassword } = req.body
   if (!token || !newPassword) {

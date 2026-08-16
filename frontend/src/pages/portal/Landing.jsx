@@ -16,7 +16,7 @@ const CATEGORIES = [
 ]
 
 const TESTIMONIALS = [
-  { name: 'Hanan Ali', role: 'Marketing Director', text: 'The QR check-in at our product launch was quick and professional — guests were through the door in seconds.', rating: 5 },
+  { name: 'Hanan Ali', role: 'Marketing Director', text: 'The QR check-in at our product launch was quick and professional - guests were through the door in seconds.', rating: 5 },
   { name: 'Dawit Tsegaye', role: 'Tech Entrepreneur', text: 'I registered for three conferences in one sitting. Clearest ticket page I have used so far.', rating: 5 },
   { name: 'Selam Bekele', role: 'Event Attendee', text: 'No paper, no queue. My ticket lived on my phone and got scanned straight at the entrance.', rating: 4 },
 ]
@@ -26,7 +26,7 @@ const SPONSORS = ['ETH FINTECH Group', 'Abyssinia Bank', 'Walia Telecom', 'Sheba
 const FAQS = [
   { q: 'How do I purchase tickets?', a: 'Browse events, pick your ticket type, complete checkout, and your QR ticket arrives instantly on your profile.' },
   { q: 'Can I get a refund?', a: 'Refund policies vary by event. Check the event page for the specific terms before buying.' },
-  { q: 'How do I check in at an event?', a: 'Open your ticket QR at the entrance — our staff scan it for immediate entry. No printing needed.' },
+  { q: 'How do I check in at an event?', a: 'Open your ticket QR at the entrance - our staff scan it for immediate entry. No printing needed.' },
   { q: 'Do I need an account to buy tickets?', a: 'Yes, a free account stores your tickets, your purchase history, and event updates in one place.' },
   { q: 'What payment methods are available?', a: 'Cash, card, Telebirr, CBE Birr and bank transfer are accepted at checkout.' },
 ]
@@ -54,7 +54,7 @@ export default function Landing() {
 
   return (
     <div>
-      {/* Hero — premium, spacious, Apple/Stripe style */}
+      {/* Hero - premium, spacious, Apple/Stripe style */}
       <section className="relative overflow-hidden bg-white">
         {/* Subtle background gradient */}
         <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(58,170,28,0.06) 0%, transparent 60%)' }} />
@@ -73,7 +73,7 @@ export default function Landing() {
               Browse upcoming conferences, concerts, and exhibitions. Register with instant QR ticket delivery.
             </p>
 
-            {/* Search bar — prominent, Eventbrite style */}
+            {/* Search bar - prominent, Eventbrite style */}
             <div className="animate-portal-fade-up mx-auto mt-10 flex max-w-2xl items-center gap-2 rounded-2xl border border-gray-200 bg-white p-2 shadow-lg" style={{ animationDelay: '0.3s', boxShadow: '0 8px 30px rgba(0,0,0,0.06)' }}>
               <Search size={20} className="ml-3 text-gray-400" />
               <input
@@ -95,7 +95,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Categories — chip style, horizontal scroll on mobile */}
+      {/* Categories - chip style, horizontal scroll on mobile */}
       <section className="mx-auto max-w-7xl px-5 py-10 sm:px-8">
         <div className="flex gap-3 overflow-x-auto pb-2 sm:flex-wrap sm:justify-center sm:overflow-visible">
           {CATEGORIES.map((cat) => (
@@ -113,7 +113,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Featured Event — large hero card */}
+      {/* Featured Event - large hero card */}
       {featured && !loading && (
         <section className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
           <div className="mb-5 flex items-end justify-between">
@@ -128,7 +128,7 @@ export default function Landing() {
             style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}
           >
             <div className="grid lg:grid-cols-2">
-              {/* Image area — gradient placeholder */}
+              {/* Image area - gradient placeholder */}
               <div className="relative h-64 overflow-hidden lg:h-full" style={{ background: 'linear-gradient(135deg, #166534 0%, #3AAA1C 50%, #4ade80 100%)' }}>
                 <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 30% 50%, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -162,7 +162,7 @@ export default function Landing() {
         </section>
       )}
 
-      {/* Upcoming Events — grid of large cards */}
+      {/* Upcoming Events - grid of large cards */}
       <section className="mx-auto max-w-7xl px-5 py-10 sm:px-8">
         <div className="mb-6 flex items-end justify-between">
           <div>
@@ -214,7 +214,7 @@ export default function Landing() {
           {[
             { icon: Ticket, title: 'Instant QR Tickets', desc: 'Get your QR code immediately after purchase. No waiting, no printing required.' },
             { icon: Shield, title: 'Secure Checkout', desc: 'Your payments are protected with industry-standard encryption and secure gateways.' },
-            { icon: Zap, title: 'Lightning Fast', desc: 'Browse, register, and check in — all in seconds. Designed for speed and simplicity.' },
+            { icon: Zap, title: 'Lightning Fast', desc: 'Browse, register, and check in - all in seconds. Designed for speed and simplicity.' },
           ].map((feat) => (
             <div key={feat.title} className="rounded-[20px] border border-gray-100 bg-white p-7 text-center transition hover:shadow-lg" style={{ boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
               <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-portal-50 text-portal-600">
@@ -297,7 +297,7 @@ function EventCard({ event, delay = 0 }) {
       className="group animate-portal-fade-up block overflow-hidden rounded-[20px] border border-gray-100 bg-white transition hover:-translate-y-1 hover:shadow-xl"
       style={{ animationDelay: `${delay}s`, boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}
     >
-      {/* Image area — gradient placeholder with zoom on hover */}
+      {/* Image area - gradient placeholder with zoom on hover */}
       <div className="relative h-44 overflow-hidden" style={{ background: 'linear-gradient(135deg, #166534 0%, #3AAA1C 100%)' }}>
         <div className="absolute inset-0 opacity-15" style={{ backgroundImage: 'radial-gradient(circle at 30% 50%, white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
         <div className="absolute inset-0 flex items-center justify-center transition duration-500 group-hover:scale-110">

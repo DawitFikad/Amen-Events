@@ -58,7 +58,7 @@ export default function Topbar({ onMenuClick }) {
         >
           <Menu size={20} />
         </button>
-        <div className="relative w-full max-w-md hidden sm:block">
+        <div className="relative w-full min-w-0 max-w-md flex-1">
           <GlobalSearch />
         </div>
       </div>

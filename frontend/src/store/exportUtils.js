@@ -1,4 +1,4 @@
-// Export helpers — CSV, real .xlsx (SheetJS) and real .pdf (jsPDF + autotable).
+// Export helpers - CSV, real .xlsx (SheetJS) and real .pdf (jsPDF + autotable).
 
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
@@ -94,7 +94,7 @@ export function exportPDF(title, sections) {
 function tableHTML(headers, rows) {
   return (
     `<table><thead><tr>${headers.map((h) => `<th>${h}</th>`).join('')}</tr></thead>` +
-    `<tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${c == null ? '—' : esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`
+    `<tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${c == null ? '-' : esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`
   )
 }
 

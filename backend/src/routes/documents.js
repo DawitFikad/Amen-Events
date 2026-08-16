@@ -4,7 +4,7 @@ import { authRequired } from '../middleware/auth.js'
 
 const router = Router()
 
-// GET /api/documents — list documents, optionally filtered by module + entityId
+// GET /api/documents - list documents, optionally filtered by module + entityId
 router.get('/', authRequired, async (req, res) => {
   const { module, entityId } = req.query
   const where = {}
@@ -19,7 +19,7 @@ router.get('/', authRequired, async (req, res) => {
   res.json({ documents })
 })
 
-// POST /api/documents — upload a document (metadata only, URL-based)
+// POST /api/documents - upload a document (metadata only, URL-based)
 router.post('/', authRequired, async (req, res) => {
   const { name, type, module, entityId, mimeType, size, url } = req.body
   const doc = await prisma.document.create({

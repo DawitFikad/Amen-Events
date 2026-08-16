@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Megaphone, Plus, Mail, MessageSquare, Send, Link2, Tag, TrendingUp, Globe, Pencil, CalendarDays, FileText } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, Toast, EmptyState, Th, Td, Modal, Field } from '../components/ui'
@@ -19,7 +19,7 @@ const channelDefaults = {
 }
 
 export default function Marketing() {
-  const { state, patch, addCampaign, updateCampaign, addCoupon, logActivity } = useData()
+  const { state, patch, addCampaign, updateCampaign, addCoupon, logActivity, intent, clearIntent } = useData()
   const [view, setView] = useState('campaigns')
   const [toast, setToast] = useState(null)
   const [open, setOpen] = useState(null) // 'campaign' | 'coupon'
@@ -46,6 +46,31 @@ export default function Marketing() {
     setErrors({}); setOpen('campaign')
   }
 
+  useEffect(() => {
+    if (intent === 'new-campaign') {
+      if (state.demo.autoplay) {
+        const seed = { name: 'Summer Summit Promo', channel: 'Email', audience: '50000', status: 'draft', schedule: '2026-09-01', description: 'Early-bird campaign for the 2026 summit' }
+        setView('campaigns'); setForm(seed); openCampaign(); setErrors({})
+        setTimeout(() => {
+          const rec = addCampaign(seed)
+          show(`Campaign "${rec?.name || seed.name}" created automatically`); setOpen(null); setForm({})
+        }, 1100)
+      } else { setView('campaigns'); openCampaign() }
+      clearIntent()
+    }
+    if (intent === 'new-coupon') {
+      if (state.demo.autoplay) {
+        const seed = { code: 'SUMMIT20', value: '20% off', max: '500' }
+        setView('coupons'); setForm(seed); setErrors({}); setOpen('coupon')
+        setTimeout(() => {
+          addCoupon(seed)
+          show(`Coupon ${seed.code} generated automatically`); setOpen(null); setForm({})
+        }, 1100)
+      } else { setView('coupons'); setForm({}); setErrors({}); setOpen('coupon') }
+      clearIntent()
+    }
+  }, [intent])
+
   const submitCampaign = () => {
     const res = validate(form, campaignSchema)
     if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
@@ -68,9 +93,9 @@ export default function Marketing() {
   }
 
   const viewReport = (c) => {
-    exportPDF(`Campaign Report — ${c.name}`, [
+    exportPDF(`Campaign Report - ${c.name}`, [
       { title: 'Campaign', text: `${c.name} via ${c.channel}` },
-      { title: 'Delivery', rows: { headers: ['Metric', 'Value'], rows: [['Audience', c.audience.toLocaleString()], ['Sent', c.sent.toLocaleString()], ['Opens', c.opens || 0], ['Open Rate', c.opens ? Math.round((c.opens / c.sent) * 100) + '%' : '—']] } },
+      { title: 'Delivery', rows: { headers: ['Metric', 'Value'], rows: [['Audience', c.audience.toLocaleString()], ['Sent', c.sent.toLocaleString()], ['Opens', c.opens || 0], ['Open Rate', c.opens ? Math.round((c.opens / c.sent) * 100) + '%' : '-']] } },
     ])
     logActivity(`Opened report for campaign "${c.name}"`, 'marketing')
     show(`Report opened for ${c.name}`)
@@ -124,7 +149,7 @@ export default function Marketing() {
                     <p className="text-xs text-ink/40">of {c.audience.toLocaleString()} audience</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-black text-brand-700">{c.opens ? rate + '%' : '—'}</p>
+                    <p className="text-lg font-black text-brand-700">{c.opens ? rate + '%' : '-'}</p>
                     <p className="text-xs text-ink/40">open rate</p>
                   </div>
                 </div>
@@ -145,7 +170,8 @@ export default function Marketing() {
             <span className="text-sm text-ink/55">{state.coupons.length} promo codes</span>
             <button className="btn-primary !py-1.5 text-xs" onClick={() => { setErrors({}); setOpen('coupon') }}><Plus size={14} /> Generate Coupon</button>
           </div>
-          <table className="w-full">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px]">
             <thead className="bg-brand-50/50"><tr><Th>Code</Th><Th>Type</Th><Th>Value</Th><Th>Usage</Th><Th>Status</Th></tr></thead>
             <tbody className="divide-y divide-brand-50">
               {state.coupons.map((c) => (
@@ -159,6 +185,7 @@ export default function Marketing() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

@@ -18,7 +18,7 @@ export default {
           900: '#124112',
           950: '#082408',
         },
-        // Warm gold accent — harmonizes with forest green
+        // Warm gold accent - harmonizes with forest green
         gold: {
           50: '#fbf8ee',
           100: '#f5edcf',
@@ -31,7 +31,7 @@ export default {
           800: '#714f24',
           900: '#5d4121',
         },
-        // Public portal brand — same forest green family as `brand`
+        // Public portal brand - same forest green family as `brand`
         portal: {
           50: '#f0f7f0',
           100: '#dcebdc',

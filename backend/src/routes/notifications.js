@@ -26,7 +26,7 @@ router.get('/stream', authRequired, (req, res) => {
   req.on('close', () => clearInterval(interval))
 })
 
-// GET /api/notifications — user's notifications
+// GET /api/notifications - user's notifications
 router.get('/', authRequired, async (req, res) => {
   const isAdmin = req.user.userRoles?.some((ur) => ur.role.key === 'admin')
   const where = isAdmin ? {} : {
@@ -40,7 +40,7 @@ router.get('/', authRequired, async (req, res) => {
   res.json({ notifications })
 })
 
-// POST /api/notifications/:id/read — mark as read
+// POST /api/notifications/:id/read - mark as read
 router.post('/:id/read', authRequired, async (req, res) => {
   await prisma.notification.update({
     where: { id: req.params.id },
@@ -49,7 +49,7 @@ router.post('/:id/read', authRequired, async (req, res) => {
   res.json({ success: true })
 })
 
-// POST /api/notifications/read-all — mark all as read
+// POST /api/notifications/read-all - mark all as read
 router.post('/read-all', authRequired, async (req, res) => {
   await prisma.notification.updateMany({
     where: { OR: [{ userId: req.user.id }, { userId: null }], read: false },
