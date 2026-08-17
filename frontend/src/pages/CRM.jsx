@@ -30,8 +30,8 @@ const commLog = [
   { id: 'cm4', client: 'Walia Telecom', from: 'Liya Kebede', channel: 'Email', subject: 'Expo sponsor package', date: '2026-07-30' },
 ]
 
-const pipelineStages = ['lead', 'opportunity', 'quotation', 'negotiation', 'contract']
-const pipelineLabels = { lead: 'Lead', opportunity: 'Opportunity', quotation: 'Quotation', negotiation: 'Negotiation', contract: 'Contract' }
+const pipelineStages = ['lead', 'opportunity', 'quotation', 'negotiation', 'contract', 'Other']
+const pipelineLabels = { lead: 'Lead', opportunity: 'Opportunity', quotation: 'Quotation', negotiation: 'Negotiation', contract: 'Contract', Other: 'Other' }
 
 export default function CRM() {
   const { state, addClient, updateClient, patchBy, patch, logActivity, intent, clearIntent, addContract, updateContractStatus, addClientDoc, setDemoFlag } = useData()
@@ -515,11 +515,11 @@ export default function CRM() {
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Company Name *"><input className="input" value={form.company || ''} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="e.g. Walia Telecom" />{errors.company && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.company}</p>}</Field>
-          <Field label="Industry"><select className="input" value={form.industry || ''} onChange={(e) => setForm({ ...form, industry: e.target.value })}><option value="">Select…</option><option>Financial Services</option><option>Telecommunications</option><option>Healthcare</option><option>Banking</option><option>Education</option><option>Hospitality</option><option>Construction</option></select></Field>
-          <Field label="Contact Person"><input className="input" value={form.contactPerson || ''} onChange={(e) => setForm({ ...form, contactPerson: e.target.value })} />{errors.contactPerson && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.contactPerson}</p>}</Field>
+          <Field label="Industry"><select className="input" value={form.industry || ''} onChange={(e) => setForm({ ...form, industry: e.target.value })}><option value="">Select…</option><option>Financial Services</option><option>Telecommunications</option><option>Healthcare</option><option>Banking</option><option>Education</option><option>Hospitality</option><option>Construction</option><option>Technology</option><option>Retail & Consumer Goods</option><option>Manufacturing</option><option>Energy & Utilities</option><option>Agriculture</option><option>Media & Entertainment</option><option>Government</option><option>Nonprofit / NGO</option><option>Transportation & Logistics</option><option>Mining</option><option>Pharmaceuticals</option><option>Insurance</option><option>Legal Services</option><option>Real Estate</option><option>Travel & Tourism</option><option>Other</option></select></Field>
+          <Field label="Contact Person *"><input className="input" value={form.contactPerson || ''} onChange={(e) => setForm({ ...form, contactPerson: e.target.value })} />{errors.contactPerson && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.contactPerson}</p>}</Field>
           <Field label="Role"><input className="input" value={form.role || ''} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder="Events Director" /></Field>
-          <Field label="Phone"><input className="input" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+251 911 000 000" />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</Field>
-          <Field label="Email"><input className="input" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="contact@company.com" />{errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}</Field>
+          <Field label="Phone *"><input className="input" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+251 911 000 000" />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</Field>
+          <Field label="Email *"><input className="input" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="contact@company.com" />{errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}</Field>
           <Field label="City"><input className="input" value={form.city || 'Addis Ababa'} onChange={(e) => setForm({ ...form, city: e.target.value })} /></Field>
           <Field label="Pipeline Stage"><select className="input" value={form.stage || 'lead'} onChange={(e) => setForm({ ...form, stage: e.target.value })}>{pipelineStages.map((s) => <option key={s} value={s}>{pipelineLabels[s]}</option>)}</select></Field>
         </div>
@@ -584,11 +584,11 @@ export default function CRM() {
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Company Name *"><input className="input" value={editForm.company || ''} onChange={(e) => { setEditForm({ ...editForm, company: e.target.value }); if (errors.company) setErrors({ ...errors, company: undefined }) }} />{errors.company && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.company}</p>}</Field>
-          <Field label="Industry"><select className="input" value={editForm.industry || ''} onChange={(e) => setEditForm({ ...editForm, industry: e.target.value })}><option value="">Select…</option><option>Financial Services</option><option>Telecommunications</option><option>Healthcare</option><option>Banking</option><option>Education</option><option>Hospitality</option><option>Construction</option></select></Field>
-          <Field label="Contact Person"><input className="input" value={editForm.contactPerson || ''} onChange={(e) => setEditForm({ ...editForm, contactPerson: e.target.value })} />{errors.contactPerson && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.contactPerson}</p>}</Field>
+          <Field label="Industry"><select className="input" value={editForm.industry || ''} onChange={(e) => setEditForm({ ...editForm, industry: e.target.value })}><option value="">Select…</option><option>Financial Services</option><option>Telecommunications</option><option>Healthcare</option><option>Banking</option><option>Education</option><option>Hospitality</option><option>Construction</option><option>Technology</option><option>Retail & Consumer Goods</option><option>Manufacturing</option><option>Energy & Utilities</option><option>Agriculture</option><option>Media & Entertainment</option><option>Government</option><option>Nonprofit / NGO</option><option>Transportation & Logistics</option><option>Mining</option><option>Pharmaceuticals</option><option>Insurance</option><option>Legal Services</option><option>Real Estate</option><option>Travel & Tourism</option><option>Other</option></select></Field>
+          <Field label="Contact Person *"><input className="input" value={editForm.contactPerson || ''} onChange={(e) => setEditForm({ ...editForm, contactPerson: e.target.value })} />{errors.contactPerson && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.contactPerson}</p>}</Field>
           <Field label="Role"><input className="input" value={editForm.role || ''} onChange={(e) => setEditForm({ ...editForm, role: e.target.value })} placeholder="Events Director" /></Field>
-          <Field label="Phone"><input className="input" value={editForm.phone || ''} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} placeholder="+251 911 000 000" />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</Field>
-          <Field label="Email"><input className="input" value={editForm.email || ''} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} placeholder="contact@company.com" />{errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}</Field>
+          <Field label="Phone *"><input className="input" value={editForm.phone || ''} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} placeholder="+251 911 000 000" />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</Field>
+          <Field label="Email *"><input className="input" value={editForm.email || ''} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} placeholder="contact@company.com" />{errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}</Field>
           <Field label="City"><input className="input" value={editForm.city || ''} onChange={(e) => setEditForm({ ...editForm, city: e.target.value })} /></Field>
           <Field label="Pipeline Stage"><select className="input" value={editForm.stage || 'lead'} onChange={(e) => setEditForm({ ...editForm, stage: e.target.value })}>{pipelineStages.map((s) => <option key={s} value={s}>{pipelineLabels[s]}</option>)}</select></Field>
         </div>
@@ -698,15 +698,16 @@ export default function CRM() {
       {/* New quotation modal */}
       <Modal open={quoteOpen} onClose={() => setQuoteOpen(false)} title="New Quotation">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Client" className="col-span-2">
+          <Field label="Client *" className="col-span-2">
             <select className="input" value={quoteForm.company || ''} onChange={(e) => setQuoteForm({ ...quoteForm, company: e.target.value })}>
               <option value="">Select client…</option>
               {state.clients.map((c) => <option key={c.id} value={c.company}>{c.company}</option>)}
             </select>
+            {errors.company && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.company}</p>}
           </Field>
-          <Field label="Event Type"><input className="input" value={quoteForm.type || ''} onChange={(e) => setQuoteForm({ ...quoteForm, type: e.target.value })} placeholder="Product Launch" />{errors.type && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.type}</p>}</Field>
-          <Field label="Amount (ETB)"><input type="number" className="input" value={quoteForm.amount || ''} onChange={(e) => setQuoteForm({ ...quoteForm, amount: e.target.value })} />{errors.amount && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.amount}</p>}</Field>
-          <Field label="Status"><select className="input" value={quoteForm.status || 'draft'} onChange={(e) => setQuoteForm({ ...quoteForm, status: e.target.value })}><option value="draft">Draft</option><option value="sent">Sent</option><option value="accepted">Accepted</option></select></Field>
+          <Field label="Event Type *"><input className="input" value={quoteForm.type || ''} onChange={(e) => setQuoteForm({ ...quoteForm, type: e.target.value })} placeholder="Product Launch" />{errors.type && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.type}</p>}</Field>
+          <Field label="Amount (ETB) *"><input type="number" className="input" value={quoteForm.amount || ''} onChange={(e) => setQuoteForm({ ...quoteForm, amount: e.target.value })} />{errors.amount && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.amount}</p>}</Field>
+          <Field label="Status"><select className="input" value={quoteForm.status || 'draft'} onChange={(e) => setQuoteForm({ ...quoteForm, status: e.target.value })}><option value="draft">Draft</option><option value="sent">Sent</option><option value="accepted">Accepted</option><option value="rejected">Rejected</option><option value="expired">Expired</option><option value="Other">Other</option></select></Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button className="btn-outline" onClick={() => setQuoteOpen(false)}>Cancel</button>
@@ -729,9 +730,9 @@ export default function CRM() {
               {state.events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
             </select>
           </Field>
-          <Field label="Value (ETB)"><input type="number" className="input" value={contractForm.value || ''} onChange={(e) => setContractForm({ ...contractForm, value: e.target.value })} />{errors.value && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.value}</p>}</Field>
-          <Field label="Start Date"><input type="date" className="input" value={contractForm.startDate || ''} onChange={(e) => setContractForm({ ...contractForm, startDate: e.target.value })} />{errors.startDate && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.startDate}</p>}</Field>
-          <Field label="End Date"><input type="date" className="input" value={contractForm.endDate || ''} onChange={(e) => setContractForm({ ...contractForm, endDate: e.target.value })} />{errors.endDate && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.endDate}</p>}</Field>
+          <Field label="Value (ETB) *"><input type="number" className="input" value={contractForm.value || ''} onChange={(e) => setContractForm({ ...contractForm, value: e.target.value })} />{errors.value && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.value}</p>}</Field>
+          <Field label="Start Date *"><input type="date" className="input" value={contractForm.startDate || ''} onChange={(e) => setContractForm({ ...contractForm, startDate: e.target.value })} />{errors.startDate && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.startDate}</p>}</Field>
+          <Field label="End Date *"><input type="date" className="input" value={contractForm.endDate || ''} onChange={(e) => setContractForm({ ...contractForm, endDate: e.target.value })} />{errors.endDate && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.endDate}</p>}</Field>
           <Field label="Notes" className="col-span-2"><input className="input" value={contractForm.notes || ''} onChange={(e) => setContractForm({ ...contractForm, notes: e.target.value })} placeholder="Scope of work…" /></Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
@@ -750,7 +751,7 @@ export default function CRM() {
             <input type="file" className="hidden" onChange={onDocFile} />
           </label>
           <Field label="File Name *" className="col-span-2"><input className="input" value={docForm.name || ''} onChange={(e) => setDocForm({ ...docForm, name: e.target.value })} placeholder="e.g. Signed MOU.pdf" />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
-          <Field label="Type"><select className="input" value={docForm.ext || 'PDF'} onChange={(e) => setDocForm({ ...docForm, ext: e.target.value })}><option>PDF</option><option>DOCX</option><option>XLSX</option><option>ZIP</option><option>PNG</option><option>JPG</option></select></Field>
+          <Field label="Type"><select className="input" value={docForm.ext || 'PDF'} onChange={(e) => setDocForm({ ...docForm, ext: e.target.value })}><option>PDF</option><option>DOCX</option><option>XLSX</option><option>ZIP</option><option>PNG</option><option>JPG</option><option>Other</option></select></Field>
           <Field label="Size"><input className="input" value={docForm.size || ''} onChange={(e) => setDocForm({ ...docForm, size: e.target.value })} placeholder="980 KB" /></Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">

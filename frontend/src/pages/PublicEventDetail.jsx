@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { Calendar, MapPin, Users, Mic, ArrowLeft, Ticket, CheckCircle2, QrCode, AlertCircle } from 'lucide-react'
 import { publicApi } from '../store/api'
 import { Spinner, EmptyState } from '../components/ui'
-import { nameOnly, emailValid, phoneValid, optional, validate } from '../store/validation'
+import { nameOnly, emailValid, phoneValid, validate } from '../store/validation'
 
 const TICKET_TYPES = [
   { type: 'Standard', price: 1000, label: 'Standard', perks: ['Event access', 'Networking session', 'Lunch included'] },
@@ -42,7 +42,7 @@ export default function PublicEventDetail() {
     const res = validate(form, {
       name: [nameOnly('Full name')],
       email: [emailValid('Email')],
-      phone: [optional(phoneValid('Phone number'))],
+      phone: [phoneValid('Phone number')],
     })
     if (!res.ok) {
       setFormError(res.first)
@@ -274,12 +274,13 @@ export default function PublicEventDetail() {
                 />
               </div>
               <div>
-                <label className="label">Phone</label>
+                <label className="label">Phone *</label>
                 <input
                   className="input"
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
                   placeholder="+251 9XX XXX XXX"
+                  required
                 />
               </div>
 

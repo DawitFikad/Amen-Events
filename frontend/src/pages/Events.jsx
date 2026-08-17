@@ -9,7 +9,7 @@ import { PageHeader, Badge, Progress, Avatar, Modal, Field, SearchBox, Toast, Em
 import { fmt, todayISO } from '../store/data'
 import { required, textRequired, numberPositive, dateRequired, optional, validate } from '../store/validation'
 
-const eventTypes = ['Conference', 'Exhibition', 'Product Launch', 'Retreat', 'Gala', 'Ceremony', 'Wedding', 'Summit']
+const eventTypes = ['Conference', 'Exhibition', 'Product Launch', 'Retreat', 'Gala', 'Ceremony', 'Wedding', 'Summit', 'Workshop', 'Seminar', 'Award Night', 'Fashion Show', 'Concert', 'Sporting Event', 'Networking Mixer', 'Charity Fundraiser', 'Festival', 'Trade Show']
 
 const teamByEvent = {
   ev1: ['st2', 'st3', 'st5', 'st7', 'st8'],
@@ -105,7 +105,7 @@ export default function Events() {
           name: 'Amen Staff Summit 2026', date: '2026-09-24',
           clientId: state.demo.lastClientId || 'cl1', category: 'Conference',
           status: 'upcoming', pmId: 'st2', time: '09:00', capacity: '400',
-          budget: '750000', published: true, tags: 'Internal, Summit',
+          published: true, tags: 'Internal, Summit',
         }
         setOpen(true); setForm(seed); setErrors({}); setTab('all')
         setTimeout(async () => {
@@ -164,7 +164,7 @@ export default function Events() {
   const venue = (id) => state.venues.find((v) => v.id === id)
 
   const submit = async () => {
-    const res = validate(form, { name: [textRequired('Event name', { max: 120 })], date: [dateRequired('Date')], budget: [optional(numberPositive('Budget'))] })
+    const res = validate(form, { name: [textRequired('Event name', { max: 120 })], date: [dateRequired('Date')], clientId: [required('Client')], budget: [optional(numberPositive('Budget'))] })
     if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
     const payload = {
       ...form,
@@ -414,16 +414,16 @@ export default function Events() {
         <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><InfoIcon size={13} /> Event Details</p>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Event Name *" className="col-span-2"><input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Annual Innovation Summit 2026" />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
-          <Field label="Client"><select className="input" value={form.clientId || ''} onChange={(e) => setForm({ ...form, clientId: e.target.value })}><option value="">Select client…</option>{state.clients.map((c) => <option key={c.id} value={c.id}>{c.company}</option>)}</select></Field>
-          <Field label="Category"><select className="input" value={form.category || ''} onChange={(e) => setForm({ ...form, category: e.target.value })}>{eventTypes.map((t) => <option key={t}>{t}</option>)}</select></Field>
-          <Field label="Status"><select className="input" value={form.status || 'upcoming'} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="upcoming">Upcoming</option><option value="ongoing">Ongoing</option><option value="completed">Completed</option></select></Field>
+          <Field label="Client *"><select className="input" value={form.clientId || ''} onChange={(e) => { setForm({ ...form, clientId: e.target.value }); if (errors.clientId) setErrors({ ...errors, clientId: undefined }) }}><option value="">Select client…</option>{state.clients.map((c) => <option key={c.id} value={c.id}>{c.company}</option>)}</select>{errors.clientId && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.clientId}</p>}</Field>
+          <Field label="Category"><select className="input" value={form.category || ''} onChange={(e) => setForm({ ...form, category: e.target.value })}>{eventTypes.map((t) => <option key={t}>{t}</option>)}<option>Other</option></select></Field>
+          <Field label="Status"><select className="input" value={form.status || 'upcoming'} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="upcoming">Upcoming</option><option value="ongoing">Ongoing</option><option value="completed">Completed</option><option value="Other">Other</option></select></Field>
           <Field label="Project Manager"><select className="input" value={form.pmId || 'st2'} onChange={(e) => setForm({ ...form, pmId: e.target.value })}>{state.staff.filter((m) => m.type === 'Employee').map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select></Field>
         </div>
 
         {/* Schedule */}
         <p className="mt-5 mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><CalendarDays size={13} /> Schedule</p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Field label="Start Date *"><input type="date" className="input" value={form.date || ''} onChange={(e) => setForm({ ...form, date: e.target.value })} />{errors.date && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.date}</p>}</Field>
+          <Field label="Start Date *"><input type="date" className="input" value={form.date || ''} onChange={(e) => { setForm({ ...form, date: e.target.value }); if (errors.date) setErrors({ ...errors, date: undefined }) }} />{errors.date && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.date}</p>}</Field>
           <Field label="Start Time"><input type="time" className="input" value={form.time || '09:00'} onChange={(e) => setForm({ ...form, time: e.target.value })} /></Field>
           <Field label="End Date"><input type="date" className="input" value={form.endDate || ''} onChange={(e) => setForm({ ...form, endDate: e.target.value })} /></Field>
           <Field label="End Time"><input type="time" className="input" value={form.endTime || ''} onChange={(e) => setForm({ ...form, endTime: e.target.value })} /></Field>
@@ -554,7 +554,7 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
   }
   useEffect(() => { if (!editOpen) setErrors({}) }, [editOpen])
   const editSave = () => {
-    const res = validate(editForm, { name: [textRequired('Event name', { min: 2, max: 120 })] })
+    const res = validate(editForm, { name: [textRequired('Event name', { min: 2, max: 120 })], date: [dateRequired('Date')] })
     if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
     setErrors({})
     saveEvent()
@@ -877,9 +877,9 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit Event" width="max-w-2xl">
         <div className="grid grid-cols-2 gap-3">
           <Field label="Event Name *" className="col-span-2"><input className="input" value={editForm.name || ''} onChange={(e) => { setEditForm({ ...editForm, name: e.target.value }); if (errors.name) setErrors({ ...errors, name: undefined }) }} />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
-          <Field label="Category"><select className="input" value={editForm.category || ''} onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}>{eventTypes.map((t) => <option key={t}>{t}</option>)}</select></Field>
-          <Field label="Status"><select className="input" value={editForm.status || 'upcoming'} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}><option value="upcoming">Upcoming</option><option value="ongoing">Ongoing</option><option value="completed">Completed</option></select></Field>
-          <Field label="Start Date"><input type="date" className="input" value={editForm.date || ''} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} /></Field>
+          <Field label="Category"><select className="input" value={editForm.category || ''} onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}>{eventTypes.map((t) => <option key={t}>{t}</option>)}<option>Other</option></select></Field>
+          <Field label="Status"><select className="input" value={editForm.status || 'upcoming'} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}><option value="upcoming">Upcoming</option><option value="ongoing">Ongoing</option><option value="completed">Completed</option><option value="Other">Other</option></select></Field>
+          <Field label="Start Date *"><input type="date" className="input" value={editForm.date || ''} onChange={(e) => { setEditForm({ ...editForm, date: e.target.value }); if (errors.date) setErrors({ ...errors, date: undefined }) }} />{errors.date && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.date}</p>}</Field>
           <Field label="Start Time"><input type="time" className="input" value={editForm.time || '09:00'} onChange={(e) => setEditForm({ ...editForm, time: e.target.value })} /></Field>
           <Field label="End Date"><input type="date" className="input" value={editForm.endDate || ''} onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })} /></Field>
           <Field label="End Time"><input type="time" className="input" value={editForm.endTime || ''} onChange={(e) => setEditForm({ ...editForm, endTime: e.target.value })} /></Field>
@@ -982,7 +982,7 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
             <button className="btn-outline" onClick={() => setCompleteOpen(false)}>Cancel</button>
             <button className="btn-primary" onClick={() => {
               patchBy('events', event.id, { status: 'completed' })
-              markDone(11)
+              markDone(22)
               logActivity(`Event "${event.name}" marked as completed`, 'event')
               setCompleteOpen(false)
               show('Event completed 🎉')
@@ -1248,7 +1248,7 @@ function BudgetView({ event, state, openBudgetModal }) {
 
       <Modal open={expOpen} onClose={() => setExpOpen(false)} title={`Record Expense - ${event.name}`}>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Category"><select className="input" value={expForm.category || 'General'} onChange={(e) => setExpForm({ ...expForm, category: e.target.value })}><option>Venue Rental</option><option>Catering</option><option>Technical</option><option>Decoration</option><option>Transport</option><option>Marketing</option><option>General</option></select></Field>
+          <Field label="Category"><select className="input" value={expForm.category || 'General'} onChange={(e) => setExpForm({ ...expForm, category: e.target.value })}><option>Venue Rental</option><option>Catering</option><option>Technical</option><option>Decoration</option><option>Transport</option><option>Marketing</option><option>Security</option><option>Staffing</option><option>Printing & Signage</option><option>Entertainment</option><option>Insurance</option><option>Accommodation</option><option>Miscellaneous</option><option>Other</option></select></Field>
           <Field label="Amount (ETB) *"><input type="number" className="input" value={expForm.amount || ''} onChange={(e) => { setExpForm({ ...expForm, amount: e.target.value }); if (errors.amount) setErrors({ ...errors, amount: undefined }) }} />{errors.amount && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.amount}</p>}</Field>
           <Field label="Date"><input type="date" className="input" value={expForm.date || ''} onChange={(e) => setExpForm({ ...expForm, date: e.target.value })} /></Field>
           <Field label="Vendor"><select className="input" value={expForm.vendorId || ''} onChange={(e) => setExpForm({ ...expForm, vendorId: e.target.value })}><option value="">-</option>{state.vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></Field>

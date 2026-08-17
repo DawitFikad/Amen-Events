@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   ShieldCheck, CalendarCheck2, BarChart3, QrCode, Users, Wallet,
@@ -78,6 +78,20 @@ export default function Login() {
       setBusy(false)
     }
   }
+
+  // Native Enter-to-submit on the login form (works with autofill overlays).
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== 'Enter') return
+      const t = e.target
+      if (!t || t.tagName !== 'INPUT') return
+      if (forgotOpen) return
+      e.preventDefault()
+      submit(e)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
 
   const submitForgot = async () => {
     if (!forgotEmail.trim()) { show('Please enter your email', 'error'); return }
@@ -530,7 +544,7 @@ export default function Login() {
           )}
 
           {/* Login form */}
-          <form onSubmit={submit} className="mt-5">
+          <form onSubmit={submit} className="mt-5" noValidate>
             <div className="space-y-3">
               {/* Email */}
               <div>
@@ -543,7 +557,6 @@ export default function Login() {
                     placeholder="you@amen.et"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(e) } }}
                     autoComplete="username"
                   />
                 </div>
@@ -559,7 +572,6 @@ export default function Login() {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(e) } }}
                     autoComplete="current-password"
                   />
                   <button type="button" onClick={() => setShowPw((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-ink/30 transition hover:bg-gray-50 hover:text-ink/60">

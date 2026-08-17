@@ -34,6 +34,7 @@ export default function PortalEventDetail() {
   const [inWishlist, setInWishlist] = useState(false)
   const [showReviewForm, setShowReviewForm] = useState(false)
   const [reviewData, setReviewData] = useState({ rating: 5, comment: '' })
+  const [reviewErr, setReviewErr] = useState('')
 
   useEffect(() => {
     fetch(`${API_URL}/portal/events/${id}`)
@@ -81,9 +82,12 @@ export default function PortalEventDetail() {
   }
 
   const submitReview = async () => {
+    const comment = (reviewData.comment || '').trim()
+    if (comment.length < 3) { setReviewErr('Please write a few words about your experience'); return }
+    setReviewErr('')
     const data = await authFetch(`/portal/events/${id}/reviews`, {
       method: 'POST',
-      body: JSON.stringify(reviewData),
+      body: JSON.stringify({ ...reviewData, comment }),
     })
     if (data.review) {
       setReviews([data.review, ...reviews])
@@ -294,7 +298,8 @@ export default function PortalEventDetail() {
                   </button>
                 ))}
               </div>
-              <textarea className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-portal-400 focus:ring-2 focus:ring-portal-500/15 min-h-[80px]" placeholder="Share your experience..." value={reviewData.comment} onChange={(e) => setReviewData({ ...reviewData, comment: e.target.value })} />
+              <textarea className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-portal-400 focus:ring-2 focus:ring-portal-500/15 min-h-[80px]" placeholder="Share your experience..." value={reviewData.comment} onChange={(e) => { setReviewData({ ...reviewData, comment: e.target.value }); setReviewErr('') }} />
+              {reviewErr && <p className="mt-1 text-[11px] font-medium text-red-600">{reviewErr}</p>}
               <button onClick={submitReview} className="mt-3 rounded-xl bg-portal-500 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-portal-600">Submit Review</button>
             </div>
           )}

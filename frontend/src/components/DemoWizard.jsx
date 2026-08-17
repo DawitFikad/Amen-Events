@@ -110,19 +110,13 @@ export default function DemoWizard() {
   // Autoplay: when the current step is finished (its flag auto-detected),
   // automatically trigger the next one. Runs hands-free for client demos.
   const autoplay = !!demo.autoplay
-  const autoplayRef = React.useRef(-1)
-  useEffect(() => {
-    if (autoplay) autoplayRef.current = -1
-  }, [autoplay])
 
   useEffect(() => {
     if (!autoplay) return
     if (allDone) { setDemoFlag('autoplay', false); return }
     if (current === undefined) return
-    // Only fire once per step transition (reset whenever autoplay restarts)
-    if (autoplayRef.current === current) return
-    const prev = autoplayRef.current
-    autoplayRef.current = current
+    // Schedule the current step once per transition; any uniqueDone/current
+    // change tears down the pending timer and re-schedules, never stranding it.
     const t = setTimeout(() => go(steps[current], current), 900)
     return () => clearTimeout(t)
   }, [autoplay, current, uniqueDone.join(',')])

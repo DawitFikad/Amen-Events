@@ -26,8 +26,8 @@ export default function Speakers() {
     name: [nameOnly('Full name')],
     company: [optional(textRequired('Organization', { min: 2, max: 100 }))],
     topic: [optional(textRequired('Topic', { min: 3, max: 120 }))],
-    email: [optional(emailValid('Email'))],
-    phone: [optional(phoneValid('Phone number'))],
+    email: [emailValid('Email')],
+    phone: [phoneValid('Phone number')],
   }
 
   const openAdd = () => { setEditId(null); setForm({}); setErrors({}); setOpen(true) }
@@ -218,11 +218,11 @@ export default function Speakers() {
           <Field label="Full Name *" className="col-span-2"><input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Prof. Elias Bekele" />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
           <Field label="Organization/Company"><input className="input" value={form.company || ''} onChange={(e) => setForm({ ...form, company: e.target.value })} />{errors.company && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.company}</p>}</Field>
           <Field label="Topic"><input className="input" value={form.topic || ''} onChange={(e) => setForm({ ...form, topic: e.target.value })} placeholder="e.g. Digital Payments Trends" />{errors.topic && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.topic}</p>}</Field>
-          <Field label="Email"><input className="input" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="speaker@org.et" />{errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}</Field>
-          <Field label="Phone"><input className="input" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+251 9XX XXX XXX" />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</Field>
+          <Field label="Email *"><input className="input" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="speaker@org.et" />{errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}</Field>
+          <Field label="Phone *"><input className="input" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+251 9XX XXX XXX" />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</Field>
           <Field label="Event" className="col-span-2"><select className="input" value={form.eventId || 'ev1'} onChange={(e) => setForm({ ...form, eventId: e.target.value })}>{state.events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}</select></Field>
           <Field label="Session Time"><input type="time" className="input" value={form.time || '12:00'} onChange={(e) => setForm({ ...form, time: e.target.value })} /></Field>
-          <Field label="Status"><select className="input" value={form.status || 'pending'} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="confirmed">Confirmed</option><option value="pending">Pending</option></select></Field>
+          <Field label="Status"><select className="input" value={form.status || 'pending'} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="invited">Invited</option><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="declined">Declined</option><option value="canceled">Canceled</option><option value="Other">Other</option></select></Field>
           <Field label="Speaker Bio" className="col-span-2"><textarea className="input min-h-[70px] resize-y" value={form.bio || ''} onChange={(e) => setForm({ ...form, bio: e.target.value })} placeholder="Background, expertise, talk highlights…" /></Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
@@ -237,7 +237,7 @@ export default function Speakers() {
           <Field label="Session Title *"><input className="input" value={sessionForm.session || ''} onChange={(e) => setSessionForm({ ...sessionForm, session: e.target.value })} placeholder="e.g. Networking Lunch" />{errors.session && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.session}</p>}</Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Time"><input type="time" className="input" value={sessionForm.time || '16:30'} onChange={(e) => setSessionForm({ ...sessionForm, time: e.target.value })} /></Field>
-            <Field label="Type"><select className="input" value={sessionForm.type || 'talk'} onChange={(e) => setSessionForm({ ...sessionForm, type: e.target.value })}><option value="keynote">Keynote</option><option value="panel">Panel</option><option value="workshop">Workshop</option><option value="fireside">Fireside</option><option value="talk">Talk</option><option value="networking">Networking</option></select></Field>
+            <Field label="Type"><select className="input" value={sessionForm.type || 'talk'} onChange={(e) => setSessionForm({ ...sessionForm, type: e.target.value })}><option value="keynote">Keynote</option><option value="panel">Panel</option><option value="workshop">Workshop</option><option value="fireside">Fireside</option><option value="talk">Talk</option><option value="networking">Networking</option><option value="Other">Other</option></select></Field>
           </div>
           <Field label="Venue"><input className="input" value={sessionForm.venue || ''} onChange={(e) => setSessionForm({ ...sessionForm, venue: e.target.value })} placeholder="e.g. Grand Hall" /></Field>
           <Field label="Speaker (optional)"><select className="input" value={sessionForm.speakerId || ''} onChange={(e) => setSessionForm({ ...sessionForm, speakerId: e.target.value })}><option value="">No speaker</option>{state.speakers.map((sp) => <option key={sp.id} value={sp.id}>{sp.name}</option>)}</select></Field>

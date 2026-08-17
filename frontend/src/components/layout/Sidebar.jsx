@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, CalendarDays, KanbanSquare, MapPin, Package, Handshake,
   UserCog, Wallet, Ticket, QrCode, Mic2, Building2, BadgeDollarSign, Megaphone,
   BarChart3, Settings, ChevronDown, CalendarCheck2, UserCircle, Workflow,
-  FileCheck, CalendarRange, FileText, MessageSquare, Bell,
+  FileCheck, CalendarRange, FileText, MessageSquare, Bell, ClipboardList,
 } from 'lucide-react'
 import { useData } from '../../store/DataContext'
 import logo from '../../logo.jpg'
@@ -43,6 +43,7 @@ const groups = [
       { to: '/erp/exhibition', label: 'Exhibition Management', icon: Building2, module: 'exhibition' },
       { to: '/erp/sponsorship', label: 'Sponsorship', icon: BadgeDollarSign, module: 'sponsorship' },
       { to: '/erp/marketing', label: 'Marketing', icon: Megaphone, module: 'marketing' },
+      { to: '/erp/operations', label: 'Operations', icon: ClipboardList, module: 'operations' },
     ],
   },
   {

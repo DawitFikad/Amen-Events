@@ -4,7 +4,7 @@ import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, SearchBox, Toast, EmptyState, Th, Td, Avatar, Modal, Field } from '../components/ui'
 import { nameOnly, phoneValid, textRequired, numberPositive, validate } from '../store/validation'
 
-const typeIcon = { Caterer: '🍽️', Decorator: '🌸', Security: '🛡️', Photographer: '📷', Videographer: '🎥', Entertainment: '🎤', Printing: '🖨️', Transportation: '🚚' }
+const typeIcon = { Caterer: '🍽️', Decorator: '🌸', Security: '🛡️', Photographer: '📷', Videographer: '🎥', Entertainment: '🎤', Printing: '🖨️', Transportation: '🚚', Cleaner: '🧹', Technician: '🔧', AV: '🎛️', Floral: '💐', Furniture: '🪑', Lighting: '💡', Other: '✨' }
 
 export default function Vendors() {
   const { state, addVendor, intent, clearIntent } = useData()
@@ -13,8 +13,6 @@ export default function Vendors() {
   const [toast, setToast] = useState(null)
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({})
-  const [pay, setPay] = useState(false)
-  const [payForm, setPayForm] = useState({})
   const [errors, setErrors] = useState({})
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
@@ -50,13 +48,6 @@ export default function Vendors() {
     setOpen(false); setForm({}); setErrors({})
   }
 
-  const submitPayment = () => {
-    const res = validate(payForm, { amount: [numberPositive('Amount')] })
-    if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
-    show(`Payment of ETB ${Number(payForm.amount).toLocaleString()} recorded to ${state.vendors.find((v) => v.id === payForm.vendorId)?.name}`)
-    setPay(false); setPayForm({}); setErrors({})
-  }
-
   return (
     <div>
       <PageHeader
@@ -89,28 +80,29 @@ export default function Vendors() {
       </div>
 
       <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* Payments */}
+        {/* Service categories */}
         <div className="card p-5">
           <div className="mb-3 flex items-center justify-between">
-            <p className="font-bold text-brand-950">Vendor Payments</p>
-            <span className="chip bg-brand-100 text-brand-800">{state.expenses.filter((e) => e.vendorId).reduce((a, e) => a + e.amount, 0).toLocaleString()}/etb total</span>
+            <p className="font-bold text-brand-950">Vendor Categories</p>
+            <span className="chip bg-brand-100 text-brand-800">{state.vendors.length} vendors</span>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-brand-50/50"><tr><Th>Ref</Th><Th>Vendor</Th><Th className="text-right">Amount</Th><Th>Status</Th></tr></thead>
-              <tbody className="divide-y divide-brand-50">
-                {state.expenses.filter((e) => e.vendorId).length === 0 ? (
-                  <tr><td colSpan={4} className="py-6 text-center text-sm text-ink/40">No vendor payments recorded yet.</td></tr>
-                ) : state.expenses.filter((e) => e.vendorId).slice(0, 8).map((p) => (
-                  <tr key={p.id}>
-                    <Td className="font-mono text-xs text-brand-800">EXP-{p.id.slice(-6)}</Td>
-                    <Td className="text-ink/70">{state.vendors.find((v) => v.id === p.vendorId)?.name || '-'}</Td>
-                    <Td className="text-right font-semibold text-brand-950">{p.amount.toLocaleString()}</Td>
-                    <Td><Badge status={p.status === 'paid' ? 'paid' : 'pending'} label={p.status} /></Td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-3">
+            {Object.keys(typeIcon).map((t) => {
+              const count = state.vendors.filter((v) => v.type === t).length
+              const max = Math.max(1, state.vendors.length)
+              return (
+                <div key={t} className="flex items-center gap-3">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-base">{typeIcon[t]}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-1 flex items-center justify-between text-xs">
+                      <span className="truncate font-semibold text-ink/80">{t}</span>
+                      <span className="font-bold text-brand-700">{count}</span>
+                    </div>
+                    <Progress value={(count / max) * 100} color={count > 0 ? 'bg-brand-600' : 'bg-brand-100'} />
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
 
@@ -163,7 +155,7 @@ export default function Vendors() {
                   </div>
                 ))}
               </div>
-              <button className="btn-primary mt-6 w-full" onClick={() => { setErrors({}); setPay(true); setPayForm({ ...payForm, vendorId: detail.id }) }}>Record Payment</button>
+              <button className="btn-primary mt-6 w-full" onClick={() => { setErrors({}); setOpen(true); setForm({ type: detail.type, contact: detail.contact, phone: detail.phone, rating: detail.rating }) }}><Plus size={14} /> Add Similar Vendor</button>
             </div>
           </div>
         </div>
@@ -174,31 +166,13 @@ export default function Vendors() {
         <div className="grid grid-cols-2 gap-3">
           <Field label="Vendor Name *" className="col-span-2"><input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Addis Flower Co." />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
           <Field label="Type"><select className="input" value={form.type || 'Caterer'} onChange={(e) => setForm({ ...form, type: e.target.value })}>{Object.keys(typeIcon).map((t) => <option key={t}>{t}</option>)}</select></Field>
-          <Field label="Contact Person"><input className="input" value={form.contact || ''} onChange={(e) => setForm({ ...form, contact: e.target.value })} />{errors.contact && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.contact}</p>}</Field>
-          <Field label="Phone"><input className="input" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</Field>
+          <Field label="Contact Person *"><input className="input" value={form.contact || ''} onChange={(e) => setForm({ ...form, contact: e.target.value })} />{errors.contact && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.contact}</p>}</Field>
+          <Field label="Phone *"><input className="input" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</Field>
           <Field label="Initial Rating"><input type="number" step="0.1" min="0" max="5" className="input" value={form.rating || 4.0} onChange={(e) => setForm({ ...form, rating: e.target.value })} />{errors.rating && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.rating}</p>}</Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button className="btn-outline" onClick={() => setOpen(false)}>Cancel</button>
           <button className="btn-primary" onClick={submit}>Add Vendor</button>
-        </div>
-      </Modal>
-
-      {/* Payment modal */}
-      <Modal open={pay} onClose={() => setPay(false)} title="Record Vendor Payment">
-        <div className="space-y-3">
-          <Field label="Vendor">
-            <select className="input" value={payForm.vendorId || ''} onChange={(e) => setPayForm({ ...payForm, vendorId: e.target.value })}>
-              <option value="">Select…</option>
-              {state.vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
-            </select>
-          </Field>
-          <Field label="Amount (ETB) *"><input type="number" className="input" value={payForm.amount || ''} onChange={(e) => setPayForm({ ...payForm, amount: e.target.value })} />{errors.amount && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.amount}</p>}</Field>
-          <Field label="Payment Ref"><input className="input" value={payForm.ref || 'PAY-' + String(Math.floor(100 + Math.random() * 900))} onChange={(e) => setPayForm({ ...payForm, ref: e.target.value })} /></Field>
-        </div>
-        <div className="mt-5 flex justify-end gap-2">
-          <button className="btn-outline" onClick={() => setPay(false)}>Cancel</button>
-          <button className="btn-primary" onClick={submitPayment}>Confirm Payment</button>
         </div>
       </Modal>
 

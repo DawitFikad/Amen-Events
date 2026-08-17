@@ -1,12 +1,12 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  CalendarDays, TrendingUp, CheckCircle2, Clock3, Wallet, AlertCircle, Activity,
+  CalendarDays, TrendingUp, CheckCircle2, Wallet, AlertCircle, Activity,
   Users, Target, ArrowUpRight, ArrowRight, Sparkles, Server, Database, ShieldCheck, Bell,
 } from 'lucide-react'
 import { useData } from '../../store/DataContext'
 import { StatCard, Badge, Progress, Avatar, PageHeader } from '../../components/ui'
-import { fmtCompact, todayISO, revenueTrend, categorySplit } from '../../store/data'
+import { fmtCompact, revenueTrend, categorySplit } from '../../store/data'
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
   PieChart, Pie, Cell, BarChart, Bar,
@@ -64,32 +64,6 @@ export default function AdminDashboard() {
     return { ...m, total: mine.length, done, pct: mine.length ? Math.round((done / mine.length) * 100) : 0 }
   }).sort((a, b) => b.pct - a.pct).slice(0, 5)
 
-  const [week] = React.useState(() => {
-    const out = []
-    for (let i = -3; i <= 3; i++) {
-      const d = new Date()
-      d.setDate(d.getDate() + i)
-      out.push({ d, iso: d.toISOString().slice(0, 10), name: d.toLocaleDateString('en', { weekday: 'short' }), day: d.getDate() })
-    }
-    return out
-  })
-
-  // Month calendar cells for the Event Calendar widget
-  const [calendar] = React.useState(() => {
-    const now = new Date()
-    const year = now.getFullYear()
-    const month = now.getMonth()
-    const first = new Date(year, month, 1).getDay() // 0 = Sunday
-    const daysInMonth = new Date(year, month + 1, 0).getDate()
-    const cells = []
-    for (let i = 0; i < first; i++) cells.push(null)
-    for (let d = 1; d <= daysInMonth; d++) cells.push(d)
-    while (cells.length % 7 !== 0) cells.push(null)
-    return cells
-  })
-  const eventsByDay = {}
-  state.events.forEach((e) => { if (e.date) (eventsByDay[e.date] = eventsByDay[e.date] || []).push(e) })
-
   const meId = state.currentUserId
   const myNotifications = state.notifications.filter((n) => !n.userId || n.userId === meId).slice(0, 5)
   const notifTone = {
@@ -104,12 +78,6 @@ export default function AdminDashboard() {
         title="Company Overview"
         subtitle="Full-system visibility - revenue, events, staff and resource health."
         icon={Sparkles}
-        actions={
-          <>
-            <button className="btn-outline" onClick={() => navigate('/erp/crm')}><Users size={15} /> New Client</button>
-            <button className="btn-primary" onClick={() => navigate('/erp/admin/events')}><CalendarDays size={15} /> New Event</button>
-          </>
-        }
       />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
@@ -165,42 +133,24 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Event calendar + notifications */}
+      {/* Notifications */}
       <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-3">
         <div className="card p-5 xl:col-span-2">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <p className="font-bold text-brand-950">Event Calendar</p>
-              <p className="text-xs text-ink/45">Scheduled events this month · click a day's event to open it</p>
-            </div>
-            <button className="btn-ghost !px-2.5 !py-1 text-xs" onClick={() => navigate('/erp/admin/events')}><CalendarDays size={13} /> All Events</button>
+          <div className="mb-4 flex items-center gap-2">
+            <Activity size={16} className="text-brand-600" />
+            <p className="font-bold text-brand-950">Recent Activities</p>
           </div>
-          <div className="grid grid-cols-7 gap-1.5">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
-              <div key={d} className="pb-1 text-center text-[10px] font-bold uppercase tracking-wide text-ink/40">{d}</div>
-            ))}
-            {calendar.map((day, i) => {
-              if (day === null) return <div key={'x' + i} />
-              const iso = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-              const dayEvents = eventsByDay[iso] || []
-              const isToday = iso === todayISO()
-              return (
-                <div key={iso} className={`min-h-[64px] rounded-lg border p-1.5 ${isToday ? 'border-brand-400 bg-brand-50' : 'border-brand-100 bg-white'}`}>
-                  <div className="flex items-center justify-between">
-                    <span className={`text-[11px] font-bold ${isToday ? 'text-brand-800' : 'text-ink/55'}`}>{day}</span>
-                    {dayEvents.length > 0 && <span className="chip bg-brand-800 text-white !px-1.5 !py-0 text-[9px]">{dayEvents.length}</span>}
-                  </div>
-                  <div className="mt-1 space-y-1">
-                    {dayEvents.slice(0, 2).map((e) => (
-                      <button key={e.id} onClick={() => navigate('/erp/admin/events')} className="block w-full truncate rounded bg-brand-100 px-1 py-0.5 text-left text-[10px] font-semibold text-brand-800 hover:bg-brand-200">
-                        {e.name}
-                      </button>
-                    ))}
-                    {dayEvents.length > 2 && <p className="text-[9px] font-semibold text-ink/40">+{dayEvents.length - 2} more</p>}
-                  </div>
+          <div className="grid grid-cols-1 gap-1 md:grid-cols-2">
+            {state.activities.slice(0, 6).map((a) => (
+              <div key={a.id} className="flex items-start gap-2.5 rounded-lg border border-brand-50 p-2.5">
+                <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand-500" />
+                <div className="min-w-0">
+                  <p className="text-[13px] leading-snug text-ink/80">{a.text}</p>
+                  <p className="text-[11px] text-ink/35">{a.at}</p>
                 </div>
-              )
-            })}
+              </div>
+            ))}
+            {state.activities.length === 0 && <p className="col-span-full py-6 text-center text-sm text-ink/40">No recent activity.</p>}
           </div>
         </div>
 
@@ -289,25 +239,6 @@ export default function AdminDashboard() {
               </div>
               <Progress value={totalClients > 0 ? Math.round((activeClients / totalClients) * 100) : 0} color="bg-brand-700" />
             </div>
-          </div>
-        </div>
-
-        <div className="card p-5">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="font-bold text-brand-950">Recent Activities</p>
-            <Activity size={16} className="text-ink/35" />
-          </div>
-          <div className="space-y-1">
-            {state.activities.slice(0, 7).map((a, i) => (
-              <div key={a.id} className="relative flex gap-3 py-1.5">
-                {i < 6 && <span className="absolute left-[7px] top-8 h-full w-px bg-brand-100" />}
-                <span className="mt-1.5 h-4 w-4 shrink-0 rounded-full border-4 border-brand-200 bg-white" />
-                <div className="min-w-0">
-                  <p className="text-[13px] leading-snug text-ink/80">{a.text}</p>
-                  <p className="text-[11px] text-ink/35">{a.at}</p>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </div>

@@ -5,7 +5,7 @@ export const MODULES = [
   'dashboard', 'reports', 'crm', 'events', 'projects',
   'venues', 'resources', 'vendors', 'staff', 'finance',
   'ticketing', 'checkin', 'speakers', 'exhibition', 'sponsorship',
-  'marketing', 'admin',
+  'marketing', 'operations', 'admin',
 ]
 
 export const PERMISSIONS = [
@@ -23,14 +23,15 @@ export const ROLE_DEFINITIONS = {
     modules: MODULES.reduce((acc, m) => { acc[m] = all(); return acc }, {}),
   },
 
-  // Event Manager - event execution only + own settings
+  // Event Manager - all event-related execution: events, projects, ticketing,
+  // check-in, speakers, exhibition, sponsorship & client CRM. No finance/admin.
   manager: {
     label: 'Event Manager',
-    description: 'Plan, assign & run events, tasks, speakers & exhibition.',
+    description: 'Plan, assign & run events, tasks, speakers, exhibition & sponsorship.',
     modules: {
       dashboard: perms('view'),
       reports: none(),
-      crm: none(),
+      crm: perms('view', 'create', 'edit', 'assign'),
       events: perms('view', 'create', 'edit', 'delete', 'assign'),
       projects: perms('view', 'create', 'edit', 'delete', 'assign'),
       venues: none(),
@@ -42,26 +43,29 @@ export const ROLE_DEFINITIONS = {
       checkin: perms('view', 'create'),
       speakers: perms('view', 'create', 'edit', 'assign', 'manage'),
       exhibition: perms('view', 'create', 'edit', 'manage'),
-      sponsorship: none(),
+      sponsorship: perms('view', 'create', 'edit', 'manage'),
       marketing: none(),
+      operations: perms('view'),
       admin: none(),
     },
   },
 
-  // Operations - logistics only: venues, resources, vendors
+  // Operations - operator workspace only: view KPIs, run-of-show, checklists,
+  // coordination & crew boards, submit verification requests to admin. No admin
+  // core pages (events, projects, venues, resources, vendors, staff).
   operations: {
     label: 'Operations',
-    description: 'Venues, resources, vendors & event logistics.',
+    description: 'Day-to-day event logistics, checklists, crew & verification requests.',
     modules: {
       dashboard: perms('view'),
       reports: perms('view', 'export'),
       crm: none(),
-      events: perms('view', 'edit', 'assign'),
-      projects: perms('view', 'create', 'edit', 'assign'),
-      venues: perms('view', 'create', 'edit', 'manage'),
-      resources: perms('view', 'create', 'edit', 'delete', 'assign', 'manage'),
-      vendors: perms('view', 'create', 'edit', 'assign'),
-      staff: perms('view', 'assign'),
+      events: none(),
+      projects: none(),
+      venues: none(),
+      resources: none(),
+      vendors: none(),
+      staff: none(),
       finance: none(),
       ticketing: none(),
       checkin: none(),
@@ -69,19 +73,21 @@ export const ROLE_DEFINITIONS = {
       exhibition: none(),
       sponsorship: none(),
       marketing: none(),
+      operations: perms('view', 'create', 'edit', 'manage'),
       admin: none(),
     },
   },
 
-  // Finance - money only: finance module, reports, client info for invoicing
+  // Finance - money only: finance module, approvals & vendor payments. No CRM,
+  // events, sponsorship or other core/admin actions.
   finance: {
     label: 'Finance',
-    description: 'Budgets, expenses, revenue, invoices & payments.',
+    description: 'Budgets, expenses, revenue, invoices, payments & approvals.',
     modules: {
       dashboard: perms('view'),
       reports: perms('view', 'export', 'print'),
-      crm: perms('view'),
-      events: perms('view'),
+      crm: none(),
+      events: none(),
       projects: none(),
       venues: none(),
       resources: none(),
@@ -92,29 +98,30 @@ export const ROLE_DEFINITIONS = {
       checkin: none(),
       speakers: none(),
       exhibition: none(),
-      sponsorship: perms('view'),
+      sponsorship: none(),
       marketing: none(),
       admin: none(),
     },
   },
 
-  // Marketing - promotions only: campaigns, sponsors, tickets
+  // Marketing - promotions only: marketing, sponsors & client CRM. No events,
+  // ticketing, check-in or other core/admin actions.
   marketing: {
     label: 'Marketing',
-    description: 'Campaigns, sponsors, tickets & promotions.',
+    description: 'Campaigns, sponsors, coupons, social & client leads.',
     modules: {
       dashboard: perms('view'),
       reports: perms('view', 'export'),
       crm: perms('view', 'edit'),
-      events: perms('view'),
+      events: none(),
       projects: none(),
       venues: none(),
       resources: none(),
       vendors: none(),
       staff: none(),
       finance: none(),
-      ticketing: perms('view', 'create', 'edit', 'delete', 'export', 'manage'),
-      checkin: perms('view'),
+      ticketing: none(),
+      checkin: none(),
       speakers: none(),
       exhibition: none(),
       sponsorship: perms('view', 'create', 'edit', 'delete', 'manage'),

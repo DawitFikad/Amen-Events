@@ -1,8 +1,8 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  CalendarDays, CheckCircle2, Clock3, AlertCircle, ArrowRight, ArrowUpRight,
-  KanbanSquare, Sparkles, CalendarCheck2, Users,
+  CalendarDays, Clock3, AlertCircle, ArrowRight, ArrowUpRight,
+  KanbanSquare, Sparkles, Users,
 } from 'lucide-react'
 import { useData } from '../../store/DataContext'
 import { StatCard, Badge, Progress, Avatar, PageHeader } from '../../components/ui'
@@ -64,16 +64,6 @@ export default function ManagerDashboard() {
     .sort((a, b) => (a.due || '').localeCompare(b.due || ''))
     .slice(0, 5)
 
-  const [week] = useState(() => {
-    const out = []
-    for (let i = -3; i <= 3; i++) {
-      const d = new Date()
-      d.setDate(d.getDate() + i)
-      out.push({ d, iso: d.toISOString().slice(0, 10), name: d.toLocaleDateString('en', { weekday: 'short' }), day: d.getDate() })
-    }
-    return out
-  })
-
   return (
     <div>
       <PageHeader
@@ -81,10 +71,7 @@ export default function ManagerDashboard() {
         subtitle="Your assigned events, tasks, team and upcoming deadlines."
         icon={Sparkles}
         actions={
-          <>
-            <button className="btn-outline" onClick={() => navigate('/erp/projects')}><KanbanSquare size={15} /> View Tasks</button>
-            <button className="btn-primary" onClick={() => navigate('/erp/admin/events')}><CalendarDays size={15} /> New Event</button>
-          </>
+          <button className="btn-outline" onClick={() => navigate('/erp/projects')}><KanbanSquare size={15} /> View Tasks</button>
         }
       />
 

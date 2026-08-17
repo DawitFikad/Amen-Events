@@ -37,7 +37,7 @@ export default function Profile() {
       firstName: [nameOnly('First name')],
       lastName: [nameOnly('Last name')],
       email: [emailValid('Email')],
-      phone: [optional(phoneValid('Phone'))],
+      phone: [phoneValid('Phone')],
       city: [optional(textRequired('City', { max: 100 }))],
     })
     if (!res.ok) { setErrors(res.errors); setError(res.first); return }
@@ -150,7 +150,7 @@ export default function Profile() {
             </div>
             <div><label className="mb-1.5 block text-xs font-semibold text-gray-600">Email</label><input className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-portal-400 focus:ring-2 focus:ring-portal-500/15" value={form.email} onChange={(e) => { setForm({ ...form, email: e.target.value }); setErrors(clearError(errors, 'email')) }} />{errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}</div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div><label className="mb-1.5 block text-xs font-semibold text-gray-600">Phone</label><input className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-portal-400 focus:ring-2 focus:ring-portal-500/15" value={form.phone} onChange={(e) => { setForm({ ...form, phone: e.target.value }); setErrors(clearError(errors, 'phone')) }} placeholder="+251..." />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</div>
+              <div><label className="mb-1.5 block text-xs font-semibold text-gray-600">Phone *</label><input className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-portal-400 focus:ring-2 focus:ring-portal-500/15" value={form.phone} onChange={(e) => { setForm({ ...form, phone: e.target.value }); setErrors(clearError(errors, 'phone')) }} placeholder="+251..." />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</div>
               <div><label className="mb-1.5 block text-xs font-semibold text-gray-600">City</label><input className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-portal-400 focus:ring-2 focus:ring-portal-500/15" value={form.city} onChange={(e) => { setForm({ ...form, city: e.target.value }); setErrors(clearError(errors, 'city')) }} placeholder="Addis Ababa" />{errors.city && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.city}</p>}</div>
             </div>
             <button onClick={handleSave} disabled={saving} className="rounded-xl bg-portal-500 px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-portal-600 disabled:opacity-50">

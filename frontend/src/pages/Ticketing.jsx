@@ -88,8 +88,8 @@ export default function Ticketing() {
   const submit = async () => {
     const res = validate(form, {
       name: [nameOnly('Full name')],
-      email: [optional(emailValid('Email'))],
-      phone: [optional(phoneValid('Phone number'))],
+      email: [emailValid('Email')],
+      phone: [phoneValid('Phone number')],
     })
     if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
     const amount = ticketTypes.find((t) => t.name === form.type)?.price || 6000
@@ -249,9 +249,9 @@ export default function Ticketing() {
       <Modal open={open} onClose={() => setOpen(false)} title="Register Attendee">
         <div className="grid grid-cols-2 gap-3">
           <Field label="Full Name *" className="col-span-2"><input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
-          <Field label="Email" className="col-span-2"><input className="input" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} />{errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}</Field>
-          <Field label="Phone" className="col-span-2"><input className="input" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+251 9XX XXX XXX" />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</Field>
-          <Field label="Ticket Type"><select className="input" value={form.type || 'Standard'} onChange={(e) => setForm({ ...form, type: e.target.value })}>{ticketTypes.map((t) => <option key={t.id} value={t.name}>{t.name} - {fmt(t.price)}</option>)}</select></Field>
+          <Field label="Email *" className="col-span-2"><input className="input" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} />{errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}</Field>
+          <Field label="Phone *" className="col-span-2"><input className="input" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+251 9XX XXX XXX" />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</Field>
+          <Field label="Ticket Type"><select className="input" value={form.type || 'Standard'} onChange={(e) => setForm({ ...form, type: e.target.value })}>{ticketTypes.map((t) => <option key={t.id} value={t.name}>{t.name} - {fmt(t.price)}</option>)}<option value="Other">Other</option></select></Field>
 
           {/* Payment section - manual collection for this demo */}
           <div className="rounded-xl border border-brand-100 bg-brand-50/40 p-3">
@@ -260,7 +260,8 @@ export default function Ticketing() {
               <span className="text-sm font-black text-brand-950">{fmt(ticketTypes.find((t) => t.name === form.type)?.price || 6000)}</span>
             </div>
             <select className="input" value={form.paymentMethod || 'Cash'} onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}>
-              {['Cash', 'Card', 'Telebirr', 'CBE Birr', 'Bank Transfer'].map((m) => <option key={m} value={m}>{m}</option>)}
+              {['Cash', 'Card', 'Telebirr', 'CBE Birr', 'Bank Transfer', 'Amole', 'HelloCash', 'Cheque'].map((m) => <option key={m} value={m}>{m}</option>)}
+              <option value="Other">Other</option>
             </select>
             <p className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-brand-700">
               <span className="flex h-4 w-4 items-center justify-center rounded-full bg-brand-600 text-white text-[9px]"><CheckCircle2 size={9} /></span>

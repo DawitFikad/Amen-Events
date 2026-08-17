@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Ticket, CheckCircle2, XCircle, Loader2, ArrowLeft, Shield } from 'lucide-react'
 import { useAttendee } from '../../store/AttendeeContext'
+import { nameOnly, emailValid, phoneValid, validate } from '../../store/validation'
 
 export default function Checkout() {
   const location = useLocation()
@@ -12,6 +13,8 @@ export default function Checkout() {
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState(null)
   const [agreeTerms, setAgreeTerms] = useState(false)
+  const [buyer, setBuyer] = useState({ name: '', email: '', phone: '' })
+  const [buyerErrors, setBuyerErrors] = useState({})
 
   const { eventId, eventName, ticketType, unitPrice, quantity, eventDate, venue } = location.state || {}
 
@@ -34,6 +37,13 @@ export default function Checkout() {
   const total = subtotal + tax
 
   const handlePay = async () => {
+    const res = validate(buyer, {
+      name: [nameOnly('Full name')],
+      email: [emailValid('Email')],
+      phone: [phoneValid('Phone number')],
+    })
+    if (!res.ok) { setBuyerErrors(res.errors); setError(res.first); return }
+    setBuyerErrors({})
     if (!agreeTerms) { setError('Please agree to the terms to continue'); return }
     setProcessing(true)
     setError(null)
@@ -106,9 +116,9 @@ export default function Checkout() {
         <div className="rounded-[20px] border border-gray-100 bg-white p-7" style={{ boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
           <h2 className="text-lg font-bold text-gray-900">Personal Information</h2>
           <div className="mt-5 space-y-4">
-            <div><label className="mb-1.5 block text-xs font-semibold text-gray-600">Full Name</label><input className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-portal-400 focus:ring-2 focus:ring-portal-500/15" placeholder="Your name" /></div>
-            <div><label className="mb-1.5 block text-xs font-semibold text-gray-600">Email</label><input className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-portal-400 focus:ring-2 focus:ring-portal-500/15" placeholder="you@example.com" /></div>
-            <div><label className="mb-1.5 block text-xs font-semibold text-gray-600">Phone</label><input className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-portal-400 focus:ring-2 focus:ring-portal-500/15" placeholder="+251..." /></div>
+            <div><label className="mb-1.5 block text-xs font-semibold text-gray-600">Full Name *</label><input className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-portal-400 focus:ring-2 focus:ring-portal-500/15" value={buyer.name} onChange={(e) => { setBuyer({ ...buyer, name: e.target.value }); setBuyerErrors({ ...buyerErrors, name: undefined }) }} placeholder="Your name" />{buyerErrors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{buyerErrors.name}</p>}</div>
+            <div><label className="mb-1.5 block text-xs font-semibold text-gray-600">Email *</label><input className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-portal-400 focus:ring-2 focus:ring-portal-500/15" value={buyer.email} onChange={(e) => { setBuyer({ ...buyer, email: e.target.value }); setBuyerErrors({ ...buyerErrors, email: undefined }) }} placeholder="you@example.com" />{buyerErrors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{buyerErrors.email}</p>}</div>
+            <div><label className="mb-1.5 block text-xs font-semibold text-gray-600">Phone *</label><input className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-portal-400 focus:ring-2 focus:ring-portal-500/15" value={buyer.phone} onChange={(e) => { setBuyer({ ...buyer, phone: e.target.value }); setBuyerErrors({ ...buyerErrors, phone: undefined }) }} placeholder="+251..." />{buyerErrors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{buyerErrors.phone}</p>}</div>
             <div><label className="mb-1.5 block text-xs font-semibold text-gray-600">Country</label><select className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-900 outline-none focus:border-portal-400"><option>Ethiopia</option><option>Kenya</option><option>Other</option></select></div>
           </div>
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import {
   CheckCircle2, XCircle, RotateCcw, FileText, DollarSign, Handshake,
-  ShoppingBag, Wallet, Clock, Sparkles, ArrowRight,
+  ShoppingBag, Wallet, Clock, Sparkles, ArrowRight, ShieldCheck,
 } from 'lucide-react'
 import api from '../store/api'
 import { useData } from '../store/DataContext'
@@ -14,6 +14,7 @@ const TYPE_ICONS = {
   sponsorship: Handshake,
   vendor_payment: DollarSign,
   purchase_request: ShoppingBag,
+  operational: ShieldCheck,
 }
 
 const STATUS_TONES = {

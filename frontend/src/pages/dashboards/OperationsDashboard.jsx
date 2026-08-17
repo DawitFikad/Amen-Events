@@ -2,7 +2,7 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   MapPin, Package, Handshake, CheckCircle2, Clock3, AlertCircle,
-  ArrowRight, Sparkles, Truck, Wrench,
+  ArrowRight, Sparkles, Truck, Wrench, ClipboardList,
 } from 'lucide-react'
 import { useData } from '../../store/DataContext'
 import { StatCard, Badge, Progress, PageHeader } from '../../components/ui'
@@ -16,6 +16,7 @@ export default function OperationsDashboard() {
   const resources = state.resources
   const vendors = state.vendors
   const events = state.events
+  const openRequests = (state.approvals || []).filter((a) => a.status === 'pending' && a.type === 'operational').length
 
   // Venue stats
   const bookedVenues = venues.filter((v) => v.status === 'booked')
@@ -43,19 +44,19 @@ export default function OperationsDashboard() {
     { label: 'Total Venues', value: venues.length, icon: MapPin, tone: 'brand', sub: `${bookedVenues.length} booked · ${availableVenues.length} available`, delta: null },
     { label: 'Resources', value: resources.length, icon: Package, tone: 'gold', sub: `${allocatedResources.length} allocated`, delta: null },
     { label: 'Active Vendors', value: activeVendors.length, icon: Handshake, tone: 'brand', sub: `avg rating ${avgRating}`, delta: null },
-    { label: 'Maintenance', value: maintenanceVenues.length + maintenanceResources.length, icon: Wrench, tone: 'red', sub: 'needs attention', delta: null },
+    { label: 'Verification Requests', value: openRequests, icon: CheckCircle2, tone: 'sky', sub: 'awaiting admin', delta: null },
   ]
 
   return (
     <div>
       <PageHeader
         title="Operations Overview"
-        subtitle="Venues, resources, vendors and event logistics at a glance."
+        subtitle="Day-to-day logistics, checklists, crew and verification requests."
         icon={Sparkles}
         actions={
           <>
-            <button className="btn-outline" onClick={() => navigate('/erp/vendors')}><Handshake size={15} /> Vendors</button>
-            <button className="btn-primary" onClick={() => navigate('/erp/venues')}><MapPin size={15} /> Venues</button>
+            <button className="btn-outline" onClick={() => navigate('/erp/operations')}><ClipboardList size={15} /> Open Board</button>
+            <button className="btn-primary" onClick={() => navigate('/erp/operations')}><CheckCircle2 size={15} /> Verification</button>
           </>
         }
       />
@@ -69,7 +70,7 @@ export default function OperationsDashboard() {
         <div className="card p-5">
           <div className="mb-3 flex items-center justify-between">
             <p className="font-bold text-brand-950">Venue Status</p>
-            <button onClick={() => navigate('/erp/venues')} className="inline-flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-900">Manage <ArrowRight size={13} /></button>
+            <button onClick={() => navigate('/erp/operations')} className="inline-flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-900">Coordinate <ArrowRight size={13} /></button>
           </div>
           <div className="mb-4 grid grid-cols-3 gap-3">
             <div className="rounded-lg bg-brand-50 p-3 text-center">
@@ -104,7 +105,7 @@ export default function OperationsDashboard() {
         <div className="card p-5">
           <div className="mb-3 flex items-center justify-between">
             <p className="font-bold text-brand-950">Resource Inventory</p>
-            <button onClick={() => navigate('/erp/resources')} className="inline-flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-900">Manage <ArrowRight size={13} /></button>
+            <button onClick={() => navigate('/erp/operations')} className="inline-flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-900">Coordinate <ArrowRight size={13} /></button>
           </div>
           <div className="mb-4 grid grid-cols-3 gap-3">
             <div className="rounded-lg bg-brand-50 p-3 text-center">
@@ -172,7 +173,7 @@ export default function OperationsDashboard() {
         <div className="card p-5">
           <div className="mb-3 flex items-center justify-between">
             <p className="font-bold text-brand-950">Vendor Overview</p>
-            <button onClick={() => navigate('/erp/vendors')} className="inline-flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-900">All vendors <ArrowRight size={13} /></button>
+            <button onClick={() => navigate('/erp/operations')} className="inline-flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-900">Coordinate <ArrowRight size={13} /></button>
           </div>
           <div className="space-y-2">
             {vendors.slice(0, 5).map((v) => (

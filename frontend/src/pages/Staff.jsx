@@ -12,7 +12,7 @@ const attendance = [
   { id: 'at5', staffId: 'st7', eventId: 'ev3', role: 'Marketing', hours: 0, status: 'absent' },
 ]
 
-const departments = ['Management', 'Operations', 'Finance', 'Procurement', 'Marketing', 'Technical']
+const departments = ['Management', 'Operations', 'Finance', 'Procurement', 'Marketing', 'Technical', 'Sales', 'HR', 'Logistics', 'Security', 'Creative', 'Hospitality', 'IT & AV', 'Guest Relations']
 
 export default function Staff() {
   const { state, addStaffMember, updateStaffMember, intent, clearIntent } = useData()
@@ -108,11 +108,11 @@ export default function Staff() {
       <div className="grid grid-cols-2 gap-3">
         <Field label="Full Name *" className="col-span-2"><input className="input" value={f.name || ''} onChange={(e) => setFn({ ...f, name: e.target.value })} placeholder="e.g. Elias Bekele" />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
         <Field label="Role / Job Title"><input className="input" value={f.role || f.jobTitle || ''} onChange={(e) => setFn({ ...f, role: e.target.value })} placeholder="Project Manager" /></Field>
-        <Field label="Department"><select className="input" value={f.dept || 'Operations'} onChange={(e) => setFn({ ...f, dept: e.target.value })}>{departments.map((d) => <option key={d}>{d}</option>)}</select></Field>
-        <Field label="Phone"><input className="input" value={f.phone || ''} onChange={(e) => setFn({ ...f, phone: e.target.value })} placeholder="+251 911 000 000" />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</Field>
-        <Field label="Email"><input className="input" value={f.email || ''} onChange={(e) => setFn({ ...f, email: e.target.value })} placeholder="name@amen.et" />{errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}</Field>
-        <Field label="Type"><select className="input" value={f.type || 'Employee'} onChange={(e) => setFn({ ...f, type: e.target.value })}><option>Employee</option><option>Freelancer</option><option>Volunteer</option></select></Field>
-        <Field label="Status"><select className="input" value={f.status || 'active'} onChange={(e) => setFn({ ...f, status: e.target.value })}><option value="active">Active</option><option value="inactive">Inactive</option></select></Field>
+        <Field label="Department"><select className="input" value={f.dept || 'Operations'} onChange={(e) => setFn({ ...f, dept: e.target.value })}>{departments.map((d) => <option key={d}>{d}</option>)}<option>Other</option></select></Field>
+        <Field label="Phone *"><input className="input" value={f.phone || ''} onChange={(e) => setFn({ ...f, phone: e.target.value })} placeholder="+251 911 000 000" />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</Field>
+        <Field label="Email *"><input className="input" value={f.email || ''} onChange={(e) => setFn({ ...f, email: e.target.value })} placeholder="name@amen.et" />{errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}</Field>
+        <Field label="Type"><select className="input" value={f.type || 'Employee'} onChange={(e) => setFn({ ...f, type: e.target.value })}><option>Employee</option><option>Freelancer</option><option>Contractor</option><option>Volunteer</option><option>Intern</option><option>Consultant</option><option>Other</option></select></Field>
+        <Field label="Status"><select className="input" value={f.status || 'active'} onChange={(e) => setFn({ ...f, status: e.target.value })}><option value="active">Active</option><option value="inactive">Inactive</option><option value="on-leave">On Leave</option><option value="terminated">Terminated</option><option value="Other">Other</option></select></Field>
       </div>
 
       <p className="mt-5 mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><Info size={13} /> Employment Details</p>

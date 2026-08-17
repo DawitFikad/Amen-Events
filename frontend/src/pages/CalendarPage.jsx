@@ -123,7 +123,7 @@ export default function CalendarPage() {
         icon={CalendarDays}
         actions={
           <button className="btn-primary" onClick={() => { setErrors({}); setNewEvent((n) => ({ ...n, date: selectedDate || today })); setShowAdd(true) }}>
-            <Plus size={15} /> New Event
+            <Plus size={15} /> New Meeting
           </button>
         }
       />
@@ -219,7 +219,7 @@ export default function CalendarPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setShowAdd(false)}>
           <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-pop" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
-              <p className="font-bold text-brand-950">New Calendar Event</p>
+              <p className="font-bold text-brand-950">New Calendar Entry</p>
               <button onClick={() => setShowAdd(false)} className="text-ink/40 hover:text-ink/70"><X size={18} /></button>
             </div>
             <div className="space-y-3">
@@ -229,14 +229,12 @@ export default function CalendarPage() {
                 {errors.title && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.title}</p>}
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="lbl">Type</label>
-                  <select className="input" value={newEvent.type} onChange={(e) => setNewEvent((n) => ({ ...n, type: e.target.value }))}>
-                    <option value="meeting">Meeting</option>
-                    <option value="event">Event</option>
-                    <option value="task">Task</option>
-                  </select>
-                </div>
+<div>
+                <label className="lbl">Type</label>
+                <select className="input" value="meeting" disabled>
+                  <option value="meeting">Meeting</option>
+                </select>
+              </div>
                 <div>
                   <label className="lbl">Date</label>
                   <input type="date" className="input" value={newEvent.date} onChange={(e) => setNewEvent((n) => ({ ...n, date: e.target.value }))} />
@@ -257,7 +255,7 @@ export default function CalendarPage() {
                 <label className="lbl">Notes</label>
                 <textarea className="input min-h-[60px]" value={newEvent.notes} onChange={(e) => setNewEvent((n) => ({ ...n, notes: e.target.value }))} placeholder="Optional notes…" />
               </div>
-              <button onClick={addEvent} className="btn-primary w-full">Create Event</button>
+              <button onClick={addEvent} className="btn-primary w-full">Create Entry</button>
             </div>
           </div>
         </div>

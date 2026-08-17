@@ -33,7 +33,7 @@ export default function ClientProfile() {
     const res = validate(form, {
       company: [textRequired('Company name', { max: 120 })],
       contactPerson: [nameOnly('Contact person')],
-      phone: [optional(phoneValid('Phone'))],
+      phone: [phoneValid('Phone')],
       email: [emailValid('Email')],
       address: [optional(textRequired('Address', { max: 150 }))],
       industry: [optional(textRequired('Industry', { max: 120 }))],
@@ -125,7 +125,7 @@ export default function ClientProfile() {
               {errors.contactPerson && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.contactPerson}</p>}
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-bold text-ink/60">Phone</label>
+              <label className="mb-1.5 block text-xs font-bold text-ink/60">Phone *</label>
               <div className="relative">
                 <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" />
                 <input className="input pl-10" value={form.phone} onChange={(e) => { setForm({ ...form, phone: e.target.value }); setErrors(clearError(errors, 'phone')) }} />

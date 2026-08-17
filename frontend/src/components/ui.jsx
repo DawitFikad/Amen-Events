@@ -53,15 +53,20 @@ const statusStyles = {
   opportunity: 'bg-indigo-100 text-indigo-700',
   confirmed: 'bg-brand-100 text-brand-800',
   available: 'bg-brand-100 text-brand-800',
+  reserved: 'bg-sky-100 text-sky-700',
   booked: 'bg-gold-100 text-gold-700',
   'in-use': 'bg-sky-100 text-sky-700',
   maintenance: 'bg-red-100 text-red-700',
+  retired: 'bg-slate-100 text-slate-500',
+  'on-leave': 'bg-gold-100 text-gold-700',
+  terminated: 'bg-red-100 text-red-700',
   sending: 'bg-sky-100 text-sky-700',
   sent: 'bg-brand-100 text-brand-800',
   draft: 'bg-slate-100 text-slate-500',
   inactive: 'bg-slate-100 text-slate-500',
   registering: 'bg-gold-100 text-gold-700',
   high: 'bg-red-100 text-red-700',
+  urgent: 'bg-red-100 text-red-700',
   medium: 'bg-gold-100 text-gold-700',
   low: 'bg-slate-100 text-slate-500',
   signed: 'bg-brand-100 text-brand-800',
@@ -69,6 +74,14 @@ const statusStyles = {
   scheduled: 'bg-sky-100 text-sky-700',
   approved: 'bg-brand-100 text-brand-800',
   rejected: 'bg-red-100 text-red-700',
+  invited: 'bg-sky-100 text-sky-700',
+  declined: 'bg-red-100 text-red-700',
+  canceled: 'bg-slate-100 text-slate-500',
+  cancelled: 'bg-slate-100 text-slate-500',
+  expired: 'bg-red-100 text-red-700',
+  paused: 'bg-gold-100 text-gold-700',
+  delivered: 'bg-brand-100 text-brand-800',
+  postponed: 'bg-gold-100 text-gold-700',
 }
 
 export function Badge({ status, label }) {
@@ -77,7 +90,7 @@ export function Badge({ status, label }) {
 }
 
 export function PriorityDot({ level }) {
-  const map = { high: 'bg-red-500', medium: 'bg-gold-500', low: 'bg-slate-300' }
+  const map = { urgent: 'bg-red-600', high: 'bg-red-500', medium: 'bg-gold-500', low: 'bg-slate-300' }
   return <span className={`inline-block h-2 w-2 rounded-full ${map[level] || map.low}`} />
 }
 

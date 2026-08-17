@@ -53,9 +53,9 @@ export default function Venues() {
     capacity: [numberPositive('Capacity', { integer: true })],
     halls: [optional(numberPositive('Halls', { integer: true }))],
     price: [optional(numberPositive('Daily rate'))],
-    contact: [optional(nameOnly('Booking contact'))],
-    phone: [optional(phoneValid('Booking phone'))],
-    email: [optional(emailValid('Booking email'))],
+    contact: [nameOnly('Booking contact')],
+    phone: [phoneValid('Booking phone')],
+    email: [emailValid('Booking email')],
     parking: [optional(numberPositive('Parking slots', { integer: true }))],
   }
 
@@ -139,10 +139,10 @@ export default function Venues() {
         <Field label="Capacity *"><input type="number" className="input" value={f.capacity || ''} onChange={(e) => setFn({ ...f, capacity: e.target.value })} placeholder="1500" />{errors.capacity && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.capacity}</p>}</Field>
         <Field label="Daily Rate (ETB)"><input type="number" className="input" value={f.price || ''} onChange={(e) => setFn({ ...f, price: e.target.value })} placeholder="250000" />{errors.price && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.price}</p>}</Field>
         <Field label="Parking Slots"><input type="number" className="input" value={f.parking || ''} onChange={(e) => setFn({ ...f, parking: e.target.value })} placeholder="e.g. 200" />{errors.parking && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.parking}</p>}</Field>
-        <Field label="Status"><select className="input" value={f.status || 'available'} onChange={(e) => setFn({ ...f, status: e.target.value })}><option value="available">Available</option><option value="booked">Booked</option><option value="maintenance">Maintenance</option></select></Field>
-        <Field label="Booking Contact"><input className="input" value={f.contact || ''} onChange={(e) => setFn({ ...f, contact: e.target.value })} />{errors.contact && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.contact}</p>}</Field>
-        <Field label="Booking Phone"><input className="input" value={f.phone || ''} onChange={(e) => setFn({ ...f, phone: e.target.value })} placeholder="+251 911 000 000" />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</Field>
-        <Field label="Booking Email" className="col-span-2 sm:col-span-1"><input className="input" value={f.email || ''} onChange={(e) => setFn({ ...f, email: e.target.value })} placeholder="venue@company.com" />{errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}</Field>
+        <Field label="Status"><select className="input" value={f.status || 'available'} onChange={(e) => setFn({ ...f, status: e.target.value })}><option value="available">Available</option><option value="reserved">Reserved</option><option value="booked">Booked</option><option value="maintenance">Maintenance</option><option value="closed">Closed</option><option value="Other">Other</option></select></Field>
+        <Field label="Booking Contact *"><input className="input" value={f.contact || ''} onChange={(e) => setFn({ ...f, contact: e.target.value })} />{errors.contact && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.contact}</p>}</Field>
+        <Field label="Booking Phone *"><input className="input" value={f.phone || ''} onChange={(e) => setFn({ ...f, phone: e.target.value })} placeholder="+251 911 000 000" />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</Field>
+        <Field label="Booking Email *" className="col-span-2 sm:col-span-1"><input className="input" value={f.email || ''} onChange={(e) => setFn({ ...f, email: e.target.value })} placeholder="venue@company.com" />{errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}</Field>
         <Field label="Equipment / Amenities" className="col-span-2"><input className="input" value={f.equipment || ''} onChange={(e) => setFn({ ...f, equipment: e.target.value })} placeholder="Stage, Sound System, AV, WiFi, VIP Lounge (comma separated)" /></Field>
         <Field label="Description" className="col-span-2"><textarea className="input min-h-[70px] resize-y" value={f.description || ''} onChange={(e) => setFn({ ...f, description: e.target.value })} placeholder="Layout, standout features, conditions, notes…" /></Field>
       </div>

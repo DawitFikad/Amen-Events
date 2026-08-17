@@ -90,7 +90,7 @@ export default function Finance() {
   }
 
   const submitPayment = () => {
-    const res = validate(form, { amount: [numberPositive('Amount')] })
+    const res = validate(form, { amount: [numberPositive('Amount')], invoiceId: [required('Invoice')] })
     if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
     recordPayment(form.invoiceId, Number(form.amount))
     show(`Payment of ${fmt(Number(form.amount))} recorded`)
@@ -267,7 +267,7 @@ export default function Finance() {
       <Modal open={open === 'expense'} onClose={() => setOpen(null)} title="Record Expense">
         <div className="grid grid-cols-2 gap-3">
           <Field label="Event"><select className="input" value={form.eventId || ''} onChange={(e) => setForm({ ...form, eventId: e.target.value })}><option value="">Select…</option>{state.events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}</select></Field>
-          <Field label="Category"><select className="input" value={form.category || 'General'} onChange={(e) => setForm({ ...form, category: e.target.value })}><option>Venue Rental</option><option>Catering</option><option>Technical</option><option>Decoration</option><option>Transport</option><option>Marketing</option><option>General</option></select></Field>
+          <Field label="Category"><select className="input" value={form.category || 'General'} onChange={(e) => setForm({ ...form, category: e.target.value })}><option>Venue Rental</option><option>Catering</option><option>Technical</option><option>Decoration</option><option>Transport</option><option>Marketing</option><option>Security</option><option>Staffing</option><option>Printing & Signage</option><option>Entertainment</option><option>Insurance</option><option>Accommodation</option><option>General</option><option>Other</option></select></Field>
           <Field label="Amount (ETB) *"><input type="number" className="input" value={form.amount || ''} onChange={(e) => setForm({ ...form, amount: e.target.value })} />{errors.amount && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.amount}</p>}</Field>
           <Field label="Vendor"><select className="input" value={form.vendorId || ''} onChange={(e) => setForm({ ...form, vendorId: e.target.value })}><option value="">-</option>{state.vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></Field>
         </div>
@@ -280,13 +280,14 @@ export default function Finance() {
       {/* Payment modal */}
       <Modal open={open === 'payment'} onClose={() => setOpen(null)} title="Record Payment">
         <div className="space-y-3">
-          <Field label="Invoice">
+          <Field label="Invoice *">
             <select className="input" value={form.invoiceId || ''} onChange={(e) => setForm({ ...form, invoiceId: e.target.value })}>
               <option value="">Select invoice…</option>
               {state.invoices.filter((i) => i.status !== 'paid').map((inv) => (
                 <option key={inv.id} value={inv.id}>{inv.ref} - {fmt(inv.amount - inv.paid)} due</option>
               ))}
             </select>
+            {errors.invoiceId && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.invoiceId}</p>}
           </Field>
           <Field label="Amount (ETB) *"><input type="number" className="input" value={form.amount || ''} onChange={(e) => setForm({ ...form, amount: e.target.value })} />{errors.amount && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.amount}</p>}</Field>
         </div>
@@ -299,7 +300,7 @@ export default function Finance() {
       {/* Invoice modal */}
       <Modal open={open === 'invoice'} onClose={() => setOpen(null)} title="Issue Invoice">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Client"><select className="input" value={form.clientId || ''} onChange={(e) => setForm({ ...form, clientId: e.target.value })}><option value="">Select…</option>{state.clients.map((c) => <option key={c.id} value={c.id}>{c.company}</option>)}</select></Field>
+          <Field label="Client *"><select className="input" value={form.clientId || ''} onChange={(e) => setForm({ ...form, clientId: e.target.value })}><option value="">Select…</option>{state.clients.map((c) => <option key={c.id} value={c.id}>{c.company}</option>)}</select>{errors.clientId && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.clientId}</p>}</Field>
           <Field label="Event"><select className="input" value={form.eventId || ''} onChange={(e) => setForm({ ...form, eventId: e.target.value })}><option value="">Select…</option>{state.events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}</select></Field>
           <Field label="Amount (ETB) *"><input type="number" className="input" value={form.amount || ''} onChange={(e) => setForm({ ...form, amount: e.target.value })} />{errors.amount && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.amount}</p>}</Field>
           <Field label="Due Date"><input type="date" className="input" value={form.dueDate || ''} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></Field>
@@ -320,7 +321,7 @@ export default function Finance() {
       <Modal open={open === 'purchase'} onClose={() => setOpen(null)} title="New Purchase Request">
         <div className="grid grid-cols-2 gap-3">
           <Field label="Item / Description *" className="col-span-2"><input className="input" value={prForm.item || ''} onChange={(e) => setPrForm({ ...prForm, item: e.target.value })} placeholder="e.g. Extra moving head lights (12)" />{errors.item && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.item}</p>}</Field>
-          <Field label="Category"><select className="input" value={prForm.category || 'Technical'} onChange={(e) => setPrForm({ ...prForm, category: e.target.value })}><option>Technical</option><option>Catering</option><option>Decoration</option><option>Logistics</option><option>Marketing</option><option>Branding</option><option>General</option></select></Field>
+          <Field label="Category"><select className="input" value={prForm.category || 'Technical'} onChange={(e) => setPrForm({ ...prForm, category: e.target.value })}><option>Technical</option><option>Catering</option><option>Decoration</option><option>Logistics</option><option>Marketing</option><option>Branding</option><option>Security</option><option>Staffing</option><option>Printing & Signage</option><option>Entertainment</option><option>Insurance</option><option>Equipment Rental</option><option>General</option><option>Other</option></select></Field>
           <Field label="Amount (ETB) *"><input type="number" className="input" value={prForm.amount || ''} onChange={(e) => setPrForm({ ...prForm, amount: e.target.value })} />{errors.prAmount && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.prAmount}</p>}</Field>
           <Field label="Event"><select className="input" value={prForm.eventId || ''} onChange={(e) => setPrForm({ ...prForm, eventId: e.target.value })}><option value="">-</option>{state.events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}</select></Field>
           <Field label="Requested By"><select className="input" value={prForm.requestedBy || state.currentUserId || 'st2'} onChange={(e) => setPrForm({ ...prForm, requestedBy: e.target.value })}>{state.staff.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select></Field>

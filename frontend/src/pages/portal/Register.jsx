@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { User, Mail, Phone, Lock, ArrowRight, CheckCircle2, Camera } from 'lucide-react'
 import { useAttendee } from '../../store/AttendeeContext'
-import { nameOnly, emailValid, phoneValid, optional, validate, clearError } from '../../store/validation'
+import { nameOnly, emailValid, phoneValid, validate, clearError } from '../../store/validation'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
@@ -32,7 +32,7 @@ export default function PortalRegister() {
       firstName: [nameOnly('First name')],
       lastName: [nameOnly('Last name')],
       email: [emailValid('Email')],
-      phone: [optional(phoneValid('Phone'))],
+      phone: [phoneValid('Phone')],
       password: [(v) => (String(v || '').length < 6 ? 'Password must be at least 6 characters' : '')],
     })
     if (res.ok && form.password !== form.confirm) { res.errors.confirm = 'Passwords do not match'; res.ok = false; res.first = 'Passwords do not match' }
@@ -100,7 +100,7 @@ export default function PortalRegister() {
             {errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}
           </div>
           <div>
-            <label className="label">Phone</label>
+            <label className="label">Phone *</label>
             <input className="input" value={form.phone} onChange={(e) => { setForm({ ...form, phone: e.target.value }); setErrors(clearError(errors, 'phone')) }} placeholder="+251 9XX XXX XXX" />
             {errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}
           </div>

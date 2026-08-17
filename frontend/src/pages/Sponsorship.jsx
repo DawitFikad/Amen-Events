@@ -9,6 +9,9 @@ const packages = [
   { id: 'pkg1', name: 'Platinum', price: 500000, perks: ['Keynote mention', 'Main stage branding', 'Logo on all tickets', 'VIP lounge access', 'Press coverage'] },
   { id: 'pkg2', name: 'Gold', price: 300000, perks: ['Booth A-tier', 'Announcement slot', 'Logo on screens', '2 VIP passes'] },
   { id: 'pkg3', name: 'Silver', price: 180000, perks: ['Booth B-tier', 'Logo on screens', '1 VIP pass'] },
+  { id: 'pkg4', name: 'Bronze', price: 90000, perks: ['Booth C-tier', 'Logo on program', '2 entry passes'] },
+  { id: 'pkg5', name: 'Diamond', price: 800000, perks: ['Headline branding', 'Exclusive stage takeover', 'Logo on all materials', 'Full-page ad slot', 'VIP suite access'] },
+  { id: 'pkg6', name: 'Media Partner', price: 120000, perks: ['Press coverage', 'Logo on screens', 'Interview slot', '2 entry passes'] },
 ]
 
 export default function Sponsorship() {
@@ -30,8 +33,8 @@ export default function Sponsorship() {
   const sponsorSchema = {
     name: [textRequired('Sponsor name', { min: 2, max: 100 })],
     amount: [optional(numberPositive('Amount'))],
-    email: [optional(emailValid('Email'))],
-    phone: [optional(phoneValid('Phone number'))],
+    email: [emailValid('Email')],
+    phone: [phoneValid('Phone number')],
   }
 
   const openAdd = () => { setEditId(null); setForm({}); setErrors({}); setOpen(true) }
@@ -195,11 +198,11 @@ export default function Sponsorship() {
           <Field label="Sponsor Name *" className="col-span-2"><input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Coca-Cola Sabco" />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
           <Field label="Contact Person"><input className="input" value={form.contact || ''} onChange={(e) => setForm({ ...form, contact: e.target.value })} placeholder="e.g. Lidya Girma" /></Field>
           <Field label="Agreement Date"><input type="date" className="input" value={form.date || ''} onChange={(e) => setForm({ ...form, date: e.target.value })} /></Field>
-          <Field label="Email"><input className="input" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="partner@company.et" />{errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}</Field>
-          <Field label="Phone"><input className="input" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+251 9XX XXX XXX" />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</Field>
-          <Field label="Package"><select className="input" value={form.package || 'Silver'} onChange={(e) => setForm({ ...form, package: e.target.value })}><option>Platinum</option><option>Gold</option><option>Silver</option></select></Field>
+          <Field label="Email *"><input className="input" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="partner@company.et" />{errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}</Field>
+          <Field label="Phone *"><input className="input" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+251 9XX XXX XXX" />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</Field>
+          <Field label="Package"><select className="input" value={form.package || 'Silver'} onChange={(e) => setForm({ ...form, package: e.target.value })}><option>Platinum</option><option>Gold</option><option>Silver</option><option>Bronze</option><option>Diamond</option><option>Media Partner</option><option>Other</option></select></Field>
           <Field label="Amount (ETB)"><input type="number" className="input" value={form.amount ?? ''} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="180000" />{errors.amount && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.amount}</p>}</Field>
-          <Field label="Status"><select className="input" value={form.status || 'pending'} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="active">Active</option><option value="pending">Pending</option></select></Field>
+          <Field label="Status"><select className="input" value={form.status || 'pending'} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="active">Active</option><option value="completed">Completed</option><option value="expired">Expired</option><option value="cancelled">Cancelled</option><option value="Other">Other</option></select></Field>
           <Field label="Deliverables (comma separated)" className="col-span-2"><textarea className="input min-h-[60px] resize-y" value={form.deliverables || ''} onChange={(e) => setForm({ ...form, deliverables: e.target.value })} placeholder="e.g. Main stage branding, Logo on tickets, VIP lounge" /></Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">

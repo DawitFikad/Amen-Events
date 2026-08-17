@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Mail, Lock, ArrowRight, Sparkles, ShieldCheck, Building2, Eye, EyeOff } from 'lucide-react'
 import { useData } from '../store/DataContext'
@@ -28,6 +28,19 @@ export default function ClientLogin() {
       setBusy(false)
     }
   }
+
+  // Native Enter-to-submit on the login form (works with autofill overlays).
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== 'Enter') return
+      const t = e.target
+      if (!t || t.tagName !== 'INPUT') return
+      e.preventDefault()
+      submit(e)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-white px-4 py-10">
@@ -79,7 +92,7 @@ export default function ClientLogin() {
             <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-semibold text-red-700">{error}</div>
           )}
 
-          <form onSubmit={submit} className="mt-5 space-y-4">
+          <form onSubmit={submit} className="mt-5 space-y-4" noValidate>
             <div>
               <label className="mb-2 block text-xs font-semibold tracking-wide text-ink/70">Email</label>
               <div className="relative">
@@ -89,7 +102,6 @@ export default function ClientLogin() {
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(e) } }}
                   placeholder="you@company.com"
                   autoComplete="username"
                 />
@@ -105,7 +117,6 @@ export default function ClientLogin() {
                   type={showPw ? 'text' : 'password'}
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(e) } }}
                   placeholder="••••••••"
                   autoComplete="current-password"
                 />

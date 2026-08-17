@@ -42,6 +42,7 @@ const Speakers = lazy(() => import('./pages/Speakers'))
 const Exhibition = lazy(() => import('./pages/Exhibition'))
 const Sponsorship = lazy(() => import('./pages/Sponsorship'))
 const Marketing = lazy(() => import('./pages/Marketing'))
+const Operations = lazy(() => import('./pages/Operations'))
 const Reports = lazy(() => import('./pages/Reports'))
 const Admin = lazy(() => import('./pages/Admin'))
 const Profile = lazy(() => import('./pages/Profile'))
@@ -168,7 +169,7 @@ const ROUTE_MODULES = {
   '/erp/resources': 'resources', '/erp/vendors': 'vendors', '/erp/staff': 'staff',
   '/erp/finance': 'finance', '/erp/ticketing': 'ticketing', '/erp/checkin': 'checkin',
   '/erp/speakers': 'speakers', '/erp/exhibition': 'exhibition', '/erp/sponsorship': 'sponsorship',
-  '/erp/marketing': 'marketing', '/erp/admin': 'admin',
+  '/erp/marketing': 'marketing', '/erp/operations': 'operations', '/erp/admin': 'admin',
 }
 
 function RequirePermission({ module, children }) {
@@ -252,6 +253,7 @@ export default function App() {
           <Route path="/erp/exhibition" element={<RequirePermission module="exhibition"><Exhibition /></RequirePermission>} />
           <Route path="/erp/sponsorship" element={<RequirePermission module="sponsorship"><Sponsorship /></RequirePermission>} />
           <Route path="/erp/marketing" element={<RequirePermission module="marketing"><Marketing /></RequirePermission>} />
+          <Route path="/erp/operations" element={<RequirePermission module="operations"><Operations /></RequirePermission>} />
           <Route path="/erp/reports" element={<RequirePermission module="reports"><Reports /></RequirePermission>} />
           <Route path="/erp/notifications" element={<Notifications />} />
           <Route path="/erp/admin" element={<RequirePermission module="admin"><Admin /></RequirePermission>} />

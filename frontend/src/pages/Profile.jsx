@@ -3,7 +3,7 @@ import { UserCircle, Lock, History, Shield, Save, CheckCircle2, XCircle, MapPin,
 import { useData } from '../store/DataContext'
 import api from '../store/api'
 import { PageHeader, Avatar, Badge, Toast, Th, Td } from '../components/ui'
-import { nameOnly, phoneValid, optional, validate } from '../store/validation'
+import { nameOnly, phoneValid, validate } from '../store/validation'
 
 export default function Profile() {
   const { state, rbac, backendOnline, patch } = useData()
@@ -54,7 +54,7 @@ export default function Profile() {
   ]
 
   const saveProfile = async () => {
-    const res = validate(form, { name: [nameOnly('Name')], phone: [optional(phoneValid('Phone number'))] })
+    const res = validate(form, { name: [nameOnly('Name')], phone: [phoneValid('Phone number')] })
     if (!res.ok) { show(res.first, 'error'); return }
     setSaving(true)
     try {
@@ -181,7 +181,7 @@ export default function Profile() {
                 <input className="input bg-brand-50/50" value={user.email} disabled />
               </div>
               <div>
-                <label className="label">Phone</label>
+                <label className="label">Phone *</label>
                 <input className="input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+251 9…" />
               </div>
               <div>

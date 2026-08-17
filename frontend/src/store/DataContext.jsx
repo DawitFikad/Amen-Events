@@ -398,7 +398,7 @@ export function DataProvider({ children }) {
 
   const addTask = useCallback(async (data) => {
     if (backendOnline) {
-      try { const { task } = await api.tasks.create(data); setState((s) => ({ ...s, tasks: [task, ...s.tasks] })); return } catch (e) {}
+      try { const { task } = await api.tasks.create(data); setState((s) => ({ ...s, tasks: [task, ...s.tasks] })); setDemoFlag('taskCreated', true); return } catch (e) {}
     }
     const rec = { id: 'tk-' + Math.random().toString(36).slice(2, 8), ...data, status: data.status || 'todo', comments: 0 }
     patch('tasks', (a) => [rec, ...a])
@@ -503,7 +503,7 @@ export function DataProvider({ children }) {
   }, [backendOnline, patch, logActivity])
 
   const addVenue = useCallback(async (data) => {
-    if (backendOnline) { try { const { venue } = await api.venues.create(data); setState((s) => ({ ...s, venues: [venue, ...s.venues] })); return venue } catch (e) {} }
+    if (backendOnline) { try { const { venue } = await api.venues.create(data); setState((s) => ({ ...s, venues: [venue, ...s.venues] })); setDemoFlag('venueAdded', true); return venue } catch (e) {} }
 const equipment = typeof data.equipment === 'string' ? data.equipment.split(',').map((s) => s.trim()).filter(Boolean) : Array.isArray(data.equipment) ? data.equipment : []
   const rec = { id: 'vn-' + Math.random().toString(36).slice(2, 8), abbr: (data.name || 'VN').replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase() || 'VN', capacity: Number(data.capacity) || 100, price: Number(data.price) || 0, equipment, status: 'available', color: 'bg-brand-600', halls: Number(data.halls) || 1, contact: data.contact || '-', image: data.image || '', address: data.address || '', description: data.description || '', contactPhone: data.contactPhone || '', contactEmail: data.contactEmail || '' }
   patch('venues', (a) => [rec, ...a])
@@ -522,7 +522,7 @@ const updateVenue = useCallback(async (id, data) => {
 }, [backendOnline, patchBy, logActivity])
 
   const addResource = useCallback(async (data) => {
-    if (backendOnline) { try { const { resource } = await api.resources.create(data); setState((s) => ({ ...s, resources: [resource, ...s.resources] })); return resource } catch (e) {} }
+    if (backendOnline) { try { const { resource } = await api.resources.create(data); setState((s) => ({ ...s, resources: [resource, ...s.resources] })); setDemoFlag('resourceAdded', true); return resource } catch (e) {} }
     const rec = { id: 'rc-' + Math.random().toString(36).slice(2, 8), qty: Number(data.qty) || 1, allocated: 0, maintenance: 0, status: 'available', location: data.location || 'Main Warehouse', ...data }
     patch('resources', (a) => [rec, ...a])
     setDemoFlag('resourceAdded', true)
@@ -539,7 +539,7 @@ const updateVenue = useCallback(async (id, data) => {
   }, [backendOnline, patchBy, logActivity])
 
   const addVendor = useCallback(async (data) => {
-    if (backendOnline) { try { const { vendor } = await api.vendors.create(data); setState((s) => ({ ...s, vendors: [vendor, ...s.vendors] })); return vendor } catch (e) {} }
+    if (backendOnline) { try { const { vendor } = await api.vendors.create(data); setState((s) => ({ ...s, vendors: [vendor, ...s.vendors] })); setDemoFlag('vendorAdded', true); return vendor } catch (e) {} }
     const rec = { id: 'vd-' + Math.random().toString(36).slice(2, 8), rating: 4.0, contracts: 0, status: 'active', ...data }
     patch('vendors', (a) => [rec, ...a])
     setDemoFlag('vendorAdded', true)
@@ -548,7 +548,7 @@ const updateVenue = useCallback(async (id, data) => {
   }, [backendOnline, patch, logActivity, setDemoFlag])
 
   const addStaffMember = useCallback(async (data) => {
-    if (backendOnline) { try { const { user } = await api.users.create(data); setState((s) => ({ ...s, staff: [user, ...s.staff] })); return user } catch (e) {} }
+    if (backendOnline) { try { const { user } = await api.users.create(data); setState((s) => ({ ...s, staff: [user, ...s.staff] })); setDemoFlag('staffAdded', true); return user } catch (e) {} }
 const name = data.name || 'New Member'
   const rec = { id: 'st-' + Math.random().toString(36).slice(2, 8), name, role: data.role || data.jobTitle || 'Coordinator', dept: data.dept || 'Operations', phone: data.phone || '-', email: data.email || '', type: data.type || 'Employee', status: 'active', color: 'bg-brand-500', initials: name.split(' ').map((p) => p[0]).slice(0, 2).join(''), avatar: data.avatar || '', salary: Number(data.salary) || 0, joinedDate: data.joinedDate || '', contractEnd: data.contractEnd || '', address: data.address || '', bio: data.bio || '' }
   patch('staff', (a) => [rec, ...a])
@@ -566,7 +566,7 @@ const updateStaffMember = useCallback(async (id, data) => {
 }, [backendOnline, patchBy, logActivity])
 
   const addSpeaker = useCallback(async (data) => {
-    if (backendOnline) { try { const { speaker } = await api.modules.createSpeaker(data); setState((s) => ({ ...s, speakers: [speaker, ...s.speakers] })); return speaker } catch (e) {} }
+    if (backendOnline) { try { const { speaker } = await api.modules.createSpeaker(data); setState((s) => ({ ...s, speakers: [speaker, ...s.speakers] })); setDemoFlag('speakerAdded', true); return speaker } catch (e) {} }
     const name = data.name || 'Speaker'
     const rec = { id: 'sp-' + Math.random().toString(36).slice(2, 8), name, initials: name.split(' ').map((p) => p[0]).slice(0, 2).join(''), color: 'bg-gold-500', topic: data.topic || 'TBD', company: data.company || '', email: data.email || '', phone: data.phone || '', bio: data.bio || '', eventId: data.eventId || 'ev1', time: data.time || '12:00', status: data.status || 'pending' }
     patch('speakers', (a) => [rec, ...a])
@@ -583,7 +583,7 @@ const updateStaffMember = useCallback(async (id, data) => {
   }, [backendOnline, patchBy, logActivity])
 
   const addExhibitor = useCallback(async (data) => {
-    if (backendOnline) { try { const { exhibitor } = await api.modules.createExhibitor(data); setState((s) => ({ ...s, exhibitors: [exhibitor, ...s.exhibitors] })); return exhibitor } catch (e) {} }
+    if (backendOnline) { try { const { exhibitor } = await api.modules.createExhibitor(data); setState((s) => ({ ...s, exhibitors: [exhibitor, ...s.exhibitors] })); setDemoFlag('exhibitorAdded', true); return exhibitor } catch (e) {} }
     const rec = { id: 'ex-' + Math.random().toString(36).slice(2, 8), booth: data.booth || '-', size: data.size || 'Standard', package: data.package || 'Exhibitor', paid: Number(data.paid) || 0, status: data.status || 'registering', ...data }
     patch('exhibitors', (a) => [rec, ...a])
     setDemoFlag('exhibitorAdded', true)
@@ -600,7 +600,7 @@ const updateStaffMember = useCallback(async (id, data) => {
   }, [backendOnline, patchBy, logActivity])
 
   const addSponsor = useCallback(async (data) => {
-    if (backendOnline) { try { const { sponsor } = await api.modules.createSponsor(data); setState((s) => ({ ...s, sponsors: [sponsor, ...s.sponsors] })); return sponsor } catch (e) {} }
+    if (backendOnline) { try { const { sponsor } = await api.modules.createSponsor(data); setState((s) => ({ ...s, sponsors: [sponsor, ...s.sponsors] })); setDemoFlag('sponsorAdded', true); return sponsor } catch (e) {} }
     const rec = { id: 'spn-' + Math.random().toString(36).slice(2, 8), name: data.name || 'Sponsor', package: data.package || 'Silver', amount: Number(data.amount) || 0, status: data.status || 'pending', deliverables: typeof data.deliverables === 'string' ? data.deliverables.split(',').map((x) => x.trim()).filter(Boolean) : Array.isArray(data.deliverables) ? data.deliverables : data.deliverables ? [data.deliverables] : [], contact: data.contact || '', email: data.email || '', phone: data.phone || '', date: data.date || '' }
     patch('sponsors', (a) => [rec, ...a])
     setDemoFlag('sponsorAdded', true)
@@ -617,7 +617,7 @@ const updateStaffMember = useCallback(async (id, data) => {
   }, [backendOnline, patchBy, logActivity])
 
   const addCampaign = useCallback(async (data) => {
-    if (backendOnline) { try { const { campaign } = await api.modules.createCampaign(data); setState((s) => ({ ...s, campaigns: [campaign, ...s.campaigns] })); return campaign } catch (e) {} }
+    if (backendOnline) { try { const { campaign } = await api.modules.createCampaign(data); setState((s) => ({ ...s, campaigns: [campaign, ...s.campaigns] })); setDemoFlag('campaignCreated', true); return campaign } catch (e) {} }
     const rec = { id: 'cm-' + Math.random().toString(36).slice(2, 8), name: data.name || 'New Campaign', channel: data.channel || 'Email', audience: Number(data.audience) || 0, sent: 0, opens: 0, clicks: 0, status: data.status || 'draft', schedule: data.schedule || '', description: data.description || '' }
     patch('campaigns', (a) => [rec, ...a])
     setDemoFlag('campaignCreated', true)
@@ -633,7 +633,7 @@ const updateStaffMember = useCallback(async (id, data) => {
   }, [backendOnline, patchBy, logActivity])
 
   const addCoupon = useCallback(async (data) => {
-    if (backendOnline) { try { const { coupon } = await api.modules.createCoupon(data); setState((s) => ({ ...s, coupons: [coupon, ...s.coupons] })); return coupon } catch (e) {} }
+    if (backendOnline) { try { const { coupon } = await api.modules.createCoupon(data); setState((s) => ({ ...s, coupons: [coupon, ...s.coupons] })); setDemoFlag('couponCreated', true); return coupon } catch (e) {} }
     const rec = { id: 'cp-' + Math.random().toString(36).slice(2, 8), usage: 0, status: 'active', max: Number(data.max) || 500, ...data }
     patch('coupons', (a) => [rec, ...a])
     setDemoFlag('couponCreated', true)
@@ -673,7 +673,7 @@ const updateStaffMember = useCallback(async (id, data) => {
 
   const addContract = useCallback(async (data) => {
     const rec = { id: 'ct-' + Math.random().toString(36).slice(2, 8), ref: 'CTR-2026-' + String(1000 + Math.floor(Math.random() * 9000)), status: 'draft', ...data, value: Number(data.value) || 0 }
-    if (backendOnline) { try { const { contract } = await api.modules.createContract?.(data); return contract } catch (e) {} }
+    if (backendOnline) { try { const { contract } = await api.modules.createContract?.(data); setDemoFlag('contractCreated', true); return contract } catch (e) {} }
     patch('contracts', (a) => [rec, ...a])
     setDemoFlag('contractCreated', true)
     const clientName = state.clients.find((c) => c.id === rec.clientId)?.company || 'client'

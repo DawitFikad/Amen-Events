@@ -13,7 +13,7 @@ import {
 } from 'recharts'
 
 export default function FinanceDashboard() {
-  const { state, patchBy, logActivity } = useData()
+  const { state } = useData()
   const navigate = useNavigate()
 
   const invoices = state.invoices
@@ -26,12 +26,6 @@ export default function FinanceDashboard() {
   const totalExpenses = expenses.reduce((a, e) => a + e.amount, 0)
   const profit = totalRevenue - totalExpenses
   const margin = totalRevenue > 0 ? Math.round((profit / totalRevenue) * 100) : 0
-
-  // Budget approval queue - expenses that are high value
-  const budgetApprovals = expenses
-    .filter((e) => e.amount > 100000)
-    .sort((a, b) => b.amount - a.amount)
-    .slice(0, 5)
 
   // Cash flow data - revenue vs expenses by month
   const cashFlowData = revenueTrend.map((r) => ({
@@ -161,14 +155,14 @@ export default function FinanceDashboard() {
 
         <div className="card p-5">
           <div className="mb-3 flex items-center justify-between">
-            <p className="font-bold text-brand-950">Budget Approval Queue</p>
-            <span className="chip bg-gold-100 text-gold-700">{budgetApprovals.length} pending</span>
+            <p className="font-bold text-brand-950">Recent Expenses</p>
+            <button onClick={() => navigate('/erp/finance')} className="inline-flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-900">All expenses <ArrowRight size={13} /></button>
           </div>
           <div className="space-y-2">
-            {budgetApprovals.length === 0 ? (
-              <div className="py-6 text-center text-sm text-ink/40">No approvals pending.</div>
+            {expenses.length === 0 ? (
+              <div className="py-6 text-center text-sm text-ink/40">No expenses recorded.</div>
             ) : (
-              budgetApprovals.map((exp) => {
+              expenses.slice().sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 5).map((exp) => {
                 const event = state.events.find((e) => e.id === exp.eventId)
                 const vendor = state.vendors.find((v) => v.id === exp.vendorId)
                 return (
@@ -178,11 +172,11 @@ export default function FinanceDashboard() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-brand-950">{exp.category || 'Expense'}</p>
-                      <p className="truncate text-[11px] text-ink/45">{event?.name || 'No event'} · {vendor?.name || 'No vendor'}</p>
+                      <p className="truncate text-[11px] text-ink/45">{event?.name || 'No event'} · {vendor?.name || 'No vendor'} · {exp.date}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-bold text-brand-950">ETB {fmtCompact(exp.amount)}</p>
-                      <button className="text-[11px] font-bold text-brand-700 hover:text-brand-900" onClick={() => { patchBy('expenses', exp.id, { status: 'approved' }); logActivity(`Expense ${exp.category || ''} approved (ETB ${fmtCompact(exp.amount)})`, 'finance') }}>Approve</button>
+                      <p className="text-sm font-bold text-gold-700">-ETB {fmtCompact(exp.amount)}</p>
+                      <Badge status={exp.status || 'pending'} label={exp.status || 'pending'} />
                     </div>
                   </div>
                 )

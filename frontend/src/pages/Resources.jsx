@@ -4,7 +4,7 @@ import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, SearchBox, Toast, EmptyState, Th, Td, Avatar, Modal, Field } from '../components/ui'
 import { textRequired, required, numberPositive, optional, dateRequired, nameOnly, validate } from '../store/validation'
 
-const categories = ['LED Screens', 'Sound Systems', 'Lighting', 'Stages', 'Furniture', 'Decoration', 'Vehicles', 'Generators', 'Branding']
+const categories = ['LED Screens', 'Sound Systems', 'Lighting', 'Stages', 'Furniture', 'Decoration', 'Vehicles', 'Generators', 'Branding', 'Tents & Marquees', 'Catering Equipment', 'Laptops & Tablets', 'Cameras & Video', 'Printers & Plotting', 'Barricades & Fencing', 'Photocopy Machines', 'WiFi Boosters', 'Projectors', 'Power Distribution']
 
 const allocations = [
   { id: 'al1', resourceId: 'rc2', eventId: 'ev1', qty: 2, by: 'st5', date: '2026-08-10' },
@@ -12,7 +12,7 @@ const allocations = [
   { id: 'al3', resourceId: 'rc7', eventId: 'ev3', qty: 3, by: 'st5', date: '2026-08-01' },
 ]
 
-const statuses = ['available', 'in-use', 'maintenance']
+const statuses = ['available', 'reserved', 'in-use', 'maintenance', 'retired']
 
 export default function Resources() {
   const { state, addResource, updateResource, scheduleMaintenance, completeMaintenance, intent, clearIntent } = useData()
@@ -133,14 +133,14 @@ export default function Resources() {
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Asset Name *" className="col-span-2"><input className="input" value={f.name || ''} onChange={(e) => setFn({ ...f, name: e.target.value })} placeholder="e.g. Par LED Lights (10)" />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
-        <Field label="Category"><select className="input" value={f.category || 'Branding'} onChange={(e) => setFn({ ...f, category: e.target.value })}>{categories.map((c) => <option key={c}>{c}</option>)}</select></Field>
+        <Field label="Category"><select className="input" value={f.category || 'Branding'} onChange={(e) => setFn({ ...f, category: e.target.value })}>{categories.map((c) => <option key={c}>{c}</option>)}<option>Other</option></select></Field>
         <Field label="Asset Code"><input className="input font-mono" value={f.code || ''} onChange={(e) => setFn({ ...f, code: e.target.value })} placeholder="A-LE-01" /></Field>
         <Field label="Quantity *"><input type="number" className="input" value={f.qty || ''} onChange={(e) => setFn({ ...f, qty: e.target.value })} placeholder="e.g. 10" />{errors.qty && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.qty}</p>}</Field>
         <Field label="Unit Cost (ETB)"><div className="relative"><CircleDollarSign size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" /><input type="number" className="input pl-9" value={f.unitCost || ''} onChange={(e) => setFn({ ...f, unitCost: e.target.value })} placeholder="e.g. 120000" /></div>{errors.unitCost && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.unitCost}</p>}</Field>
         <Field label="Location"><input className="input" value={f.location || 'Main Warehouse'} onChange={(e) => setFn({ ...f, location: e.target.value })} placeholder="e.g. Main Warehouse / Stage B" /></Field>
         <Field label="Supplier / Vendor"><div className="relative"><Store size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" /><input className="input pl-9" value={f.supplier || ''} onChange={(e) => setFn({ ...f, supplier: e.target.value })} placeholder="e.g. Addis AV Traders" /></div>{errors.supplier && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.supplier}</p>}</Field>
         <Field label="Purchase Date"><div className="relative"><CalendarClock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" /><input type="date" className="input pl-9" value={f.purchaseDate || ''} onChange={(e) => setFn({ ...f, purchaseDate: e.target.value })} /></div>{errors.purchaseDate && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.purchaseDate}</p>}</Field>
-        <Field label="Status"><select className="input" value={f.status || 'available'} onChange={(e) => setFn({ ...f, status: e.target.value })}>{statuses.map((s) => <option key={s} value={s}>{s[0].toUpperCase() + s.slice(1)}</option>)}</select></Field>
+        <Field label="Status"><select className="input" value={f.status || 'available'} onChange={(e) => setFn({ ...f, status: e.target.value })}>{statuses.map((s) => <option key={s} value={s}>{s[0].toUpperCase() + s.slice(1)}</option>)}<option value="Other">Other</option></select></Field>
         <Field label="Notes / Description" className="col-span-2"><textarea className="input min-h-[70px] resize-y" value={f.notes || ''} onChange={(e) => setFn({ ...f, notes: e.target.value })} placeholder="Condition, specifications, serial numbers, warranty…" /></Field>
       </div>
     </>

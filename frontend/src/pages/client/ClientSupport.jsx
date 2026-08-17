@@ -103,6 +103,7 @@ export default function ClientSupport() {
                 <option value="normal">Normal</option>
                 <option value="high">High</option>
                 <option value="urgent">Urgent</option>
+                <option value="Other">Other</option>
               </select>
             </div>
             <div>
