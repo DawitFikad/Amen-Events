@@ -16,6 +16,34 @@ import {
   fmt, todayISO,
 } from './data'
 import { decodeTicket, eventTicketCode, buildTicketCode } from './ticket'
+import {
+  checkSupabaseHealth,
+  fetchAllSupabaseData,
+  supabaseAddEvent,
+  supabaseUpdateEvent,
+  supabaseDeleteEvent,
+  supabaseAddClient,
+  supabaseUpdateClient,
+  supabaseDeleteClient,
+  supabaseAddTask,
+  supabaseUpdateTask,
+  supabaseDeleteTask,
+  supabaseRegisterAttendee,
+  supabaseCheckInAttendee,
+  supabaseAddVenue,
+  supabaseAddResource,
+  supabaseAddVendor,
+  supabaseAddInvoice,
+  supabaseAddExpense,
+  supabaseAddSpeaker,
+  supabaseAddExhibitor,
+  supabaseAddSponsor,
+  supabaseAddCampaign,
+  supabaseAddCoupon,
+  supabaseLogActivity,
+  supabaseAddNotification,
+  subscribeToSupabaseChanges,
+} from './supabase'
 
 const DataContext = createContext(null)
 
@@ -67,10 +95,54 @@ export function DataProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [backendOnline, setBackendOnline] = useState(false)
 
-  // On mount: try to restore session from refresh token
+  // On mount: try to restore session or connect directly to Supabase
   useEffect(() => {
     let mounted = true
+    let unsubscribeRealtime = null
+
     async function init() {
+      // 1. Direct Supabase initialization (works everywhere: Vercel, localhost, mobile)
+      try {
+        const sbHealth = await checkSupabaseHealth()
+        if (sbHealth.ok) {
+          const sbData = await fetchAllSupabaseData()
+          if (mounted) {
+            setBackendOnline(true)
+            setState((s) => {
+              const defaultUser = s.currentUser || (sbData.staff?.[0] ? {
+                id: sbData.staff[0].id,
+                name: sbData.staff[0].name,
+                email: sbData.staff[0].email,
+                userRoles: [{ role: { key: 'admin' } }],
+              } : null)
+              return {
+                ...s,
+                ...sbData,
+                calendarEvents: calendarEventsSeed(),
+                currentUserId: s.currentUserId || defaultUser?.id || 'st1',
+                currentUser: defaultUser,
+                lastLogin: s.lastLogin || new Date().toISOString(),
+              }
+            })
+            setLoading(false)
+          }
+
+          // Subscribe to live database changes from any connected device
+          unsubscribeRealtime = subscribeToSupabaseChanges(async () => {
+            try {
+              const fresh = await fetchAllSupabaseData()
+              if (mounted) {
+                setState((s) => ({ ...s, ...fresh }))
+              }
+            } catch (e) {}
+          })
+          return
+        }
+      } catch (err) {
+        console.warn('Supabase direct connection attempt:', err)
+      }
+
+      // 2. Fallback to Express backend if Supabase direct fails
       const storedRefresh = loadRefreshToken()
       if (storedRefresh) {
         try {
@@ -105,7 +177,10 @@ export function DataProvider({ children }) {
       if (mounted) setLoading(false)
     }
     init()
-    return () => { mounted = false }
+    return () => {
+      mounted = false
+      if (unsubscribeRealtime) unsubscribeRealtime()
+    }
   }, [])
 
   const loadDashboardData = useCallback(async (user) => {
@@ -149,8 +224,7 @@ export function DataProvider({ children }) {
     return /credential|invalid|locked|for [a-z ]* minutes|sign in through|client portal|not found|staff accounts/i.test(m)
   }
 
-  // Local (seed) staff login - used offline or as a fallback when the backend
-  // is unreachable / rate-limited (keeps the demo working without a DB).
+  // Local (seed) staff login - used offline or as a fallback
   const loginOffline = useCallback(async (email) => {
     const member = staffSeed.find((s) => s.email === email)
     if (!member) throw new Error('User not found')
@@ -178,41 +252,89 @@ export function DataProvider({ children }) {
   }, [])
 
   const login = useCallback(async (email, password) => {
-    if (backendOnline) {
-      try {
-        const data = await authApi.login(email, password)
-        if (data.user?.userRoles?.[0]?.role?.key === 'client') {
-          throw new Error('Client accounts sign in through the Client Portal')
-        }
-        setTokens(data.accessToken, data.refreshToken)
-        await loadDashboardData(data.user)
-        return data.user
-      } catch (err) {
-        if (isRealAuthFailure(err)) throw err
-        return loginOffline(email)
+    try {
+      const data = await authApi.login(email, password)
+      if (data.user?.userRoles?.[0]?.role?.key === 'client') {
+        throw new Error('Client accounts sign in through the Client Portal')
       }
-    } else {
+      setTokens(data.accessToken, data.refreshToken)
+      await loadDashboardData(data.user)
+      return data.user
+    } catch (err) {
+      if (isRealAuthFailure(err) && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
+        throw err
+      }
+    }
+
+    try {
+      const sbData = await fetchAllSupabaseData()
+      const member = (sbData.staff || []).find((s) => s.email?.toLowerCase() === email?.toLowerCase())
+        || staffSeed.find((s) => s.email?.toLowerCase() === email?.toLowerCase())
+
+      if (!member) throw new Error('User not found')
+
+      const roleKey = STAFF_ROLES[member.id] || (member.email?.includes('dawit') ? 'admin' : 'manager')
+      const userObj = {
+        id: member.id,
+        name: member.name,
+        email: member.email,
+        userRoles: [{ role: { key: roleKey } }],
+      }
+      setState((s) => ({
+        ...s,
+        ...sbData,
+        currentUserId: member.id,
+        currentUser: userObj,
+        lastLogin: new Date().toISOString(),
+      }))
+      setBackendOnline(true)
+      setLoading(false)
+      return userObj
+    } catch (e) {
       return loginOffline(email)
     }
-  }, [backendOnline, loadDashboardData, loginOffline])
+  }, [loadDashboardData, loginOffline])
 
   const loginClient = useCallback(async (email, password) => {
-    if (backendOnline) {
-      try {
-        const data = await authApi.login(email, password)
-        const isClient = data.user?.userRoles?.some?.((ur) => ur.role?.key === 'client')
-        if (!isClient) throw new Error('Staff accounts sign in through the ERP sign-in')
-        setTokens(data.accessToken, data.refreshToken)
-        await loadDashboardData(data.user)
-        return data.user
-      } catch (err) {
-        if (isRealAuthFailure(err)) throw err
-        return clientLoginOffline(email)
+    try {
+      const data = await authApi.login(email, password)
+      const isClient = data.user?.userRoles?.some?.((ur) => ur.role?.key === 'client')
+      if (!isClient) throw new Error('Staff accounts sign in through the ERP sign-in')
+      setTokens(data.accessToken, data.refreshToken)
+      await loadDashboardData(data.user)
+      return data.user
+    } catch (err) {
+      if (isRealAuthFailure(err) && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
+        throw err
       }
-    } else {
+    }
+
+    try {
+      const sbData = await fetchAllSupabaseData()
+      const client = (sbData.clients || []).find((c) => c.email?.toLowerCase() === email?.toLowerCase())
+        || clientsSeed.find((c) => c.email?.toLowerCase() === email?.toLowerCase())
+      if (!client) throw new Error('No client portal account found for this email')
+
+      const userObj = {
+        id: client.id,
+        name: client.contactPerson || client.company,
+        email: client.email,
+        userRoles: [{ role: { key: 'client' } }],
+      }
+      setState((s) => ({
+        ...s,
+        ...sbData,
+        currentUserId: client.id,
+        currentUser: userObj,
+        lastLogin: new Date().toISOString(),
+      }))
+      setBackendOnline(true)
+      setLoading(false)
+      return userObj
+    } catch (e) {
       return clientLoginOffline(email)
     }
-  }, [backendOnline, loadDashboardData, clientLoginOffline])
+  }, [loadDashboardData, clientLoginOffline])
 
   const logout = useCallback(async () => {
     if (backendOnline) {
@@ -300,87 +422,128 @@ export function DataProvider({ children }) {
   // ─── DOMAIN ACTIONS ──────────────────────────────────────────
 
   const addClient = useCallback(async (data) => {
-    if (backendOnline) {
-      try {
-        const { client } = await api.clients.create(data)
-        setState((s) => ({ ...s, clients: [client, ...s.clients] }))
-        setDemoFlag('lastClientId', client.id)
-        return client
-      } catch (e) {
-        console.error('Failed to save client to database:', e)
-        throw e
+    try {
+      const client = await supabaseAddClient(data)
+      setState((s) => ({ ...s, clients: [client, ...s.clients] }))
+      setDemoFlag('lastClientId', client.id)
+      logActivity(`New client profile created: ${data.company}`, 'crm')
+      return client
+    } catch (sbErr) {
+      console.warn('Supabase addClient error, falling back to API:', sbErr)
+      if (backendOnline) {
+        try {
+          const { client } = await api.clients.create(data)
+          setState((s) => ({ ...s, clients: [client, ...s.clients] }))
+          setDemoFlag('lastClientId', client.id)
+          return client
+        } catch (e) {
+          console.error('Failed to save client to database:', e)
+          throw e
+        }
       }
+      throw sbErr
     }
-    const id = 'cl-' + Math.random().toString(36).slice(2, 8)
-    const rec = {
-      id, company: data.company, industry: data.industry || 'General', city: data.city || 'Addis Ababa',
-      contactPerson: data.contactPerson, contactRole: data.role || data.contactRole || 'Contact',
-      phone: data.phone, email: data.email,
-      website: data.website || '', taxId: data.taxId || '', address: data.address || '',
-      notes: data.notes || '', photo: data.photo || '',
-      status: 'active', stage: data.stage || 'lead', totalValue: 0,
-      logo: data.logo || (data.company || '').replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase() || 'CO',
-    }
-    patch('clients', (a) => [rec, ...a])
-    setDemoFlag('lastClientId', rec.id)
-    logActivity(`New client profile created: ${data.company}`, 'crm')
-    return rec
-  }, [backendOnline, patch, logActivity, setDemoFlag])
+  }, [backendOnline, logActivity, setDemoFlag])
 
   const updateClient = useCallback(async (id, data) => {
-    if (backendOnline && id && !String(id).startsWith('cl-')) {
-      try { await api.clients.update(id, data) } catch (e) { console.error('Failed to update client in database:', e); throw e }
+    try {
+      const updated = await supabaseUpdateClient(id, data)
+      patchBy('clients', id, (c) => ({ ...c, ...updated }))
+      logActivity(`Client profile updated: ${data.company || 'contact details'}`, 'crm')
+      return updated
+    } catch (sbErr) {
+      if (backendOnline && id && !String(id).startsWith('cl-')) {
+        await api.clients.update(id, data).catch(() => {})
+      }
+      patchBy('clients', id, (c) => ({ ...c, ...data }))
+      logActivity(`Client profile updated: ${data.company || 'contact details'}`, 'crm')
+      return data
     }
-    patchBy('clients', id, (c) => ({ ...c, ...data, totalValue: c.totalValue }))
-    logActivity(`Client profile updated: ${data.company || 'contact details'}`, 'crm')
-    return data
   }, [backendOnline, patchBy, logActivity])
 
+  const deleteClient = useCallback(async (id) => {
+    try {
+      await supabaseDeleteClient(id)
+    } catch (e) {
+      if (backendOnline) await api.clients.delete(id).catch(() => {})
+    }
+    patch('clients', (list) => list.filter((c) => c.id !== id))
+    logActivity('Client profile removed', 'crm')
+  }, [backendOnline, patch, logActivity])
+
   const addEvent = useCallback(async (data) => {
-    if (backendOnline) {
-      try {
-        const { event } = await api.events.create(data)
-        setState((s) => ({ ...s, events: [event, ...s.events] }))
-        setDemoFlag('lastEventId', event.id)
-        return event
-      } catch (e) {
-        console.error('Failed to save event to database:', e)
-        throw e
+    try {
+      const event = await supabaseAddEvent(data)
+      setState((s) => ({ ...s, events: [event, ...s.events] }))
+      setDemoFlag('lastEventId', event.id)
+      logActivity(`Event created: ${data.name}`, 'event')
+      return event
+    } catch (sbErr) {
+      console.warn('Supabase addEvent error, falling back to API:', sbErr)
+      if (backendOnline) {
+        try {
+          const { event } = await api.events.create(data)
+          setState((s) => ({ ...s, events: [event, ...s.events] }))
+          setDemoFlag('lastEventId', event.id)
+          return event
+        } catch (e) {
+          console.error('Failed to save event to database:', e)
+          throw e
+        }
       }
+      throw sbErr
     }
-    const id = 'ev-' + Math.random().toString(36).slice(2, 8)
-    const rec = {
-      id, name: data.name, clientId: data.clientId, venueId: data.venueId, category: data.category,
-      date: data.date, time: data.time || '09:00', status: data.status || 'upcoming', pmId: data.pmId || 'st2',
-      endDate: data.endDate || '', endTime: data.endTime || '', deadline: data.deadline || '',
-      capacity: Number(data.capacity) || 0, price: Number(data.price) || 0, published: !!data.published,
-      image: data.image || '', description: data.description || '',
-      tags: Array.isArray(data.tags) ? data.tags : String(data.tags || '').split(',').map((t) => t.trim()).filter(Boolean),
-      contactName: data.contactName || '', contactPhone: data.contactPhone || '',
-      budget: Number(data.budget) || 0, spent: 0, stage: 4, progress: 36,
-      team: [data.pmId || 'st2'], allocations: [],
+  }, [backendOnline, logActivity, setDemoFlag])
+
+  const updateEvent = useCallback(async (id, data) => {
+    try {
+      const updated = await supabaseUpdateEvent(id, data)
+      patchBy('events', id, (e) => ({ ...e, ...updated }))
+      return updated
+    } catch (sbErr) {
+      if (backendOnline && id && !String(id).startsWith('ev-')) {
+        await api.events.update(id, data).catch(() => {})
+      }
+      patchBy('events', id, (e) => ({ ...e, ...data }))
+      return data
     }
-    patch('events', (a) => [rec, ...a])
-    setDemoFlag('lastEventId', rec.id)
-    logActivity(`Event created: ${data.name}`, 'event')
-    return rec
-  }, [backendOnline, patch, logActivity, setDemoFlag])
+  }, [backendOnline, patchBy])
+
+  const deleteEvent = useCallback(async (id) => {
+    try {
+      await supabaseDeleteEvent(id)
+    } catch (e) {
+      if (backendOnline) await api.events.delete(id).catch(() => {})
+    }
+    patch('events', (list) => list.filter((e) => e.id !== id))
+    logActivity('Event removed', 'event')
+  }, [backendOnline, patch, logActivity])
 
   const setEventTeam = useCallback(async (eventId, memberIds) => {
-    if (backendOnline) { try { await api.events.setTeam(eventId, memberIds) } catch (e) {} }
-    patchBy('events', eventId, (e) => ({ ...e, team: memberIds }))
+    const team = Array.isArray(memberIds) ? memberIds : []
+    try {
+      await supabaseUpdateEvent(eventId, { team })
+    } catch (e) {
+      if (backendOnline) await api.events.setTeam(eventId, team).catch(() => {})
+    }
+    patchBy('events', eventId, (e) => ({ ...e, team }))
     setDemoFlag('teamAssigned', true)
     const eventName = state.events.find((e) => e.id === eventId)?.name || 'this event'
-    memberIds.forEach((id) => addNotification({ text: `You were assigned to the team for "${eventName}"`, type: 'task', userId: id }))
-    logActivity(`Team updated on event (${memberIds.length} members)`, 'event')
+    team.forEach((id) => addNotification({ text: `You were assigned to the team for "${eventName}"`, type: 'task', userId: id }))
+    logActivity(`Team updated on event (${team.length} members)`, 'event')
   }, [backendOnline, patchBy, logActivity, setDemoFlag, state.events, addNotification])
 
   const setEventBudget = useCallback(async (eventId, budget) => {
-    if (backendOnline) { try { await api.events.setBudget(eventId, budget) } catch (e) {} }
-    patchBy('events', eventId, (e) => ({ ...e, budget: Number(budget) || 0 }))
+    const b = Number(budget) || 0
+    try {
+      await supabaseUpdateEvent(eventId, { budget: b })
+    } catch (e) {
+      if (backendOnline) await api.events.setBudget(eventId, b).catch(() => {})
+    }
+    patchBy('events', eventId, (e) => ({ ...e, budget: b }))
     setDemoFlag('budgetSet', true)
-    addNotification({ text: `Budget updated on "${state.events.find((x) => x.id === eventId)?.name || 'event'}" to ETB ${fmt(Number(budget) || 0)}`, type: 'budget' })
-    logActivity(`Budget set to ETB ${Number(budget) || 0}`, 'finance')
+    addNotification({ text: `Budget updated on "${state.events.find((x) => x.id === eventId)?.name || 'event'}" to ETB ${fmt(b)}`, type: 'budget' })
+    logActivity(`Budget set to ETB ${b}`, 'finance')
   }, [backendOnline, patchBy, logActivity, setDemoFlag, state.events, addNotification])
 
   const allocateResources = useCallback(async (eventId, items) => {
@@ -408,48 +571,71 @@ export function DataProvider({ children }) {
   }, [allocateResources])
 
   const addTask = useCallback(async (data) => {
-    if (backendOnline) {
-      try { const { task } = await api.tasks.create(data); setState((s) => ({ ...s, tasks: [task, ...s.tasks] })); setDemoFlag('taskCreated', true); return } catch (e) {}
+    try {
+      const task = await supabaseAddTask(data)
+      setState((s) => ({ ...s, tasks: [task, ...s.tasks] }))
+      setDemoFlag('taskCreated', true)
+      logActivity(`Task created: ${data.title}`, 'task')
+      return task
+    } catch (sbErr) {
+      if (backendOnline) {
+        try {
+          const { task } = await api.tasks.create(data)
+          setState((s) => ({ ...s, tasks: [task, ...s.tasks] }))
+          setDemoFlag('taskCreated', true)
+          return task
+        } catch (e) {}
+      }
+      throw sbErr
     }
-    const rec = { id: 'tk-' + Math.random().toString(36).slice(2, 8), ...data, status: data.status || 'todo', comments: 0 }
-    patch('tasks', (a) => [rec, ...a])
-    setDemoFlag('taskCreated', true)
-    logActivity(`Task created: ${data.title}`, 'task')
-  }, [backendOnline, patch, logActivity, setDemoFlag])
+  }, [backendOnline, logActivity, setDemoFlag])
 
-  const updateTask = useCallback((id, updater) => {
+  const updateTask = useCallback(async (id, updater) => {
     const target = state.tasks.find((t) => t.id === id)
     const next = typeof updater === 'function' ? updater(target) : { ...target, ...updater }
     patchBy('tasks', id, next)
-    if (backendOnline && id && !String(id).startsWith('tk-')) {
-      api.tasks.update(id, { status: next.status, priority: next.priority, due: next.due, assigneeId: next.assigneeId, eventId: next.eventId, title: next.title, progress: next.progress, description: next.description, comments: next.comments })
-        .catch(() => {})
+    try {
+      await supabaseUpdateTask(id, next)
+    } catch (e) {
+      if (backendOnline && id && !String(id).startsWith('tk-')) {
+        api.tasks.update(id, next).catch(() => {})
+      }
     }
     return next
   }, [backendOnline, state.tasks, patchBy])
 
+  const deleteTask = useCallback(async (id) => {
+    try {
+      await supabaseDeleteTask(id)
+    } catch (e) {
+      if (backendOnline) await api.tasks.delete(id).catch(() => {})
+    }
+    patch('tasks', (list) => list.filter((t) => t.id !== id))
+  }, [backendOnline, patch])
+
   const registerAttendee = useCallback(async (data) => {
     const payload = { ...data, phone: data.phone || '', paymentMethod: data.paymentMethod || 'Cash', paid: !!data.paid }
-    if (backendOnline) {
-      try {
-        const { registration } = await api.registrations.create(payload)
-        setState((s) => ({ ...s, registrations: [registration, ...s.registrations] }))
-        setDemoFlag('lastRegId', registration.id)
-        return registration
-      } catch (e) {
-        console.error('Failed to save registration to database:', e)
-        throw e
+    try {
+      const registration = await supabaseRegisterAttendee(payload)
+      setState((s) => ({ ...s, registrations: [registration, ...s.registrations] }))
+      setDemoFlag('lastRegId', registration.id)
+      logActivity(`Registration added: ${data.name} (${data.type})`, 'registration')
+      return registration
+    } catch (sbErr) {
+      if (backendOnline) {
+        try {
+          const { registration } = await api.registrations.create(payload)
+          setState((s) => ({ ...s, registrations: [registration, ...s.registrations] }))
+          setDemoFlag('lastRegId', registration.id)
+          return registration
+        } catch (e) {
+          console.error('Failed to save registration to database:', e)
+          throw e
+        }
       }
+      throw sbErr
     }
-    // Unique, event-scoped attendee id: AE-{EVENT}-{SEQ} per event so the same
-    // person registering for another event gets a fresh, distinct ticket.
-    const seq = state.registrations.filter((r) => r.eventId === data.eventId).length + 1
-    const rec = { id: 'rg-' + Math.random().toString(36).slice(2, 8), qr: buildTicketCode(data.eventId, seq), checkedIn: false, ...payload }
-    patch('registrations', (a) => [rec, ...a])
-    setDemoFlag('lastRegId', rec.id)
-    logActivity(`Registration added: ${data.name} (${data.type}) for ${state.events.find((e) => e.id === data.eventId)?.name || 'event'}`, 'registration')
-    return rec
-  }, [backendOnline, patch, logActivity, setDemoFlag, state.registrations, state.events])
+  }, [backendOnline, logActivity, setDemoFlag])
 
   const viewQr = useCallback(() => { setState((s) => ({ ...s, demo: { ...s.demo, qrViewed: true } })) }, [])
 
@@ -457,54 +643,70 @@ export function DataProvider({ children }) {
     const parsed = decodeTicket(value)
     const code = parsed ? parsed.code : String(value || '').trim()
     const ci = (s) => String(s || '').trim().toLowerCase()
-    // Match the ticket within ONE event's entry roll only - by ticket code,
-    // internal id, attendee name, or email - so typing a name also works.
     const matchIn = (list, v) => {
       const c = ci(v)
       return list.find((r) => (r.qr && ci(r.qr) === c) || (r.id && ci(r.id) === c) || (r.name && ci(r.name) === c) || (r.email && ci(r.email) === c))
     }
-    if (backendOnline) {
-      try {
-        const { registration } = await api.registrations.checkIn(code)
-        patchBy('registrations', registration.id, (r) => ({ ...r, checkedIn: true, checkedInAt: registration.checkedInAt || new Date().toLocaleString() }))
-        setDemoFlag('lastCheckinId', registration.id)
-        logActivity(`QR check-in recorded for ${registration.name}`, 'checkin')
-        return { ok: true, reg: registration }
-      } catch (e) {
-        if (e.message.includes('not-found')) return { ok: false, reason: 'not-found' }
-        if (e.message.includes('duplicate')) return { ok: false, reason: 'duplicate' }
-      }
-    }
     const eventRegs = eventId ? state.registrations.filter((r) => r.eventId === eventId) : state.registrations
     const existing = matchIn(eventRegs, code)
     if (!existing) {
-      // If the ticket exists under a different event, say so clearly instead of
-      // silently rejecting it (handles an attendee registered for another event).
       const other = eventId ? matchIn(state.registrations.filter((r) => r.eventId !== eventId), code) : null
       if (other) return { ok: false, reason: 'wrong-event', reg: other }
       return { ok: false, reason: 'not-found' }
     }
     if (existing.checkedIn) return { ok: false, reason: 'duplicate', reg: existing }
-    patchBy('registrations', existing.id, (r) => ({ ...r, checkedIn: true, checkedInAt: new Date().toLocaleString() }))
-    setDemoFlag('lastCheckinId', existing.id)
-    logActivity(`QR check-in recorded for ${existing.name}`, 'checkin')
-    return { ok: true, reg: { ...existing, checkedIn: true, checkedInAt: new Date().toLocaleString() } }
+    try {
+      const updated = await supabaseCheckInAttendee(existing.id)
+      patchBy('registrations', existing.id, (r) => ({ ...r, checkedIn: true, checkedInAt: updated.checkedInAt || new Date().toLocaleString() }))
+      setDemoFlag('lastCheckinId', existing.id)
+      logActivity(`QR check-in recorded for ${existing.name}`, 'checkin')
+      return { ok: true, reg: { ...existing, checkedIn: true, checkedInAt: new Date().toLocaleString() } }
+    } catch (e) {
+      if (backendOnline) {
+        try {
+          const { registration } = await api.registrations.checkIn(code)
+          patchBy('registrations', registration.id, (r) => ({ ...r, checkedIn: true, checkedInAt: registration.checkedInAt || new Date().toLocaleString() }))
+          setDemoFlag('lastCheckinId', registration.id)
+          logActivity(`QR check-in recorded for ${registration.name}`, 'checkin')
+          return { ok: true, reg: registration }
+        } catch (err) {}
+      }
+      patchBy('registrations', existing.id, (r) => ({ ...r, checkedIn: true, checkedInAt: new Date().toLocaleString() }))
+      setDemoFlag('lastCheckinId', existing.id)
+      logActivity(`QR check-in recorded for ${existing.name}`, 'checkin')
+      return { ok: true, reg: { ...existing, checkedIn: true, checkedInAt: new Date().toLocaleString() } }
+    }
   }, [backendOnline, state.registrations, patchBy, logActivity, setDemoFlag])
 
   const recordExpense = useCallback(async (data) => {
-    if (backendOnline) {
-      try { const { expense } = await api.finance.recordExpense(data); setState((s) => ({ ...s, expenses: [expense, ...s.expenses] })); if (data.eventId) patchBy('events', data.eventId, (e) => ({ ...e, spent: (e.spent || 0) + Number(data.amount) || 0 })); setDemoFlag('financeAction', (n) => (n || 0) + 1); return } catch (e) {}
+    try {
+      const expense = await supabaseAddExpense(data)
+      setState((s) => ({ ...s, expenses: [expense, ...s.expenses] }))
+      if (data.eventId) patchBy('events', data.eventId, (e) => ({ ...e, spent: (e.spent || 0) + (Number(data.amount) || 0) }))
+      setDemoFlag('financeAction', (n) => (n || 0) + 1)
+      logActivity(`Expense recorded: ${data.category || data.title} ${data.amount}`, 'finance')
+      return expense
+    } catch (e) {
+      if (backendOnline) {
+        try {
+          const { expense } = await api.finance.recordExpense(data)
+          setState((s) => ({ ...s, expenses: [expense, ...s.expenses] }))
+          if (data.eventId) patchBy('events', data.eventId, (e) => ({ ...e, spent: (e.spent || 0) + (Number(data.amount) || 0) }))
+          setDemoFlag('financeAction', (n) => (n || 0) + 1)
+          return expense
+        } catch (err) {}
+      }
+      patch('expenses', (a) => [{ id: 'ex-' + Math.random().toString(36).slice(2, 8), ...data }, ...a])
+      if (data.eventId) patchBy('events', data.eventId, (e) => ({ ...e, spent: (e.spent || 0) + (Number(data.amount) || 0) }))
+      setDemoFlag('financeAction', (n) => (n || 0) + 1)
+      logActivity(`Expense recorded: ${data.category || data.title} ${data.amount}`, 'finance')
     }
-    patch('expenses', (a) => [{ id: 'ex-' + Math.random().toString(36).slice(2, 8), ...data }, ...a])
-    if (data.eventId) patchBy('events', data.eventId, (e) => ({ ...e, spent: (e.spent || 0) + Number(data.amount) || 0 }))
-    setDemoFlag('financeAction', (n) => (n || 0) + 1)
-    logActivity(`Expense recorded: ${data.category} ${data.amount}`, 'finance')
   }, [backendOnline, patch, patchBy, logActivity, setDemoFlag])
 
   const recordPayment = useCallback(async (invoiceId, amount) => {
     if (backendOnline) { try { await api.finance.recordPayment(invoiceId, amount) } catch (e) {} }
     patchBy('invoices', invoiceId, (inv) => {
-      const paid = inv.paid + amount
+      const paid = (inv.paid || 0) + amount
       const status = paid >= inv.amount ? 'paid' : paid > 0 ? 'partial' : 'outstanding'
       return { ...inv, paid, status }
     })
@@ -513,40 +715,82 @@ export function DataProvider({ children }) {
   }, [backendOnline, patchBy, logActivity, setDemoFlag])
 
   const addInvoice = useCallback(async (data) => {
-    if (backendOnline) {
-      try { const { invoice } = await api.finance.createInvoice(data); setState((s) => ({ ...s, invoices: [invoice, ...s.invoices] })); return } catch (e) {}
+    try {
+      const invoice = await supabaseAddInvoice(data)
+      setState((s) => ({ ...s, invoices: [invoice, ...s.invoices] }))
+      logActivity(`Invoice issued for ${data.number || data.ref || ''}`, 'finance')
+      return invoice
+    } catch (e) {
+      if (backendOnline) {
+        try {
+          const { invoice } = await api.finance.createInvoice(data)
+          setState((s) => ({ ...s, invoices: [invoice, ...s.invoices] }))
+          return invoice
+        } catch (err) {}
+      }
+      const rec = { id: 'inv-' + Math.random().toString(36).slice(2, 8), ...data, paid: Number(data.paid) || 0, status: (Number(data.paid) || 0) > 0 ? 'partial' : 'outstanding' }
+      patch('invoices', (a) => [rec, ...a])
+      logActivity(`Invoice issued for ${data.ref || ''}`, 'finance')
+      return rec
     }
-    const rec = { id: 'inv-' + Math.random().toString(36).slice(2, 8), ...data, paid: Number(data.paid) || 0, status: (Number(data.paid) || 0) > 0 ? 'partial' : 'outstanding' }
-    patch('invoices', (a) => [rec, ...a])
-    logActivity(`Invoice issued for ${data.ref || ''}`, 'finance')
   }, [backendOnline, patch, logActivity])
 
   const addVenue = useCallback(async (data) => {
-    if (backendOnline) { try { const { venue } = await api.venues.create(data); setState((s) => ({ ...s, venues: [venue, ...s.venues] })); setDemoFlag('venueAdded', true); return venue } catch (e) {} }
-const equipment = typeof data.equipment === 'string' ? data.equipment.split(',').map((s) => s.trim()).filter(Boolean) : Array.isArray(data.equipment) ? data.equipment : []
-  const rec = { id: 'vn-' + Math.random().toString(36).slice(2, 8), abbr: (data.name || 'VN').replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase() || 'VN', capacity: Number(data.capacity) || 100, price: Number(data.price) || 0, equipment, status: 'available', color: 'bg-brand-600', halls: Number(data.halls) || 1, contact: data.contact || '-', image: data.image || '', address: data.address || '', description: data.description || '', contactPhone: data.contactPhone || '', contactEmail: data.contactEmail || '' }
-  patch('venues', (a) => [rec, ...a])
-  setDemoFlag('venueAdded', true)
-  logActivity(`Venue added: ${data.name}`, 'venue')
-  return rec
-}, [backendOnline, patch, logActivity, setDemoFlag])
+    try {
+      const venue = await supabaseAddVenue(data)
+      setState((s) => ({ ...s, venues: [venue, ...s.venues] }))
+      setDemoFlag('venueAdded', true)
+      logActivity(`Venue added: ${data.name}`, 'venue')
+      return venue
+    } catch (e) {
+      if (backendOnline) {
+        try {
+          const { venue } = await api.venues.create(data)
+          setState((s) => ({ ...s, venues: [venue, ...s.venues] }))
+          setDemoFlag('venueAdded', true)
+          return venue
+        } catch (err) {}
+      }
+      const equipment = typeof data.equipment === 'string' ? data.equipment.split(',').map((s) => s.trim()).filter(Boolean) : Array.isArray(data.equipment) ? data.equipment : []
+      const rec = { id: 'vn-' + Math.random().toString(36).slice(2, 8), abbr: (data.name || 'VN').replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase() || 'VN', capacity: Number(data.capacity) || 100, price: Number(data.price) || 0, equipment, status: 'available', color: 'bg-brand-600', halls: Number(data.halls) || 1, contact: data.contact || '-', image: data.image || '', address: data.address || '', description: data.description || '', contactPhone: data.contactPhone || '', contactEmail: data.contactEmail || '' }
+      patch('venues', (a) => [rec, ...a])
+      setDemoFlag('venueAdded', true)
+      logActivity(`Venue added: ${data.name}`, 'venue')
+      return rec
+    }
+  }, [backendOnline, patch, logActivity, setDemoFlag])
 
-const updateVenue = useCallback(async (id, data) => {
-  const equipment = typeof data.equipment === 'string' ? data.equipment.split(',').map((s) => s.trim()).filter(Boolean) : Array.isArray(data.equipment) ? data.equipment : []
-  const payload = { ...data, equipment, capacity: Number(data.capacity) || 1, price: Number(data.price) || 0, halls: Number(data.halls) || 1 }
-  if (backendOnline && id && !String(id).startsWith('vn-')) { try { await api.venues.update(id, payload) } catch (e) { /* keep local */ } }
-  patchBy('venues', id, (v) => ({ ...v, ...payload }))
-  logActivity(`Venue updated: ${data.name}`, 'venue')
-  return payload
-}, [backendOnline, patchBy, logActivity])
+  const updateVenue = useCallback(async (id, data) => {
+    const equipment = typeof data.equipment === 'string' ? data.equipment.split(',').map((s) => s.trim()).filter(Boolean) : Array.isArray(data.equipment) ? data.equipment : []
+    const payload = { ...data, equipment, capacity: Number(data.capacity) || 1, price: Number(data.price) || 0, halls: Number(data.halls) || 1 }
+    if (backendOnline && id && !String(id).startsWith('vn-')) { try { await api.venues.update(id, payload) } catch (e) { /* keep local */ } }
+    patchBy('venues', id, (v) => ({ ...v, ...payload }))
+    logActivity(`Venue updated: ${data.name}`, 'venue')
+    return payload
+  }, [backendOnline, patchBy, logActivity])
 
   const addResource = useCallback(async (data) => {
-    if (backendOnline) { try { const { resource } = await api.resources.create(data); setState((s) => ({ ...s, resources: [resource, ...s.resources] })); setDemoFlag('resourceAdded', true); return resource } catch (e) {} }
-    const rec = { id: 'rc-' + Math.random().toString(36).slice(2, 8), qty: Number(data.qty) || 1, allocated: 0, maintenance: 0, status: 'available', location: data.location || 'Main Warehouse', ...data }
-    patch('resources', (a) => [rec, ...a])
-    setDemoFlag('resourceAdded', true)
-    logActivity(`Asset added: ${data.name}`, 'inventory')
-    return rec
+    try {
+      const resource = await supabaseAddResource(data)
+      setState((s) => ({ ...s, resources: [resource, ...s.resources] }))
+      setDemoFlag('resourceAdded', true)
+      logActivity(`Asset added: ${data.name}`, 'inventory')
+      return resource
+    } catch (e) {
+      if (backendOnline) {
+        try {
+          const { resource } = await api.resources.create(data)
+          setState((s) => ({ ...s, resources: [resource, ...s.resources] }))
+          setDemoFlag('resourceAdded', true)
+          return resource
+        } catch (err) {}
+      }
+      const rec = { id: 'rc-' + Math.random().toString(36).slice(2, 8), qty: Number(data.qty) || 1, allocated: 0, maintenance: 0, status: 'available', location: data.location || 'Main Warehouse', ...data }
+      patch('resources', (a) => [rec, ...a])
+      setDemoFlag('resourceAdded', true)
+      logActivity(`Asset added: ${data.name}`, 'inventory')
+      return rec
+    }
   }, [backendOnline, patch, logActivity, setDemoFlag])
 
   const updateResource = useCallback(async (id, data) => {
@@ -558,12 +802,27 @@ const updateVenue = useCallback(async (id, data) => {
   }, [backendOnline, patchBy, logActivity])
 
   const addVendor = useCallback(async (data) => {
-    if (backendOnline) { try { const { vendor } = await api.vendors.create(data); setState((s) => ({ ...s, vendors: [vendor, ...s.vendors] })); setDemoFlag('vendorAdded', true); return vendor } catch (e) {} }
-    const rec = { id: 'vd-' + Math.random().toString(36).slice(2, 8), rating: 4.0, contracts: 0, status: 'active', ...data }
-    patch('vendors', (a) => [rec, ...a])
-    setDemoFlag('vendorAdded', true)
-    logActivity(`Vendor added: ${data.name} (${data.type})`, 'vendor')
-    return rec
+    try {
+      const vendor = await supabaseAddVendor(data)
+      setState((s) => ({ ...s, vendors: [vendor, ...s.vendors] }))
+      setDemoFlag('vendorAdded', true)
+      logActivity(`Vendor added: ${data.name} (${data.type})`, 'vendor')
+      return vendor
+    } catch (e) {
+      if (backendOnline) {
+        try {
+          const { vendor } = await api.vendors.create(data)
+          setState((s) => ({ ...s, vendors: [vendor, ...s.vendors] }))
+          setDemoFlag('vendorAdded', true)
+          return vendor
+        } catch (err) {}
+      }
+      const rec = { id: 'vd-' + Math.random().toString(36).slice(2, 8), rating: 4.0, contracts: 0, status: 'active', ...data }
+      patch('vendors', (a) => [rec, ...a])
+      setDemoFlag('vendorAdded', true)
+      logActivity(`Vendor added: ${data.name} (${data.type})`, 'vendor')
+      return rec
+    }
   }, [backendOnline, patch, logActivity, setDemoFlag])
 
   const addStaffMember = useCallback(async (data) => {
@@ -585,13 +844,21 @@ const updateStaffMember = useCallback(async (id, data) => {
 }, [backendOnline, patchBy, logActivity])
 
   const addSpeaker = useCallback(async (data) => {
-    if (backendOnline) { try { const { speaker } = await api.modules.createSpeaker(data); setState((s) => ({ ...s, speakers: [speaker, ...s.speakers] })); setDemoFlag('speakerAdded', true); return speaker } catch (e) {} }
-    const name = data.name || 'Speaker'
-    const rec = { id: 'sp-' + Math.random().toString(36).slice(2, 8), name, initials: name.split(' ').map((p) => p[0]).slice(0, 2).join(''), color: 'bg-gold-500', topic: data.topic || 'TBD', company: data.company || '', email: data.email || '', phone: data.phone || '', bio: data.bio || '', eventId: data.eventId || 'ev1', time: data.time || '12:00', status: data.status || 'pending' }
-    patch('speakers', (a) => [rec, ...a])
-    setDemoFlag('speakerAdded', true)
-    logActivity(`Speaker added: ${name}`, 'speaker')
-    return rec
+    try {
+      const speaker = await supabaseAddSpeaker(data)
+      setState((s) => ({ ...s, speakers: [speaker, ...s.speakers] }))
+      setDemoFlag('speakerAdded', true)
+      logActivity(`Speaker added: ${speaker.name}`, 'speaker')
+      return speaker
+    } catch (e) {
+      if (backendOnline) { try { const { speaker } = await api.modules.createSpeaker(data); setState((s) => ({ ...s, speakers: [speaker, ...s.speakers] })); setDemoFlag('speakerAdded', true); return speaker } catch (err) {} }
+      const name = data.name || 'Speaker'
+      const rec = { id: 'sp-' + Math.random().toString(36).slice(2, 8), name, initials: name.split(' ').map((p) => p[0]).slice(0, 2).join(''), color: 'bg-gold-500', topic: data.topic || 'TBD', company: data.company || '', email: data.email || '', phone: data.phone || '', bio: data.bio || '', eventId: data.eventId || 'ev1', time: data.time || '12:00', status: data.status || 'pending' }
+      patch('speakers', (a) => [rec, ...a])
+      setDemoFlag('speakerAdded', true)
+      logActivity(`Speaker added: ${name}`, 'speaker')
+      return rec
+    }
   }, [backendOnline, patch, logActivity, setDemoFlag])
 
   const updateSpeaker = useCallback(async (id, data) => {
@@ -602,12 +869,20 @@ const updateStaffMember = useCallback(async (id, data) => {
   }, [backendOnline, patchBy, logActivity])
 
   const addExhibitor = useCallback(async (data) => {
-    if (backendOnline) { try { const { exhibitor } = await api.modules.createExhibitor(data); setState((s) => ({ ...s, exhibitors: [exhibitor, ...s.exhibitors] })); setDemoFlag('exhibitorAdded', true); return exhibitor } catch (e) {} }
-    const rec = { id: 'ex-' + Math.random().toString(36).slice(2, 8), booth: data.booth || '-', size: data.size || 'Standard', package: data.package || 'Exhibitor', paid: Number(data.paid) || 0, status: data.status || 'registering', ...data }
-    patch('exhibitors', (a) => [rec, ...a])
-    setDemoFlag('exhibitorAdded', true)
-    logActivity(`Exhibitor added: ${data.company} (${data.booth || 'booth TBD'})`, 'exhibition')
-    return rec
+    try {
+      const exhibitor = await supabaseAddExhibitor(data)
+      setState((s) => ({ ...s, exhibitors: [exhibitor, ...s.exhibitors] }))
+      setDemoFlag('exhibitorAdded', true)
+      logActivity(`Exhibitor added: ${exhibitor.company}`, 'exhibition')
+      return exhibitor
+    } catch (e) {
+      if (backendOnline) { try { const { exhibitor } = await api.modules.createExhibitor(data); setState((s) => ({ ...s, exhibitors: [exhibitor, ...s.exhibitors] })); setDemoFlag('exhibitorAdded', true); return exhibitor } catch (err) {} }
+      const rec = { id: 'ex-' + Math.random().toString(36).slice(2, 8), booth: data.booth || '-', size: data.size || 'Standard', package: data.package || 'Exhibitor', paid: Number(data.paid) || 0, status: data.status || 'registering', ...data }
+      patch('exhibitors', (a) => [rec, ...a])
+      setDemoFlag('exhibitorAdded', true)
+      logActivity(`Exhibitor added: ${data.company} (${data.booth || 'booth TBD'})`, 'exhibition')
+      return rec
+    }
   }, [backendOnline, patch, logActivity, setDemoFlag])
 
   const updateExhibitor = useCallback(async (id, data) => {
@@ -619,12 +894,20 @@ const updateStaffMember = useCallback(async (id, data) => {
   }, [backendOnline, patchBy, logActivity])
 
   const addSponsor = useCallback(async (data) => {
-    if (backendOnline) { try { const { sponsor } = await api.modules.createSponsor(data); setState((s) => ({ ...s, sponsors: [sponsor, ...s.sponsors] })); setDemoFlag('sponsorAdded', true); return sponsor } catch (e) {} }
-    const rec = { id: 'spn-' + Math.random().toString(36).slice(2, 8), name: data.name || 'Sponsor', package: data.package || 'Silver', amount: Number(data.amount) || 0, status: data.status || 'pending', deliverables: typeof data.deliverables === 'string' ? data.deliverables.split(',').map((x) => x.trim()).filter(Boolean) : Array.isArray(data.deliverables) ? data.deliverables : data.deliverables ? [data.deliverables] : [], contact: data.contact || '', email: data.email || '', phone: data.phone || '', date: data.date || '' }
-    patch('sponsors', (a) => [rec, ...a])
-    setDemoFlag('sponsorAdded', true)
-    logActivity(`Sponsor added: ${rec.name} (${rec.package})`, 'sponsorship')
-    return rec
+    try {
+      const sponsor = await supabaseAddSponsor(data)
+      setState((s) => ({ ...s, sponsors: [sponsor, ...s.sponsors] }))
+      setDemoFlag('sponsorAdded', true)
+      logActivity(`Sponsor added: ${sponsor.name} (${sponsor.package})`, 'sponsorship')
+      return sponsor
+    } catch (e) {
+      if (backendOnline) { try { const { sponsor } = await api.modules.createSponsor(data); setState((s) => ({ ...s, sponsors: [sponsor, ...s.sponsors] })); setDemoFlag('sponsorAdded', true); return sponsor } catch (err) {} }
+      const rec = { id: 'spn-' + Math.random().toString(36).slice(2, 8), name: data.name || 'Sponsor', package: data.package || 'Silver', amount: Number(data.amount) || 0, status: data.status || 'pending', deliverables: typeof data.deliverables === 'string' ? data.deliverables.split(',').map((x) => x.trim()).filter(Boolean) : Array.isArray(data.deliverables) ? data.deliverables : data.deliverables ? [data.deliverables] : [], contact: data.contact || '', email: data.email || '', phone: data.phone || '', date: data.date || '' }
+      patch('sponsors', (a) => [rec, ...a])
+      setDemoFlag('sponsorAdded', true)
+      logActivity(`Sponsor added: ${rec.name} (${rec.package})`, 'sponsorship')
+      return rec
+    }
   }, [backendOnline, patch, logActivity, setDemoFlag])
 
   const updateSponsor = useCallback(async (id, data) => {
@@ -636,12 +919,20 @@ const updateStaffMember = useCallback(async (id, data) => {
   }, [backendOnline, patchBy, logActivity])
 
   const addCampaign = useCallback(async (data) => {
-    if (backendOnline) { try { const { campaign } = await api.modules.createCampaign(data); setState((s) => ({ ...s, campaigns: [campaign, ...s.campaigns] })); setDemoFlag('campaignCreated', true); return campaign } catch (e) {} }
-    const rec = { id: 'cm-' + Math.random().toString(36).slice(2, 8), name: data.name || 'New Campaign', channel: data.channel || 'Email', audience: Number(data.audience) || 0, sent: 0, opens: 0, clicks: 0, status: data.status || 'draft', schedule: data.schedule || '', description: data.description || '' }
-    patch('campaigns', (a) => [rec, ...a])
-    setDemoFlag('campaignCreated', true)
-    logActivity(`Campaign created: ${rec.name}`, 'marketing')
-    return rec
+    try {
+      const campaign = await supabaseAddCampaign(data)
+      setState((s) => ({ ...s, campaigns: [campaign, ...s.campaigns] }))
+      setDemoFlag('campaignCreated', true)
+      logActivity(`Campaign created: ${campaign.name}`, 'marketing')
+      return campaign
+    } catch (e) {
+      if (backendOnline) { try { const { campaign } = await api.modules.createCampaign(data); setState((s) => ({ ...s, campaigns: [campaign, ...s.campaigns] })); setDemoFlag('campaignCreated', true); return campaign } catch (err) {} }
+      const rec = { id: 'cm-' + Math.random().toString(36).slice(2, 8), name: data.name || 'New Campaign', channel: data.channel || 'Email', audience: Number(data.audience) || 0, sent: 0, opens: 0, clicks: 0, status: data.status || 'draft', schedule: data.schedule || '', description: data.description || '' }
+      patch('campaigns', (a) => [rec, ...a])
+      setDemoFlag('campaignCreated', true)
+      logActivity(`Campaign created: ${rec.name}`, 'marketing')
+      return rec
+    }
   }, [backendOnline, patch, logActivity, setDemoFlag])
 
   const updateCampaign = useCallback(async (id, data) => {
@@ -652,12 +943,20 @@ const updateStaffMember = useCallback(async (id, data) => {
   }, [backendOnline, patchBy, logActivity])
 
   const addCoupon = useCallback(async (data) => {
-    if (backendOnline) { try { const { coupon } = await api.modules.createCoupon(data); setState((s) => ({ ...s, coupons: [coupon, ...s.coupons] })); setDemoFlag('couponCreated', true); return coupon } catch (e) {} }
-    const rec = { id: 'cp-' + Math.random().toString(36).slice(2, 8), usage: 0, status: 'active', max: Number(data.max) || 500, ...data }
-    patch('coupons', (a) => [rec, ...a])
-    setDemoFlag('couponCreated', true)
-    logActivity(`Coupon ${data.code} generated (${data.value})`, 'marketing')
-    return rec
+    try {
+      const coupon = await supabaseAddCoupon(data)
+      setState((s) => ({ ...s, coupons: [coupon, ...s.coupons] }))
+      setDemoFlag('couponCreated', true)
+      logActivity(`Coupon ${coupon.code} generated (${coupon.discount}%)`, 'marketing')
+      return coupon
+    } catch (e) {
+      if (backendOnline) { try { const { coupon } = await api.modules.createCoupon(data); setState((s) => ({ ...s, coupons: [coupon, ...s.coupons] })); setDemoFlag('couponCreated', true); return coupon } catch (err) {} }
+      const rec = { id: 'cp-' + Math.random().toString(36).slice(2, 8), usage: 0, status: 'active', max: Number(data.max) || 500, ...data }
+      patch('coupons', (a) => [rec, ...a])
+      setDemoFlag('couponCreated', true)
+      logActivity(`Coupon ${data.code} generated (${data.value})`, 'marketing')
+      return rec
+    }
   }, [backendOnline, patch, logActivity, setDemoFlag])
 
   // ─── EVENT SUPPLIERS & CHECKLISTS ──────────────────────────

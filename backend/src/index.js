@@ -5,6 +5,7 @@ import morgan from 'morgan'
 import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
 
+import prisma from './lib/prisma.js'
 import authRoutes from './routes/auth.js'
 import clientsRoutes from './routes/clients.js'
 import eventsRoutes from './routes/events.js'

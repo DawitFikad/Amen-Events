@@ -1,10 +1,16 @@
 function resolveApiUrl() {
   const envUrl = (import.meta.env.VITE_API_URL || '').trim()
+  if (typeof window !== 'undefined') {
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    if (!isLocal && envUrl.includes('localhost')) {
+      return `${window.location.origin}/api`
+    }
+  }
   if (envUrl) {
     const clean = envUrl.replace(/\/+$/, '')
     return clean.endsWith('/api') ? clean : `${clean}/api`
   }
-  if (typeof window !== 'undefined' && window.location.origin.includes('vercel.app')) {
+  if (typeof window !== 'undefined') {
     return `${window.location.origin}/api`
   }
   return '/api'
