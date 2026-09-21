@@ -72,39 +72,56 @@ const authLimiter = rateLimit({
   message: { error: 'Too many login attempts, please try again later.' },
 })
 
-// Health check
-app.get('/api/health', (req, res) => res.json({ status: 'ok' }))
+// Health check that verifies Supabase connection
+const healthCheck = async (req, res) => {
+  try {
+    const userCount = await prisma.user.count()
+    res.json({ status: 'ok', database: 'connected', users: userCount })
+  } catch (err) {
+    console.error('Database connection error:', err)
+    res.status(500).json({ status: 'error', database: 'disconnected', error: err.message })
+  }
+}
+app.get('/health', healthCheck)
+app.get('/api/health', healthCheck)
+
+// Router containing all API endpoints
+const apiRouter = express.Router()
 
 // Public routes (no auth required)
-app.use('/api/public', publicRoutes)
+apiRouter.use('/public', publicRoutes)
 
-// Attendee portal routes (auth optional per route)
-app.use('/api/portal/auth', portalAuthRoutes)
-app.use('/api/portal', portalAttendeeRoutes)
+// Attendee portal routes
+apiRouter.use('/portal/auth', portalAuthRoutes)
+apiRouter.use('/portal', portalAttendeeRoutes)
 
-// Apply general rate limiter to all API routes
-app.use('/api', apiLimiter)
+// Apply rate limiting
+apiRouter.use('/auth', authLimiter, authRoutes)
+apiRouter.use(apiLimiter)
 
-// Routes
-app.use('/api/auth', authLimiter, authRoutes)
-app.use('/api/clients', clientsRoutes)
-app.use('/api/events', eventsRoutes)
-app.use('/api/tasks', tasksRoutes)
-app.use('/api/venues', venuesRoutes)
-app.use('/api/resources', resourcesRoutes)
-app.use('/api/vendors', vendorsRoutes)
-app.use('/api/users', usersRoutes)
-app.use('/api/finance', financeRoutes)
-app.use('/api/registrations', registrationsRoutes)
-app.use('/api/modules', modulesRoutes)
-app.use('/api/dashboard', dashboardRoutes)
-app.use('/api/portal', portalRoutes)
-app.use('/api/workflow', workflowRoutes)
-app.use('/api/notifications', notificationsRoutes)
-app.use('/api/approvals', approvalsRoutes)
-app.use('/api/documents', documentsRoutes)
-app.use('/api/calendar', calendarRoutes)
-app.use('/api/search', searchRoutes)
+// Business routes
+apiRouter.use('/clients', clientsRoutes)
+apiRouter.use('/events', eventsRoutes)
+apiRouter.use('/tasks', tasksRoutes)
+apiRouter.use('/venues', venuesRoutes)
+apiRouter.use('/resources', resourcesRoutes)
+apiRouter.use('/vendors', vendorsRoutes)
+apiRouter.use('/users', usersRoutes)
+apiRouter.use('/finance', financeRoutes)
+apiRouter.use('/registrations', registrationsRoutes)
+apiRouter.use('/modules', modulesRoutes)
+apiRouter.use('/dashboard', dashboardRoutes)
+apiRouter.use('/portal', portalRoutes)
+apiRouter.use('/workflow', workflowRoutes)
+apiRouter.use('/notifications', notificationsRoutes)
+apiRouter.use('/approvals', approvalsRoutes)
+apiRouter.use('/documents', documentsRoutes)
+apiRouter.use('/calendar', calendarRoutes)
+apiRouter.use('/search', searchRoutes)
+
+// Mount on both /api and root so calls with or without /api prefix work seamlessly
+app.use('/api', apiRouter)
+app.use('/', apiRouter)
 
 // Error handler
 app.use((err, req, res, next) => {

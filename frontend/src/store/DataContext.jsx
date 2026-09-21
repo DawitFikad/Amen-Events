@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useMemo, useState, useCallback, useEffect } from 'react'
-import api, { auth as authApi, documents as documentsApi, setTokens, clearTokens, loadRefreshToken } from './api'
+import api, { API_URL, auth as authApi, documents as documentsApi, setTokens, clearTokens, loadRefreshToken } from './api'
 import {
   getRoleKey, getRoleDef, can as canFn, canAccess,
   ROLE_DEFINITIONS, STAFF_ROLES, MODULES, PERMISSIONS,
@@ -74,7 +74,7 @@ export function DataProvider({ children }) {
       const storedRefresh = loadRefreshToken()
       if (storedRefresh) {
         try {
-          const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/auth/refresh`, {
+          const res = await fetch(`${API_URL}/auth/refresh`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ refreshToken: storedRefresh }),
@@ -94,8 +94,13 @@ export function DataProvider({ children }) {
         }
       }
       try {
-        const healthRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/health`)
-        if (healthRes.ok) setBackendOnline(true)
+        const healthRes = await fetch(`${API_URL}/health`)
+        if (healthRes.ok) {
+          const data = await healthRes.json().catch(() => ({}))
+          if (data.database === 'connected' || data.status === 'ok') {
+            setBackendOnline(true)
+          }
+        }
       } catch (e) { /* backend offline */ }
       if (mounted) setLoading(false)
     }

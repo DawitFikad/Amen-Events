@@ -1,4 +1,16 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
+function resolveApiUrl() {
+  const envUrl = (import.meta.env.VITE_API_URL || '').trim()
+  if (envUrl) {
+    const clean = envUrl.replace(/\/+$/, '')
+    return clean.endsWith('/api') ? clean : `${clean}/api`
+  }
+  if (typeof window !== 'undefined' && window.location.origin.includes('vercel.app')) {
+    return `${window.location.origin}/api`
+  }
+  return '/api'
+}
+
+export const API_URL = resolveApiUrl()
 
 // Token storage with localStorage persistence across refreshes
 let accessToken = typeof window !== 'undefined' ? localStorage.getItem('amen_access_token') : null
