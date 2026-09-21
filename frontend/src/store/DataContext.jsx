@@ -357,6 +357,67 @@ export function DataProvider({ children }) {
     }
   }, [loadDashboardData, clientLoginOffline])
 
+  const registerClient = useCallback(async (clientData) => {
+    try {
+      const data = await authApi.clientRegister(clientData)
+      if (data.accessToken && data.refreshToken) {
+        setTokens(data.accessToken, data.refreshToken)
+      }
+      if (data.user) {
+        await loadDashboardData(data.user)
+      }
+      return data
+    } catch (err) {
+      if (isRealAuthFailure(err) && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
+        throw err
+      }
+      // Supabase direct fallback if backend API offline
+      const newClient = {
+        company: clientData.company,
+        contactPerson: clientData.contactPerson || clientData.company,
+        email: clientData.email.toLowerCase().trim(),
+        phone: clientData.phone || '',
+        industry: clientData.industry || 'Corporate',
+        city: clientData.city || 'Addis Ababa',
+        stage: clientData.paymentMethod && clientData.transactionId ? 'qualified' : 'lead',
+        status: 'active',
+        totalValue: Number(clientData.amount) || 0,
+      }
+      let createdClient = null
+      try {
+        createdClient = await supabaseAddClient(newClient)
+        if (clientData.paymentMethod && clientData.transactionId && supabase) {
+          await supabase.from('Invoice').insert([{
+            clientId: createdClient.id,
+            amount: Number(clientData.amount) || 0,
+            paid: Number(clientData.amount) || 0,
+            status: 'paid',
+            ref: clientData.transactionId,
+            dueDate: new Date().toISOString().split('T')[0],
+          }]).catch(() => {})
+        }
+      } catch (sbErr) {
+        console.warn('Supabase client insert failed, fallback local:', sbErr)
+        createdClient = { id: 'cl-' + Date.now(), ...newClient }
+      }
+      const userObj = {
+        id: createdClient.id,
+        name: createdClient.contactPerson || createdClient.company,
+        email: createdClient.email,
+        userRoles: [{ role: { key: 'client' } }],
+        client: createdClient,
+      }
+      setState((s) => ({
+        ...s,
+        clients: [createdClient, ...(s.clients || [])],
+        currentUserId: userObj.id,
+        currentUser: userObj,
+        lastLogin: new Date().toISOString(),
+      }))
+      return { success: true, user: userObj, client: createdClient }
+    }
+  }, [loadDashboardData])
+
   const logout = useCallback(async () => {
     if (backendOnline) {
       try { await authApi.logout() } catch (e) { /* ignore */ }
@@ -1365,7 +1426,7 @@ export function DataProvider({ children }) {
     sendMessage, uploadDocument,
     markDone, setIntent, clearIntent, setDemoOpen, markVisitedReports,
     intent: state.intent,
-    login, loginClient, logout, refreshData,
+    login, loginClient, registerClient, logout, refreshData,
     unreadNotifications, rbac,
     loading, backendOnline,
   }

@@ -4,8 +4,12 @@ import crypto from 'crypto'
 import prisma from '../lib/prisma.js'
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../lib/jwt.js'
 import { authRequired } from '../middleware/auth.js'
+import { sendOtpEmail } from '../lib/email.js'
 
 const router = Router()
+
+// In-memory OTP storage: email -> { code, expiresAt, verified }
+const otpStore = new Map()
 
 const MAX_FAILED_ATTEMPTS = 5
 const LOCK_DURATION_MINUTES = 15
@@ -304,6 +308,201 @@ router.post('/reset-password', async (req, res) => {
   })
 
   res.json({ success: true })
+})
+
+// POST /api/auth/send-otp - generate and send 6-digit OTP via Gmail SMTP
+router.post('/send-otp', async (req, res) => {
+  try {
+    const { email, purpose = 'Client Registration' } = req.body
+    if (!email || !/\S+@\S+\.\S+/.test(email)) {
+      return res.status(400).json({ error: 'Valid email address is required' })
+    }
+    const normalizedEmail = email.toLowerCase().trim()
+    const code = Math.floor(100000 + Math.random() * 900000).toString()
+    const expiresAt = Date.now() + 10 * 60 * 1000 // 10 minutes
+
+    otpStore.set(normalizedEmail, { code, expiresAt, verified: false })
+
+    try {
+      await sendOtpEmail(normalizedEmail, code, purpose)
+    } catch (mailErr) {
+      console.error('Failed to send OTP email via SMTP:', mailErr)
+      return res.json({
+        success: true,
+        message: 'Verification code generated',
+        previewCode: process.env.NODE_ENV !== 'production' ? code : undefined,
+      })
+    }
+
+    res.json({ success: true, message: 'Verification code sent to your email' })
+  } catch (err) {
+    console.error('send-otp error:', err)
+    res.status(500).json({ error: 'Failed to send verification code' })
+  }
+})
+
+// POST /api/auth/verify-otp - verify submitted 6-digit OTP
+router.post('/verify-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body
+    if (!email || !otp) {
+      return res.status(400).json({ error: 'Email and OTP code are required' })
+    }
+    const normalizedEmail = email.toLowerCase().trim()
+    const entry = otpStore.get(normalizedEmail)
+
+    if (!entry) {
+      return res.status(400).json({ error: 'No verification code requested for this email' })
+    }
+    if (Date.now() > entry.expiresAt) {
+      otpStore.delete(normalizedEmail)
+      return res.status(400).json({ error: 'Verification code has expired. Please request a new one.' })
+    }
+    if (entry.code !== otp.trim()) {
+      return res.status(400).json({ error: 'Invalid verification code' })
+    }
+
+    entry.verified = true
+    otpStore.set(normalizedEmail, entry)
+
+    res.json({ success: true, message: 'Email verified successfully' })
+  } catch (err) {
+    console.error('verify-otp error:', err)
+    res.status(500).json({ error: 'Failed to verify code' })
+  }
+})
+
+// POST /api/auth/client-register - complete client registration with optional advance payment
+router.post('/client-register', async (req, res) => {
+  try {
+    const {
+      company,
+      contactPerson,
+      email,
+      phone,
+      password,
+      industry = 'Corporate',
+      city = 'Addis Ababa',
+      paymentMethod,
+      transactionId,
+      amount = 0,
+      receiptUrl,
+    } = req.body
+
+    if (!company || !email || !password) {
+      return res.status(400).json({ error: 'Company name, email, and password are required' })
+    }
+
+    const normalizedEmail = email.toLowerCase().trim()
+    const pwError = validatePasswordComplexity(password)
+    if (pwError) return res.status(400).json({ error: pwError })
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } })
+    if (existingUser) {
+      return res.status(400).json({ error: 'An account with this email already exists' })
+    }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 10)
+    const initials = (contactPerson || company).split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase()
+
+    // Create client record
+    const client = await prisma.client.create({
+      data: {
+        company,
+        contactPerson: contactPerson || company,
+        email: normalizedEmail,
+        phone: phone || '',
+        industry,
+        city,
+        stage: paymentMethod && transactionId ? 'qualified' : 'lead',
+        status: 'active',
+        totalValue: Number(amount) || 0,
+      },
+    })
+
+    // Create user record linked to client
+    const user = await prisma.user.create({
+      data: {
+        email: normalizedEmail,
+        name: contactPerson || company,
+        initials,
+        passwordHash,
+        phone: phone || '',
+        type: 'Client',
+        status: 'active',
+        clientId: client.id,
+      },
+    })
+
+    // Assign Client role if exists
+    const clientRole = await prisma.role.findUnique({ where: { key: 'client' } })
+    if (clientRole) {
+      await prisma.userRole.create({
+        data: { userId: user.id, roleId: clientRole.id },
+      }).catch(() => {})
+    }
+
+    // If advance payment was provided, create invoice & record
+    if (paymentMethod && transactionId && Number(amount) > 0) {
+      await prisma.invoice.create({
+        data: {
+          clientId: client.id,
+          amount: Number(amount),
+          paid: Number(amount),
+          status: 'paid',
+          ref: transactionId,
+          dueDate: new Date().toISOString().split('T')[0],
+        },
+      }).catch(() => {})
+    }
+
+    // Create admin notification
+    await prisma.notification.create({
+      data: {
+        text: `New Client Registered: ${company} (${contactPerson || 'Contact'})${paymentMethod ? ` with ${paymentMethod.toUpperCase()} advance payment of ${amount} ETB (TxID: ${transactionId})` : ''}`,
+        type: 'client',
+        at: 'Just now',
+        link: '/crm',
+      },
+    }).catch(() => {})
+
+    // Create activity log
+    await prisma.activityLog.create({
+      data: {
+        userId: user.id,
+        text: `Client registered: ${company}`,
+        type: 'crm',
+        at: 'Just now',
+      },
+    }).catch(() => {})
+
+    // Clear OTP entry
+    otpStore.delete(normalizedEmail)
+
+    // Issue tokens for immediate login
+    const accessToken = signAccessToken(user.id)
+    const refreshToken = signRefreshToken(user.id)
+
+    const expiresAt = new Date()
+    expiresAt.setDate(expiresAt.getDate() + 7)
+    await prisma.refreshToken.create({
+      data: { token: refreshToken, userId: user.id, expiresAt },
+    }).catch(() => {})
+
+    const { passwordHash: _, ...userWithoutHash } = user
+    res.status(201).json({
+      success: true,
+      user: { ...userWithoutHash, client },
+      accessToken,
+      refreshToken,
+      client,
+    })
+  } catch (err) {
+    console.error('client-register error:', err)
+    res.status(500).json({ error: 'Failed to register client: ' + (err.message || err) })
+  }
 })
 
 export default router

@@ -8,6 +8,7 @@ import { DataProvider, useData } from './store/DataContext'
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Login = lazy(() => import('./pages/Login'))
 const ClientLogin = lazy(() => import('./pages/ClientLogin'))
+const ClientRegister = lazy(() => import('./pages/ClientRegister'))
 const CRM = lazy(() => import('./pages/CRM'))
 const Notifications = lazy(() => import('./pages/Notifications'))
 
@@ -195,6 +196,9 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/client-login" element={<ClientLogin />} />
+        <Route path="/client/login" element={<ClientLogin />} />
+        <Route path="/client/register" element={<ClientRegister />} />
+        <Route path="/client-register" element={<ClientRegister />} />
         {/* Public Portal - attendee-facing, separate from ERP */}
         <Route element={<AttendeeProvider><PortalLayout /></AttendeeProvider>}>
           <Route path="/" element={<PortalLanding />} />

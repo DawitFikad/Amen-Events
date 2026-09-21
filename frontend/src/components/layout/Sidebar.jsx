@@ -1,10 +1,10 @@
-import React, { useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, Users, CalendarDays, KanbanSquare, MapPin, Package, Handshake,
   UserCog, Wallet, Ticket, QrCode, Mic2, Building2, BadgeDollarSign, Megaphone,
   BarChart3, Settings, ChevronDown, CalendarCheck2, UserCircle, Workflow,
-  FileCheck, CalendarRange, FileText, MessageSquare, Bell, ClipboardList, X,
+  FileCheck, CalendarRange, FileText, MessageSquare, Bell, ClipboardList, X, Search,
 } from 'lucide-react'
 import { useData } from '../../store/DataContext'
 import logo from '../../logo.jpg'
@@ -88,25 +88,39 @@ function Section({ group, collapsed, setMobileNav }) {
 
 export default function Sidebar({ collapsed, setCollapsed, mobileNav, setMobileNav }) {
   const { state, rbac } = useData()
+  const [searchQuery, setSearchQuery] = useState('')
   const events = state.events.filter((e) => e.status === 'upcoming' || e.status === 'ongoing').length
   const me = state.staff.find((m) => m.id === state.currentUserId)
 
   const visibleGroups = useMemo(() => {
-    if (!rbac || !rbac.canAccess) return groups
-    if (rbac.roleKey === 'client') {
-      return [{ label: 'Portal', items: [
-        { to: '/erp/portal', label: 'My Dashboard', icon: Building2, end: true, module: null },
-        { to: '/erp/portal/events', label: 'My Events', icon: CalendarDays, module: null },
-        { to: '/erp/portal/invoices', label: 'Invoices', icon: Wallet, module: null },
-        { to: '/erp/portal/documents', label: 'Documents', icon: FileText, module: null },
-        { to: '/erp/portal/messages', label: 'Messages', icon: MessageSquare, module: null },
-        { to: '/erp/portal/profile', label: 'My Profile', icon: UserCircle, module: null },
-      ]}]
+    let base = groups
+    if (rbac?.canAccess) {
+      if (rbac.roleKey === 'client') {
+        base = [{ label: 'Portal', items: [
+          { to: '/erp/portal', label: 'My Dashboard', icon: Building2, end: true, module: null },
+          { to: '/erp/portal/events', label: 'My Events', icon: CalendarDays, module: null },
+          { to: '/erp/portal/invoices', label: 'Invoices', icon: Wallet, module: null },
+          { to: '/erp/portal/documents', label: 'Documents', icon: FileText, module: null },
+          { to: '/erp/portal/messages', label: 'Messages', icon: MessageSquare, module: null },
+          { to: '/erp/portal/profile', label: 'My Profile', icon: UserCircle, module: null },
+        ]}]
+      } else {
+        base = groups
+          .map((g) => ({ ...g, items: g.items.filter((item) => item.module === null || rbac.canAccess(item.module)) }))
+          .filter((g) => g.items.length > 0)
+      }
     }
-    return groups
-      .map((g) => ({ ...g, items: g.items.filter((item) => item.module === null || rbac.canAccess(item.module)) }))
+
+    if (!searchQuery.trim()) return base
+
+    const q = searchQuery.toLowerCase().trim()
+    return base
+      .map((g) => ({
+        ...g,
+        items: g.items.filter((item) => item.label.toLowerCase().includes(q)),
+      }))
       .filter((g) => g.items.length > 0)
-  }, [rbac])
+  }, [rbac, searchQuery])
 
   return (
     <aside
@@ -138,9 +152,37 @@ export default function Sidebar({ collapsed, setCollapsed, mobileNav, setMobileN
         )}
       </div>
 
+      {/* Search Bar */}
+      {!collapsed && (
+        <div className="px-3 pt-3 pb-1 shrink-0">
+          <div className="relative">
+            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-200/60" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search menu items…"
+              className="h-8 w-full rounded-lg bg-white/10 pl-8 pr-7 text-xs text-white placeholder-brand-200/50 outline-none transition focus:bg-white/15 focus:ring-1 focus:ring-gold-400/40"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-200/60 hover:text-white"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         {visibleGroups.map((g) => <Section key={g.label} group={g} collapsed={collapsed} setMobileNav={setMobileNav} />)}
+        {visibleGroups.length === 0 && (
+          <p className="py-6 text-center text-xs text-brand-200/50">No matching menu items</p>
+        )}
       </nav>
 
       {/* Live summary */}

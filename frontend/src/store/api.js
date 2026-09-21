@@ -119,6 +119,15 @@ export const auth = {
 
   resetPassword: (token, newPassword) =>
     apiFetch('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, newPassword }) }),
+
+  sendOtp: (email, purpose) =>
+    apiFetch('/auth/send-otp', { method: 'POST', body: JSON.stringify({ email, purpose }) }),
+
+  verifyOtp: (email, otp) =>
+    apiFetch('/auth/verify-otp', { method: 'POST', body: JSON.stringify({ email, otp }) }),
+
+  clientRegister: (data) =>
+    apiFetch('/auth/client-register', { method: 'POST', body: JSON.stringify(data) }),
 }
 
 // ─── CLIENT PORTAL ─────────────────────────────────────────────

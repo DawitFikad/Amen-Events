@@ -160,6 +160,52 @@ export default function Staff() {
                 <p className="flex items-center gap-2"><Clock3 size={13} className="text-brand-600" /> {m.phone}</p>
                 {m.salary > 0 && <p className="flex items-center gap-2"><Wallet size={13} className="text-brand-600" /> ETB {Number(m.salary).toLocaleString()}/mo</p>}
               </div>
+
+              {/* Active Event Assignments & Availability */}
+              {(() => {
+                const assignedEvents = state.events.filter((e) => e.team?.includes(m.id) || e.pmId === m.id)
+                return (
+                  <div className="mt-3 rounded-xl border border-brand-100 bg-brand-50/40 p-2.5">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-brand-800 flex items-center gap-1">
+                        <CalendarDays size={11} className="text-brand-700" /> Current Assignments
+                      </p>
+                      {assignedEvents.length > 0 ? (
+                        <span className="chip bg-amber-100 text-amber-800 text-[9px] font-bold">Assigned ({assignedEvents.length})</span>
+                      ) : (
+                        <span className="chip bg-emerald-100 text-emerald-800 text-[9px] font-bold">✓ Available</span>
+                      )}
+                    </div>
+                    {assignedEvents.length > 0 ? (
+                      <div className="mt-2 space-y-1.5">
+                        {assignedEvents.slice(0, 2).map((ev) => {
+                          const v = state.venues.find((venue) => venue.id === ev.venueId)
+                          return (
+                            <div key={ev.id} className="rounded-lg bg-white p-2 text-[11px] shadow-sm ring-1 ring-brand-100">
+                              <p className="font-bold text-brand-950 truncate">{ev.name}</p>
+                              <p className="text-[10px] text-ink/50 mt-0.5">
+                                📅 {ev.date} · ⏰ {ev.time}
+                              </p>
+                              <p className="text-[10px] text-ink/50 truncate">
+                                📍 {v?.name || 'Venue TBD'}
+                              </p>
+                              <span className="inline-block mt-1 chip bg-gold-50 text-gold-800 text-[9px] font-bold">
+                                {ev.pmId === m.id ? '★ Project Manager' : 'Team Crew'}
+                              </span>
+                            </div>
+                          )
+                        })}
+                        {assignedEvents.length > 2 && (
+                          <p className="text-[10px] font-semibold text-brand-700 text-center">+{assignedEvents.length - 2} more active event(s)</p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="mt-1 text-[10px] text-ink/45 italic">No active event bookings on schedule.</p>
+                    )}
+                  </div>
+                )
+              })()}
+
               <div className="mt-4 flex items-center justify-between border-t border-brand-50 pt-3">
                 <span className="truncate text-xs text-ink/40">{m.email}</span>
                 <Badge status={m.status} label={m.status} />

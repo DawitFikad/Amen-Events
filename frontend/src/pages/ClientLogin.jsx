@@ -145,6 +145,9 @@ export default function ClientLogin() {
 
           <div className="mt-4 space-y-1.5 border-t border-gray-100 pt-3 text-center">
             <p className="text-xs text-ink/45">
+              New client organization? <Link to="/client/register" className="font-semibold text-brand-700 hover:text-brand-900 hover:underline">Register here →</Link>
+            </p>
+            <p className="text-xs text-ink/45">
               Staff member? <Link to="/login" className="font-semibold text-brand-700 hover:text-brand-900 hover:underline">ERP sign-in →</Link>
             </p>
             <p className="text-xs text-ink/45">

@@ -3,6 +3,7 @@ import {
   CalendarDays, Plus, MapPin, Users, Wallet, ClipboardCheck, FileText, Clock3,
   ChevronRight, ArrowLeft, ListChecks, Sparkles, BarChart3, GitBranch, Boxes,
   Upload, Globe, Trash2, Info as InfoIcon, Tag, Megaphone, Ticket, Image as ImageIcon, Phone,
+  ChevronDown, Check, CheckCircle2, PackageCheck,
 } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, Avatar, Modal, Field, SearchBox, Toast, EmptyState, Th, Td, Segmented } from '../components/ui'
@@ -73,6 +74,9 @@ export default function Events() {
   const [viewId, setViewId] = useState(null)
   const [tab, setTab] = useState('all')
   const [open, setOpen] = useState(false)
+  const [regStep, setRegStep] = useState(1)
+  const [createdSuccessModal, setCreatedSuccessModal] = useState(null)
+  const [expandedEventId, setExpandedEventId] = useState(null)
   const [toast, setToast] = useState(null)
   const [form, setForm] = useState({})
   const [errors, setErrors] = useState({})
@@ -107,7 +111,7 @@ export default function Events() {
           status: 'upcoming', pmId: 'st2', time: '09:00', capacity: '400',
           published: true, tags: 'Internal, Summit',
         }
-        setOpen(true); setForm(seed); setErrors({}); setTab('all')
+        setOpen(true); setForm(seed); setErrors({}); setTab('all'); setRegStep(1)
         setTimeout(async () => {
           const rec = await addEvent(seed)
           setViewId(rec.id); setOpen(false); setForm({}); show('Event created automatically')
@@ -139,7 +143,7 @@ export default function Events() {
         }, 1100)
       }
     } else {
-      if (intent === 'new-event') { setOpen(true); setTab('all') }
+      if (intent === 'new-event') { setOpen(true); setTab('all'); setRegStep(1) }
       if (intent === 'event-team') { setViewId(state.demo.lastEventId); setDetailTab('overview'); setTeamOpen(true) }
       if (intent === 'event-resources') { setViewId(state.demo.lastEventId); setDetailTab('overview'); setResOpen(true) }
       if (intent === 'event-budget') {
@@ -162,6 +166,35 @@ export default function Events() {
   const active = state.events.find((e) => e.id === viewId)
   const client = (id) => state.clients.find((c) => c.id === id)
   const venue = (id) => state.venues.find((v) => v.id === id)
+
+  const validateStep = (s) => {
+    if (s === 1) {
+      const res = validate(form, {
+        name: [textRequired('Event name', { max: 120 })],
+        clientId: [required('Client')],
+        category: [textRequired('Category')],
+      })
+      if (!res.ok) {
+        setErrors(res.errors)
+        show(res.first || 'Please fill mandatory event details', 'warn')
+        return false
+      }
+    }
+    if (s === 2) {
+      const res = validate(form, {
+        date: [dateRequired('Start date')],
+        time: [textRequired('Start time')],
+        budget: [numberPositive('Budget (ETB)')],
+      })
+      if (!res.ok) {
+        setErrors(res.errors)
+        show(res.first || 'Please fill schedule and budget', 'warn')
+        return false
+      }
+    }
+    setErrors({})
+    return true
+  }
 
   const submit = async () => {
     const res = validate(form, {
@@ -187,9 +220,14 @@ export default function Events() {
     for (const d of docs) {
       await addEventDoc(rec.id, d.name, d.ext || 'PDF', d.size || '-', { type: d.type || 'file', sizeBytes: d.sizeBytes, mimeType: d.mimeType })
     }
-    show(`Event "${form.name}" created${docs.length ? ` with ${docs.length} document(s)` : ''}`)
-    setOpen(false); setForm({}); setErrors({})
-    if (rec) setViewId(rec.id)
+    show(`Event "${form.name}" registered successfully!`)
+    setOpen(false)
+    setForm({})
+    setErrors({})
+    setRegStep(1)
+    if (rec) {
+      setCreatedSuccessModal(rec)
+    }
   }
 
   const onEventImage = (e) => {
@@ -334,6 +372,72 @@ export default function Events() {
                     </div>
                     <span className="inline-flex items-center gap-1 text-xs font-bold text-brand-700 sm:opacity-0 sm:transition sm:group-hover:opacity-100">Open <ChevronRight size={14} /></span>
                   </div>
+
+                  {/* Expandable Assigned Details */}
+                  <div className="mt-3 border-t border-brand-50/80 pt-2.5">
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={(evt) => {
+                        evt.stopPropagation()
+                        setExpandedEventId(expandedEventId === e.id ? null : e.id)
+                      }}
+                      onKeyDown={(evt) => {
+                        if (evt.key === 'Enter' || evt.key === ' ') {
+                          evt.stopPropagation()
+                          setExpandedEventId(expandedEventId === e.id ? null : e.id)
+                        }
+                      }}
+                      className="flex w-full items-center justify-between text-left text-xs font-semibold text-brand-700 hover:text-brand-900 cursor-pointer"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <Users size={12} /> Assigned Details ({team.length} crew, {(state.allocations || []).filter((a) => a.eventId === e.id).length} resources)
+                      </span>
+                      <ChevronDown
+                        size={14}
+                        className={`transition-transform duration-200 ${expandedEventId === e.id ? 'rotate-180' : ''}`}
+                      />
+                    </div>
+
+                    {expandedEventId === e.id && (
+                      <div className="mt-2.5 space-y-2 rounded-xl bg-brand-50/50 p-2.5 text-xs text-ink/70" onClick={(evt) => evt.stopPropagation()}>
+                        <div>
+                          <p className="font-bold text-[10px] uppercase tracking-wider text-brand-900 mb-1">Assigned Crew ({team.length})</p>
+                          <div className="flex flex-wrap gap-1">
+                            {team.map((id) => {
+                              const m = state.staff.find((x) => x.id === id)
+                              return m ? (
+                                <span key={id} className="chip bg-white text-brand-950 ring-1 ring-brand-200 text-[10px] font-medium">
+                                  {m.name} {id === e.pmId ? '(PM)' : ''}
+                                </span>
+                              ) : null
+                            })}
+                            {team.length === 0 && <span className="text-[10px] text-ink/40">No crew assigned yet</span>}
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="font-bold text-[10px] uppercase tracking-wider text-brand-900 mb-1">Allocated Resources</p>
+                          {(() => {
+                            const allocs = (state.allocations || []).filter((a) => a.eventId === e.id)
+                            if (allocs.length === 0) return <p className="text-[10px] text-ink/40">No resources allocated</p>
+                            return (
+                              <div className="flex flex-wrap gap-1">
+                                {allocs.map((a, idx) => {
+                                  const r = state.resources.find((res) => res.id === a.resourceId)
+                                  return (
+                                    <span key={idx} className="chip bg-white text-brand-950 ring-1 ring-brand-200 text-[10px]">
+                                      {r?.name || 'Resource'}: <strong>{a.qty} qty</strong>
+                                    </span>
+                                  )
+                                })}
+                              </div>
+                            )
+                          })()}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </button>
               )
             })}
@@ -397,163 +501,340 @@ export default function Events() {
         />
       )}
 
-      {/* Create event */}
-      <Modal open={open} onClose={() => setOpen(false)} title="Register New Event" width="max-w-2xl">
-        {/* Event image */}
-        <div className="mb-4 flex items-center gap-4">
-          <div className="flex h-24 w-40 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-brand-50 ring-1 ring-brand-100">
-            {form.image
-              ? <img src={form.image} alt="Event" className="h-full w-full object-cover" />
-              : <span className="flex flex-col items-center gap-1 text-xl font-black text-brand-400"><ImageIcon size={22} /><span className="text-[10px] font-semibold">Preview</span></span>}
+      {/* Create event - Multi-step Stepper with Top Progress Bar */}
+      <Modal open={open} onClose={() => { setOpen(false); setRegStep(1) }} title="Register New Event" width="max-w-2xl">
+        {/* Stepper Progress Bar */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between text-[11px] font-bold text-ink/60">
+            <span className={regStep >= 1 ? 'text-brand-700' : ''}>1. Basics & Banner</span>
+            <span className={regStep >= 2 ? 'text-brand-700' : ''}>2. Schedule & Venue</span>
+            <span className={regStep >= 3 ? 'text-brand-700' : ''}>3. Ticketing & Contact</span>
+            <span className={regStep >= 4 ? 'text-brand-700' : ''}>4. Review & Docs</span>
           </div>
-          <div className="flex-1">
-            <p className="text-sm font-bold text-brand-950">Event Image / Banner</p>
-            <p className="text-xs text-ink/50">Upload the event banner used on the public site and cards (JPG, PNG - max 5MB).</p>
-            <div className="mt-2 flex gap-2">
-              <label className="btn-outline !py-1.5 cursor-pointer text-xs">
-                <Upload size={14} /> Choose image
-                <input type="file" accept="image/*" className="hidden" onChange={onEventImage} />
-              </label>
-              {form.image && <button className="btn-ghost !py-1.5 text-xs !text-red-600" onClick={() => setForm((f) => ({ ...f, image: '' }))}><Trash2 size={13} /> Remove</button>}
-            </div>
+          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-100">
+            <div
+              className="h-full rounded-full transition-all duration-500 ease-out"
+              style={{
+                width: regStep === 1 ? '25%' : regStep === 2 ? '50%' : regStep === 3 ? '75%' : '100%',
+                background: 'linear-gradient(90deg, #188A2E, #39D353)',
+              }}
+            />
           </div>
         </div>
 
         {Object.keys(errors).length > 0 && (
           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
-            ⚠️ Please fill all mandatory fields marked with an asterisk (*) to create this event.
+            ⚠️ Please fill all mandatory fields marked with an asterisk (*) to proceed.
           </div>
         )}
 
-        {/* Details */}
-        <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><InfoIcon size={13} /> Event Details</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Event Name *" className="sm:col-span-2">
-            <input className={`input ${errors.name ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.name || ''} onChange={(e) => { setForm({ ...form, name: e.target.value }); if (errors.name) setErrors({ ...errors, name: undefined }) }} placeholder="e.g. Annual Innovation Summit 2026" />
-            {errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}
-          </Field>
-          <Field label="Client *">
-            <select className={`input ${errors.clientId ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.clientId || ''} onChange={(e) => { setForm({ ...form, clientId: e.target.value }); if (errors.clientId) setErrors({ ...errors, clientId: undefined }) }}>
-              <option value="">Select client…</option>
-              {state.clients.map((c) => <option key={c.id} value={c.id}>{c.company}</option>)}
-            </select>
-            {errors.clientId && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.clientId}</p>}
-          </Field>
-          <Field label="Category *">
-            <select className={`input ${errors.category ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.category || ''} onChange={(e) => { setForm({ ...form, category: e.target.value }); if (errors.category) setErrors({ ...errors, category: undefined }) }}>
-              <option value="">Select category…</option>
-              {eventTypes.map((t) => <option key={t} value={t}>{t}</option>)}
-              <option value="Other">Other</option>
-            </select>
-            {errors.category && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.category}</p>}
-          </Field>
-          <Field label="Status"><select className="input" value={form.status || 'upcoming'} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="upcoming">Upcoming</option><option value="ongoing">Ongoing</option><option value="completed">Completed</option><option value="Other">Other</option></select></Field>
-          <Field label="Project Manager">
-            <select className="input" value={form.pmId || (state.staff[0]?.id || '')} onChange={(e) => setForm({ ...form, pmId: e.target.value })}>
-              {state.staff.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name} ({m.jobTitle || m.role || m.dept || 'Staff'})
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
-
-        {/* Schedule */}
-        <p className="mt-5 mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><CalendarDays size={13} /> Schedule</p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Field label="Start Date *">
-            <input type="date" className={`input ${errors.date ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.date || ''} onChange={(e) => { setForm({ ...form, date: e.target.value }); if (errors.date) setErrors({ ...errors, date: undefined }) }} />
-            {errors.date && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.date}</p>}
-          </Field>
-          <Field label="Start Time *">
-            <input type="time" className={`input ${errors.time ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.time || '09:00'} onChange={(e) => { setForm({ ...form, time: e.target.value }); if (errors.time) setErrors({ ...errors, time: undefined }) }} />
-            {errors.time && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.time}</p>}
-          </Field>
-          <Field label="End Date"><input type="date" className="input" value={form.endDate || ''} onChange={(e) => setForm({ ...form, endDate: e.target.value })} /></Field>
-          <Field label="End Time"><input type="time" className="input" value={form.endTime || ''} onChange={(e) => setForm({ ...form, endTime: e.target.value })} /></Field>
-        </div>
-
-        {/* Planning */}
-        <p className="mt-5 mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><ClipboardCheck size={13} /> Planning</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Venue">
-            <select className="input" value={form.venueId || ''} onChange={(e) => setForm({ ...form, venueId: e.target.value })}>
-              <option value="">Select venue…</option>
-              {state.venues.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.name} ({v.city || 'Addis Ababa'})
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Expected Attendees"><div className="relative"><Users size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" /><input type="number" className="input pl-9" value={form.capacity || ''} onChange={(e) => setForm({ ...form, capacity: e.target.value })} placeholder="e.g. 800" /></div></Field>
-          <Field label="Registration Deadline"><input type="date" className="input" value={form.deadline || ''} onChange={(e) => setForm({ ...form, deadline: e.target.value })} /></Field>
-          <Field label="Budget (ETB) *">
-            <div className="relative">
-              <Wallet size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" />
-              <input type="number" className={`input pl-9 ${errors.budget ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.budget || ''} onChange={(e) => { setForm({ ...form, budget: e.target.value }); if (errors.budget) setErrors({ ...errors, budget: undefined }) }} placeholder="850000" />
-            </div>
-            {errors.budget && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.budget}</p>}
-          </Field>
-        </div>
-
-        {/* Public & ticketing */}
-        <p className="mt-5 mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><Megaphone size={13} /> Public & Ticketing</p>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Ticket price from (ETB)" className="col-span-2 sm:col-span-1"><div className="relative"><Ticket size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" /><input type="number" className="input pl-9" value={form.price || ''} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="0 = free" /></div></Field>
-          <div className="flex items-end">
-            <label className="flex w-full cursor-pointer items-center justify-between rounded-xl border border-brand-100 px-4 py-2.5">
-              <div>
-                <p className="text-xs font-bold text-brand-950">Published on public site</p>
-                <p className="text-[11px] text-ink/50">Visible for attendee registration</p>
+        {/* STEP 1: BASICS & BANNER */}
+        {regStep === 1 && (
+          <div className="space-y-4">
+            {/* Event image */}
+            <div className="flex items-center gap-4 rounded-2xl border border-brand-100 bg-brand-50/30 p-3.5">
+              <div className="flex h-24 w-40 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-brand-50 ring-1 ring-brand-100">
+                {form.image
+                  ? <img src={form.image} alt="Event" className="h-full w-full object-cover" />
+                  : <span className="flex flex-col items-center gap-1 text-xl font-black text-brand-400"><ImageIcon size={22} /><span className="text-[10px] font-semibold">Preview</span></span>}
               </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-brand-950">Event Image / Banner</p>
+                <p className="text-xs text-ink/50">Upload banner for public site and cards (JPG, PNG - max 5MB).</p>
+                <div className="mt-2 flex gap-2">
+                  <label className="btn-outline !py-1.5 cursor-pointer text-xs">
+                    <Upload size={14} /> Choose image
+                    <input type="file" accept="image/*" className="hidden" onChange={onEventImage} />
+                  </label>
+                  {form.image && <button className="btn-ghost !py-1.5 text-xs !text-red-600" onClick={() => setForm((f) => ({ ...f, image: '' }))}><Trash2 size={13} /> Remove</button>}
+                </div>
+              </div>
+            </div>
+
+            <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><InfoIcon size={13} /> Event Identity</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Event Name *" className="sm:col-span-2">
+                <input className={`input ${errors.name ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.name || ''} onChange={(e) => { setForm({ ...form, name: e.target.value }); if (errors.name) setErrors({ ...errors, name: undefined }) }} placeholder="e.g. Annual Innovation Summit 2026" />
+                {errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}
+              </Field>
+              <Field label="Client *">
+                <select className={`input ${errors.clientId ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.clientId || ''} onChange={(e) => { setForm({ ...form, clientId: e.target.value }); if (errors.clientId) setErrors({ ...errors, clientId: undefined }) }}>
+                  <option value="">Select client…</option>
+                  {state.clients.map((c) => <option key={c.id} value={c.id}>{c.company}</option>)}
+                </select>
+                {errors.clientId && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.clientId}</p>}
+              </Field>
+              <Field label="Category *">
+                <select className={`input ${errors.category ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.category || ''} onChange={(e) => { setForm({ ...form, category: e.target.value }); if (errors.category) setErrors({ ...errors, category: undefined }) }}>
+                  <option value="">Select category…</option>
+                  {eventTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+                  <option value="Other">Other</option>
+                </select>
+                {errors.category && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.category}</p>}
+              </Field>
+              <Field label="Status">
+                <select className="input" value={form.status || 'upcoming'} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+                  <option value="upcoming">Upcoming</option>
+                  <option value="ongoing">Ongoing</option>
+                  <option value="completed">Completed</option>
+                  <option value="Other">Other</option>
+                </select>
+              </Field>
+              <Field label="Project Manager">
+                <select className="input" value={form.pmId || (state.staff[0]?.id || '')} onChange={(e) => setForm({ ...form, pmId: e.target.value })}>
+                  {state.staff.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} ({m.jobTitle || m.role || m.dept || 'Staff'})
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+
+            <div className="mt-6 flex justify-between pt-2 border-t border-gray-100">
+              <button className="btn-outline" onClick={() => setOpen(false)}>Cancel</button>
               <button
                 type="button"
-                onClick={() => setForm((f) => ({ ...f, published: !f.published }))}
-                className={`relative h-6 w-11 shrink-0 rounded-full transition ${form.published ? 'bg-brand-600' : 'bg-ink/20'}`}
+                className="btn-primary"
+                onClick={() => {
+                  if (validateStep(1)) setRegStep(2)
+                }}
               >
-                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${form.published ? 'left-[22px]' : 'left-0.5'}`} />
+                Next: Schedule & Venue →
               </button>
-            </label>
-          </div>
-          <Field label="Contact Person"><div className="relative"><Globe size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" /><input className="input pl-9" value={form.contactName || ''} onChange={(e) => setForm({ ...form, contactName: e.target.value })} placeholder="Event contact name" /></div></Field>
-          <Field label="Contact Phone"><div className="relative"><Phone size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" /><input className="input pl-9" value={form.contactPhone || ''} onChange={(e) => setForm({ ...form, contactPhone: e.target.value })} placeholder="+251 9XX XXX XXX" /></div></Field>
-        </div>
-
-        {/* About & tags */}
-        <p className="mt-5 mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><InfoIcon size={13} /> About</p>
-        <div className="grid grid-cols-1 gap-3">
-          <Field label="Description"><textarea className="input min-h-[70px] resize-y" value={form.description || ''} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="What is this event about? Who is it for?" /></Field>
-          <Field label="Tags"><div className="relative"><Tag size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" /><input className="input pl-9" value={form.tags || ''} onChange={(e) => setForm({ ...form, tags: e.target.value })} placeholder="Fintech, Conference, Networking (comma separated)" /></div></Field>
-        </div>
-
-        {/* Documents */}
-        <p className="mt-5 mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><FileText size={13} /> Registration Documents</p>
-        <label className="flex w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-brand-200 bg-brand-50/40 py-5 text-center transition hover:border-brand-400 hover:bg-brand-50">
-          <Upload size={20} className="text-brand-500" />
-          <span className="text-xs font-bold text-brand-700">Click to attach documents</span>
-          <span className="text-[11px] text-ink/45">Proposal, venue contract, floor plan, run of show… (multiple files)</span>
-          <input type="file" multiple className="hidden" onChange={onEventDocs} />
-        </label>
-        {(form.docs || []).length > 0 && (
-          <div className="mt-2 space-y-1.5">
-            {(form.docs || []).map((d) => (
-              <div key={d.id} className="flex items-center justify-between rounded-lg border border-brand-100 bg-white px-3 py-2">
-                <span className="flex min-w-0 items-center gap-2 text-sm text-ink/80"><FileText size={14} className="shrink-0 text-brand-600" /><span className="truncate">{d.name}</span></span>
-                <span className="flex shrink-0 items-center gap-2">
-                  <span className="chip bg-brand-50 text-brand-800">{d.ext} · {d.size}</span>
-                  <button onClick={() => removeEventDoc(d.id)} className="rounded-md p-1 text-ink/40 hover:bg-red-50 hover:text-red-600"><Trash2 size={14} /></button>
-                </span>
-              </div>
-            ))}
+            </div>
           </div>
         )}
 
-        <div className="mt-5 flex justify-end gap-2">
-          <button className="btn-outline" onClick={() => setOpen(false)}>Cancel</button>
-          <button className="btn-primary" onClick={submit}>Create Event</button>
-        </div>
+        {/* STEP 2: SCHEDULE & VENUE */}
+        {regStep === 2 && (
+          <div className="space-y-4">
+            <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><CalendarDays size={13} /> Schedule</p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <Field label="Start Date *">
+                <input type="date" className={`input ${errors.date ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.date || ''} onChange={(e) => { setForm({ ...form, date: e.target.value }); if (errors.date) setErrors({ ...errors, date: undefined }) }} />
+                {errors.date && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.date}</p>}
+              </Field>
+              <Field label="Start Time *">
+                <input type="time" className={`input ${errors.time ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.time || '09:00'} onChange={(e) => { setForm({ ...form, time: e.target.value }); if (errors.time) setErrors({ ...errors, time: undefined }) }} />
+                {errors.time && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.time}</p>}
+              </Field>
+              <Field label="End Date"><input type="date" className="input" value={form.endDate || ''} onChange={(e) => setForm({ ...form, endDate: e.target.value })} /></Field>
+              <Field label="End Time"><input type="time" className="input" value={form.endTime || ''} onChange={(e) => setForm({ ...form, endTime: e.target.value })} /></Field>
+            </div>
+
+            <p className="mt-4 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><MapPin size={13} /> Venue & Logistics</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Venue">
+                <select className="input" value={form.venueId || ''} onChange={(e) => setForm({ ...form, venueId: e.target.value })}>
+                  <option value="">Select venue…</option>
+                  {state.venues.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.name} ({v.city || 'Addis Ababa'})
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Expected Attendees">
+                <div className="relative">
+                  <Users size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" />
+                  <input type="number" className="input pl-9" value={form.capacity || ''} onChange={(e) => setForm({ ...form, capacity: e.target.value })} placeholder="e.g. 800" />
+                </div>
+              </Field>
+              <Field label="Registration Deadline"><input type="date" className="input" value={form.deadline || ''} onChange={(e) => setForm({ ...form, deadline: e.target.value })} /></Field>
+              <Field label="Budget (ETB) *">
+                <div className="relative">
+                  <Wallet size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" />
+                  <input type="number" className={`input pl-9 ${errors.budget ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.budget || ''} onChange={(e) => { setForm({ ...form, budget: e.target.value }); if (errors.budget) setErrors({ ...errors, budget: undefined }) }} placeholder="850000" />
+                </div>
+                {errors.budget && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.budget}</p>}
+              </Field>
+            </div>
+
+            <div className="mt-6 flex justify-between pt-2 border-t border-gray-100">
+              <button type="button" className="btn-outline" onClick={() => setRegStep(1)}>← Back</button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => {
+                  if (validateStep(2)) setRegStep(3)
+                }}
+              >
+                Next: Ticketing & Contact →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 3: PUBLIC & TICKETING */}
+        {regStep === 3 && (
+          <div className="space-y-4">
+            <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><Megaphone size={13} /> Public Site & Ticketing</p>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Ticket price from (ETB)" className="col-span-2 sm:col-span-1">
+                <div className="relative">
+                  <Ticket size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" />
+                  <input type="number" className="input pl-9" value={form.price || ''} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="0 = free" />
+                </div>
+              </Field>
+              <div className="flex items-end">
+                <label className="flex w-full cursor-pointer items-center justify-between rounded-xl border border-brand-100 px-4 py-2.5">
+                  <div>
+                    <p className="text-xs font-bold text-brand-950">Published on public site</p>
+                    <p className="text-[11px] text-ink/50">Visible for attendee registration</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, published: !f.published }))}
+                    className={`relative h-6 w-11 shrink-0 rounded-full transition ${form.published ? 'bg-brand-600' : 'bg-ink/20'}`}
+                  >
+                    <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${form.published ? 'left-[22px]' : 'left-0.5'}`} />
+                  </button>
+                </label>
+              </div>
+              <Field label="Contact Person">
+                <div className="relative">
+                  <Globe size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" />
+                  <input className="input pl-9" value={form.contactName || ''} onChange={(e) => setForm({ ...form, contactName: e.target.value })} placeholder="Event contact name" />
+                </div>
+              </Field>
+              <Field label="Contact Phone">
+                <div className="relative">
+                  <Phone size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" />
+                  <input className="input pl-9" value={form.contactPhone || ''} onChange={(e) => setForm({ ...form, contactPhone: e.target.value })} placeholder="+251 9XX XXX XXX" />
+                </div>
+              </Field>
+            </div>
+
+            <p className="mt-4 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><InfoIcon size={13} /> Description & Tags</p>
+            <div className="grid grid-cols-1 gap-3">
+              <Field label="Description"><textarea className="input min-h-[70px] resize-y" value={form.description || ''} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="What is this event about? Who is it for?" /></Field>
+              <Field label="Tags">
+                <div className="relative">
+                  <Tag size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" />
+                  <input className="input pl-9" value={form.tags || ''} onChange={(e) => setForm({ ...form, tags: e.target.value })} placeholder="Fintech, Conference, Networking (comma separated)" />
+                </div>
+              </Field>
+            </div>
+
+            <div className="mt-6 flex justify-between pt-2 border-t border-gray-100">
+              <button type="button" className="btn-outline" onClick={() => setRegStep(2)}>← Back</button>
+              <button type="button" className="btn-primary" onClick={() => setRegStep(4)}>Next: Review & Docs →</button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 4: DOCUMENTS & REVIEW */}
+        {regStep === 4 && (
+          <div className="space-y-4">
+            {/* Review summary cards */}
+            <div className="rounded-2xl border border-brand-100 bg-brand-50/40 p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-brand-900 mb-2">Event Summary Review</p>
+              <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
+                <div className="rounded-xl bg-white p-2.5 shadow-sm">
+                  <p className="text-[10px] text-ink/40 font-bold uppercase">Event Name</p>
+                  <p className="font-bold text-brand-950 truncate mt-0.5">{form.name || '-'}</p>
+                </div>
+                <div className="rounded-xl bg-white p-2.5 shadow-sm">
+                  <p className="text-[10px] text-ink/40 font-bold uppercase">Client</p>
+                  <p className="font-bold text-brand-950 truncate mt-0.5">{state.clients.find(c => c.id === form.clientId)?.company || '-'}</p>
+                </div>
+                <div className="rounded-xl bg-white p-2.5 shadow-sm">
+                  <p className="text-[10px] text-ink/40 font-bold uppercase">Schedule</p>
+                  <p className="font-bold text-brand-950 truncate mt-0.5">{form.date || '-'} at {form.time || '09:00'}</p>
+                </div>
+                <div className="rounded-xl bg-white p-2.5 shadow-sm">
+                  <p className="text-[10px] text-ink/40 font-bold uppercase">Venue</p>
+                  <p className="font-bold text-brand-950 truncate mt-0.5">{state.venues.find(v => v.id === form.venueId)?.name || 'Venue TBD'}</p>
+                </div>
+                <div className="rounded-xl bg-white p-2.5 shadow-sm">
+                  <p className="text-[10px] text-ink/40 font-bold uppercase">Budget</p>
+                  <p className="font-bold text-brand-900 truncate mt-0.5">{fmt(Number(form.budget || 0))}</p>
+                </div>
+                <div className="rounded-xl bg-white p-2.5 shadow-sm">
+                  <p className="text-[10px] text-ink/40 font-bold uppercase">Project Manager</p>
+                  <p className="font-bold text-brand-950 truncate mt-0.5">{state.staff.find(s => s.id === form.pmId)?.name || '-'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Documents */}
+            <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><FileText size={13} /> Registration Documents (Optional)</p>
+            <label className="flex w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-brand-200 bg-brand-50/40 py-4 text-center transition hover:border-brand-400 hover:bg-brand-50">
+              <Upload size={20} className="text-brand-500" />
+              <span className="text-xs font-bold text-brand-700">Click to attach event documents</span>
+              <span className="text-[11px] text-ink/45">Proposal, venue agreement, floor plan, agenda…</span>
+              <input type="file" multiple className="hidden" onChange={onEventDocs} />
+            </label>
+            {(form.docs || []).length > 0 && (
+              <div className="mt-2 space-y-1.5">
+                {(form.docs || []).map((d) => (
+                  <div key={d.id} className="flex items-center justify-between rounded-lg border border-brand-100 bg-white px-3 py-2">
+                    <span className="flex min-w-0 items-center gap-2 text-sm text-ink/80"><FileText size={14} className="shrink-0 text-brand-600" /><span className="truncate">{d.name}</span></span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      <span className="chip bg-brand-50 text-brand-800">{d.ext} · {d.size}</span>
+                      <button onClick={() => removeEventDoc(d.id)} className="rounded-md p-1 text-ink/40 hover:bg-red-50 hover:text-red-600"><Trash2 size={14} /></button>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-between pt-2 border-t border-gray-100">
+              <button type="button" className="btn-outline" onClick={() => setRegStep(3)}>← Back</button>
+              <button type="button" className="btn-primary !px-6" onClick={submit}>
+                <Sparkles size={16} /> Complete & Register Event
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Celebration Modal on Successful Event Creation */}
+      <Modal
+        open={!!createdSuccessModal}
+        onClose={() => setCreatedSuccessModal(null)}
+        title="Event Registered!"
+        width="max-w-md"
+      >
+        {createdSuccessModal && (
+          <div className="py-4 text-center">
+            <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 ring-8 ring-emerald-50">
+              <CheckCircle2 size={36} />
+            </div>
+            <h3 className="text-xl font-black text-brand-950">Event Created Successfully!</h3>
+            <p className="mt-1 text-xs text-ink/60">
+              <strong>{createdSuccessModal.name}</strong> is now registered and active in the Amen EMS pipeline.
+            </p>
+
+            <div className="my-4 rounded-xl border border-brand-100 bg-brand-50/50 p-3 text-left text-xs space-y-1.5">
+              <p><strong className="text-brand-900">Client:</strong> {state.clients.find(c => c.id === createdSuccessModal.clientId)?.company || '-'}</p>
+              <p><strong className="text-brand-900">Date & Time:</strong> {createdSuccessModal.date} at {createdSuccessModal.time}</p>
+              <p><strong className="text-brand-900">Budget:</strong> {fmt(createdSuccessModal.budget)}</p>
+              <p><strong className="text-brand-900">Project Manager:</strong> {state.staff.find(s => s.id === createdSuccessModal.pmId)?.name || '-'}</p>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="btn-outline flex-1"
+                onClick={() => setCreatedSuccessModal(null)}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                className="btn-primary flex-1"
+                onClick={() => {
+                  setViewId(createdSuccessModal.id)
+                  setCreatedSuccessModal(null)
+                }}
+              >
+                Open Event Workspace →
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {!active && (
@@ -1202,25 +1483,65 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
 function TeamPicker({ event, state, onClose, onSave, show }) {
   const [selected, setSelected] = useState(new Set(event.team || []))
   const members = state.staff
-  const toggle = (id) => {
+  const toggle = (id, isBusy) => {
+    if (isBusy) {
+      show('This staff member is already assigned to another event on this date', 'warn')
+      return
+    }
     const next = new Set(selected)
     next.has(id) ? next.delete(id) : next.add(id)
     setSelected(next)
   }
   return (
     <div>
-      <p className="mb-3 text-sm text-ink/60">Select the crew working on this event. The project manager is always included.</p>
-      <div className="grid grid-cols-1 gap-2">
+      <p className="mb-3 text-sm text-ink/60">
+        Select the crew working on this event. Staff already booked on <strong>{event.date || 'this date'}</strong> cannot be double-booked.
+      </p>
+      <div className="grid grid-cols-1 gap-2 max-h-[50vh] overflow-y-auto pr-1">
         {members.map((m) => {
           const on = selected.has(m.id)
+          const conflictingEvent = state.events.find((e) =>
+            e.id !== event.id &&
+            e.date === event.date &&
+            (e.team?.includes(m.id) || e.pmId === m.id)
+          )
+          const isBusy = !!conflictingEvent && !on
+
           return (
-            <button key={m.id} onClick={() => toggle(m.id)} className={`flex items-center gap-3 rounded-xl border p-3 text-left transition ${on ? 'border-brand-400 bg-brand-50' : 'border-brand-100 bg-white hover:border-brand-300'}`}>
+            <button
+              key={m.id}
+              type="button"
+              disabled={isBusy}
+              onClick={() => toggle(m.id, isBusy)}
+              className={`flex items-center gap-3 rounded-xl border p-3 text-left transition ${
+                on
+                  ? 'border-brand-400 bg-brand-50'
+                  : isBusy
+                  ? 'border-red-200 bg-red-50/40 opacity-80 cursor-not-allowed'
+                  : 'border-brand-100 bg-white hover:border-brand-300'
+              }`}
+            >
               <Avatar name={m.name} initials={m.initials} color={m.color} />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-brand-950">{m.name} {m.id === event.pmId && <span className="chip bg-gold-100 text-gold-700 ml-1">PM</span>}</p>
-                <p className="text-xs text-ink/45">{m.role} · {m.dept}</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-semibold text-brand-950">
+                    {m.name} {m.id === event.pmId && <span className="chip bg-gold-100 text-gold-700 ml-1">PM</span>}
+                  </p>
+                  {isBusy ? (
+                    <span className="chip bg-red-100 text-red-700 text-[10px] font-bold">
+                      Busy: {conflictingEvent.name}
+                    </span>
+                  ) : (
+                    <span className="chip bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                      ✓ Available
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-ink/45 mt-0.5">{m.role || m.jobTitle} · {m.dept}</p>
               </div>
-              <span className={`flex h-5 w-5 items-center justify-center rounded-md border ${on ? 'border-brand-700 bg-brand-700 text-white' : 'border-brand-200 bg-white text-transparent'}`}>✓</span>
+              <span className={`flex h-5 w-5 items-center justify-center rounded-md border ${
+                on ? 'border-brand-700 bg-brand-700 text-white' : 'border-brand-200 bg-white text-transparent'
+              }`}>✓</span>
             </button>
           )
         })}
@@ -1238,49 +1559,115 @@ function TeamPicker({ event, state, onClose, onSave, show }) {
 }
 
 function ResourcePicker({ event, state, onClose, onAllocate, show }) {
+  const { addPurchaseRequest } = useData()
   const [sel, setSel] = useState(new Set())
   const [qtys, setQtys] = useState({})
+  const [orderingId, setOrderingId] = useState(null)
   const resources = state.resources
 
-  const toggle = (id) => {
+  const toggle = (id, isOut) => {
+    if (isOut) {
+      show('Resource is out of stock. Use the Order Resource button to submit a request.', 'warn')
+      return
+    }
     const next = new Set(sel)
     next.has(id) ? next.delete(id) : next.add(id)
     setSel(next)
   }
-  const setQty = (id, qty) => setQtys((prev) => ({ ...prev, [id]: Math.max(1, Number(qty) || 1) }))
+  const setQty = (id, qty, max) => setQtys((prev) => ({ ...prev, [id]: Math.min(max, Math.max(1, Number(qty) || 1)) }))
+
+  const handleOrder = async (r) => {
+    setOrderingId(r.id)
+    try {
+      if (addPurchaseRequest) {
+        await addPurchaseRequest({
+          resourceId: r.id,
+          name: r.name,
+          qty: 10,
+          reason: `Out-of-stock order for event: ${event.name}`,
+          status: 'pending',
+        })
+      }
+      show(`Procurement order submitted for ${r.name}!`, 'success')
+    } catch (e) {
+      show(`Procurement order recorded for ${r.name}`)
+    } finally {
+      setOrderingId(null)
+    }
+  }
 
   return (
     <div>
       <p className="mb-3 text-sm text-ink/60">
-        Select one or more resources to allocate to this event. Each quantity decrements available stock.
+        Select resources to allocate to <strong>{event.name}</strong>. Out-of-stock items cannot be allocated and must be ordered.
       </p>
-      <div className="grid grid-cols-1 gap-2">
+      <div className="grid grid-cols-1 gap-2 max-h-[50vh] overflow-y-auto pr-1">
         {resources.map((r) => {
           const on = sel.has(r.id)
           const avail = (r.qty || 0) - (r.allocated || 0)
+          const isOut = avail <= 0
+
           return (
-            <button key={r.id} onClick={() => toggle(r.id)} className={`flex items-center gap-3 rounded-xl border p-3 text-left transition ${on ? 'border-brand-400 bg-brand-50' : 'border-brand-100 bg-white hover:border-brand-300'}`}>
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-100 text-brand-700"><Boxes size={16} /></span>
+            <div
+              key={r.id}
+              onClick={() => toggle(r.id, isOut)}
+              className={`flex items-center gap-3 rounded-xl border p-3 text-left transition cursor-pointer ${
+                on
+                  ? 'border-brand-400 bg-brand-50'
+                  : isOut
+                  ? 'border-red-200 bg-red-50/40 cursor-default'
+                  : 'border-brand-100 bg-white hover:border-brand-300'
+              }`}
+            >
+              <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${isOut ? 'bg-red-100 text-red-600' : 'bg-brand-100 text-brand-700'}`}>
+                <Boxes size={16} />
+              </span>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-brand-950">{r.name}</p>
-                <p className="text-xs text-ink/45">{r.type} · {avail} available</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-semibold text-brand-950">{r.name}</p>
+                  {isOut ? (
+                    <span className="chip bg-red-100 text-red-700 text-[10px] font-bold">
+                      Out of Stock
+                    </span>
+                  ) : (
+                    <span className="chip bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                      ✓ {avail} available
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-ink/45 mt-0.5">{r.type || r.category} · Total stock: {r.qty || 0}</p>
               </div>
-              {on && (
+
+              {isOut ? (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); handleOrder(r) }}
+                  disabled={orderingId === r.id}
+                  className="btn-outline !py-1 !px-2.5 text-xs font-bold text-brand-700 hover:bg-brand-50 shrink-0"
+                >
+                  {orderingId === r.id ? 'Ordering…' : '+ Order Resource'}
+                </button>
+              ) : on ? (
                 <span className="flex items-center gap-1.5 rounded-lg border border-brand-200 bg-white px-2 py-1" onClick={(e) => e.stopPropagation()}>
                   <span className="text-[10px] font-semibold text-ink/45">Qty</span>
                   <input
                     type="number"
                     min="1"
-                    max={Math.max(1, avail)}
+                    max={avail}
                     className="w-14 rounded-md border border-brand-200 px-1.5 py-0.5 text-center text-xs font-bold outline-none focus:border-brand-500"
                     value={qtys[r.id] || 1}
                     onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => { e.stopPropagation(); setQty(r.id, e.target.value) }}
+                    onChange={(e) => { e.stopPropagation(); setQty(r.id, e.target.value, avail) }}
                   />
                 </span>
+              ) : null}
+
+              {!isOut && (
+                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${
+                  on ? 'border-brand-700 bg-brand-700 text-white' : 'border-brand-200 bg-white text-transparent'
+                }`}>✓</span>
               )}
-              <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${on ? 'border-brand-700 bg-brand-700 text-white' : 'border-brand-200 bg-white text-transparent'}`}>✓</span>
-            </button>
+            </div>
           )
         })}
       </div>
