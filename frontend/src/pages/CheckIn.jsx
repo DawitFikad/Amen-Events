@@ -44,8 +44,23 @@ export default function CheckIn() {
     show(`Ticket QR saved as ${a.download}`)
   }
 
-  const activeEvent = state.events.find((e) => e.status === 'ongoing') || state.events[0]
-  const regs = state.registrations.filter((r) => r.eventId === activeEvent.id)
+  const ongoingEvents = state.events.filter((e) => e.status === 'ongoing')
+  const upcomingEvents = state.events.filter((e) => e.status === 'upcoming')
+  const activeEvents = ongoingEvents.length > 0 ? ongoingEvents : state.events.filter((e) => e.status !== 'pending_review' && e.status !== 'declined')
+
+  const [selectedEventId, setSelectedEventId] = useState('all')
+
+  const activeEvent = selectedEventId === 'all'
+    ? (ongoingEvents[0] || activeEvents[0] || state.events[0])
+    : (state.events.find((e) => e.id === selectedEventId) || state.events[0])
+
+  const regs = selectedEventId === 'all'
+    ? state.registrations.filter((r) => {
+        const ev = state.events.find((e) => e.id === r.eventId)
+        return ev && (ev.status === 'ongoing' || ev.status === 'upcoming')
+      })
+    : state.registrations.filter((r) => r.eventId === activeEvent?.id)
+
   const checkedIn = regs.filter((r) => r.checkedIn)
   const pct = regs.length ? Math.round((checkedIn.length / regs.length) * 100) : 0
 
@@ -58,7 +73,8 @@ export default function CheckIn() {
     if (!items.length) { show('Nothing to sync', 'warn'); return }
     let ok = 0, dup = 0
     for (const it of items) {
-      const res = await checkInRef.current(it.code, activeEvent.id)
+      const targetId = it.eventId || activeEvent?.id
+      const res = await checkInRef.current(it.code, targetId)
       if (res && res.ok) ok++
       else if (res && res.reason === 'duplicate') dup++
     }
@@ -75,81 +91,131 @@ export default function CheckIn() {
     setScanned(code)
     setEntered('')
 
-    // Ticket from a DIFFERENT event's check-in screen should be clearly rejected,
-    // not silently matched against this event.
-    if (parsed?.payload?.eventId && parsed.payload.eventId !== activeEvent.id) {
-      const p = parsed.payload
-      setResult({ ok: false, payload: p, wrongEvent: true })
-      show(`This ticket belongs to "${p.event || 'another event'}", not ${activeEvent.name}`, 'error')
-      return
+    const c = String(code).trim().toLowerCase()
+
+    // 1. Look up attendee across registrations in state
+    let reg = state.registrations.find((r) =>
+      (r.qr && r.qr.toLowerCase() === c) ||
+      (r.id && r.id.toLowerCase() === c) ||
+      (r.name && r.name.toLowerCase() === c) ||
+      (r.email && r.email.toLowerCase() === c)
+    )
+
+    let matchedEv = null
+    if (reg) {
+      matchedEv = state.events.find((e) => e.id === reg.eventId)
+    } else if (parsed?.payload?.eventId) {
+      matchedEv = state.events.find((e) => e.id === parsed.payload.eventId)
+    } else if (selectedEventId !== 'all') {
+      matchedEv = activeEvent
     }
 
-    // Match by unique ticket code, attendee id, attendee name, or email - scoped
-    // to this event's entry roll, so typing a name or code both work.
-    const c = String(code).trim().toLowerCase()
-    const reg = regsRef.current.find((r) =>
-      (r.qr && r.qr.toLowerCase() === c) || (r.id && r.id.toLowerCase() === c) ||
-      (r.name && r.name.toLowerCase() === c) || (r.email && r.email.toLowerCase() === c))
     if (!reg) {
       // Attempt live database check via checkIn
       if (!offlineRef.current) {
-        const res = await checkInRef.current(code, activeEvent?.id)
+        const queryEventId = selectedEventId === 'all' ? undefined : activeEvent?.id
+        const res = await checkInRef.current(code, queryEventId)
         if (res?.ok) {
           const full = res.reg
-          setResult({ ok: true, full, name: full?.name, type: full?.type, email: full?.email, phone: full?.phone, amount: full?.amount, paid: full?.paid, paymentMethod: full?.paymentMethod })
-          setTicketView({ ...full, event: activeEvent, venue: activeEvent ? state.venues.find((v) => v.id === activeEvent.venueId) : null })
-          show(`Welcome, ${full?.name || 'Guest'}! Checked in`)
+          const ev = state.events.find((e) => e.id === full?.eventId) || activeEvent
+          setResult({
+            ok: true,
+            full,
+            name: full?.name,
+            type: full?.type,
+            email: full?.email,
+            phone: full?.phone,
+            amount: full?.amount,
+            paid: full?.paid,
+            paymentMethod: full?.paymentMethod,
+            eventName: ev?.name,
+          })
+          setTicketView({ ...full, event: ev, venue: ev ? state.venues.find((v) => v.id === ev.venueId) : null })
+          show(`Welcome, ${full?.name || 'Guest'}! Checked in to "${ev.name}"`)
           return
         } else if (res?.reason === 'duplicate') {
           setResult({ ok: false, dup: true, name: res.reg?.name, type: res.reg?.type })
           show('Already checked in - duplicate detected', 'warn')
           return
         } else if (res?.reason === 'wrong-event') {
-          setResult({ ok: false, payload: { name: res.reg?.name }, wrongEvent: true })
-          show(`This ticket belongs to another event - check-in is for "${activeEvent.name}"`, 'error')
+          const otherEv = state.events.find((e) => e.id === res.reg?.eventId)
+          if (otherEv && (otherEv.status === 'ongoing' || otherEv.status === 'upcoming')) {
+            const retryRes = await checkInRef.current(code, otherEv.id)
+            if (retryRes?.ok) {
+              const full = retryRes.reg
+              setResult({
+                ok: true,
+                full,
+                name: full?.name,
+                type: full?.type,
+                email: full?.email,
+                phone: full?.phone,
+                amount: full?.amount,
+                paid: full?.paid,
+                paymentMethod: full?.paymentMethod,
+                eventName: otherEv.name,
+              })
+              setTicketView({ ...full, event: otherEv, venue: state.venues.find((v) => v.id === otherEv.venueId) })
+              show(`Welcome, ${full?.name}! Checked in to ongoing event "${otherEv.name}"`)
+              return
+            }
+          }
+          setResult({ ok: false, payload: { name: res.reg?.name, event: otherEv?.name }, wrongEvent: true })
+          show(`Ticket belongs to event "${otherEv?.name || 'another event'}"`, 'warn')
           return
         }
       }
 
-      // A valid QR payload carries the attendee's full details even if not yet in
-      // this event's local list - surface them instead of a blank "not found".
       if (parsed && parsed.payload) {
         const p = parsed.payload
         setResult({ ok: false, payload: p })
-        show(`Ticket found for ${p.name || 'attendee'} - not on this event's roll`, 'warn')
+        show(`Ticket found for ${p.name || 'attendee'} - not registered on roll`, 'warn')
       } else {
         setResult({ ok: false })
-        show('Ticket not found - check the code or attendee name', 'error')
+        show('Ticket not found - check code or name', 'error')
       }
       return
     }
+
+    const effectiveEvent = matchedEv || activeEvent
+
     if (reg.checkedIn) {
-      setResult({ ok: false, dup: true, name: reg.name, type: reg.type, email: reg.email })
-      show('Already checked in - duplicate detected', 'warn')
+      setResult({ ok: false, dup: true, name: reg.name, type: reg.type, email: reg.email, eventName: effectiveEvent?.name })
+      show(`Already checked in for "${effectiveEvent?.name || 'this event'}" - duplicate detected`, 'warn')
       return
     }
+
     if (offlineRef.current) {
-      queueRef.current = [...queueRef.current, { code: reg.qr, eventId: activeEvent.id, name: reg.name, type: reg.type, email: reg.email, phone: reg.phone }]
+      queueRef.current = [...queueRef.current, { code: reg.qr || reg.id, eventId: effectiveEvent.id, name: reg.name, type: reg.type, email: reg.email, phone: reg.phone }]
       setQueue(queueRef.current)
-      setResult({ ok: true, queued: true, full: reg, name: reg.name, type: reg.type, email: reg.email, phone: reg.phone })
-      show('Saved offline - will sync when back online', 'success')
+      setResult({ ok: true, queued: true, full: reg, name: reg.name, type: reg.type, email: reg.email, phone: reg.phone, eventName: effectiveEvent.name })
+      show(`Saved offline for "${effectiveEvent.name}" - will sync when back online`, 'success')
       return
     }
-    const res = await checkInRef.current(reg.qr, activeEvent.id)
+
+    const res = await checkInRef.current(reg.qr || reg.id, effectiveEvent.id)
     if (res.ok) {
       const full = res.reg || reg
-      setResult({ ok: true, full, name: full.name, type: full.type, email: full.email, phone: full.phone, amount: full.amount, paid: full.paid, paymentMethod: full.paymentMethod })
-      setTicketView({ ...full, event: activeEvent, venue: activeEvent ? state.venues.find((v) => v.id === activeEvent.venueId) : null })
-      show(`Welcome, ${full.name}! Checked in`)
+      setResult({
+        ok: true,
+        full,
+        name: full.name,
+        type: full.type,
+        email: full.email,
+        phone: full.phone,
+        amount: full.amount,
+        paid: full.paid,
+        paymentMethod: full.paymentMethod,
+        eventName: effectiveEvent.name,
+      })
+      setTicketView({ ...full, event: effectiveEvent, venue: state.venues.find((v) => v.id === effectiveEvent.venueId) })
+      show(`Welcome, ${full.name}! Checked in to "${effectiveEvent.name}"`)
     } else if (res.reason === 'duplicate') {
-      setResult({ ok: false, dup: true, name: res.reg.name, type: res.reg.type })
+      setResult({ ok: false, dup: true, name: res.reg?.name || reg.name, type: res.reg?.type || reg.type, eventName: effectiveEvent.name })
       show('Already checked in - duplicate detected', 'warn')
-    } else if (res.reason === 'wrong-event') {
-      setResult({ ok: false, payload: { name: res.reg?.name, event: res.reg && regsRef.current.length ? undefined : undefined }, wrongEvent: true })
-      show(`This ticket belongs to another event - check-in is for "${activeEvent.name}"`, 'error')
     } else {
       setResult({ ok: false })
-      show('Ticket not found - check the code or attendee name', 'error')
+      show('Validation error - please re-scan', 'error')
     }
   }
 
@@ -297,7 +363,11 @@ export default function CheckIn() {
     <div>
       <PageHeader
         title="QR Check-in System"
-        subtitle={`Live check-in for "${activeEvent?.name}"`}
+        subtitle={
+          selectedEventId === 'all'
+            ? `Universal check-in active across all ongoing events (${ongoingEvents.length} live)`
+            : `Live check-in for "${activeEvent?.name}"`
+        }
         icon={QrCode}
         actions={
           <>
@@ -308,6 +378,75 @@ export default function CheckIn() {
           </>
         }
       />
+
+      {/* Event Selector & Mode Bar */}
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand-100 bg-white p-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
+            <ScanLine size={20} />
+          </span>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-brand-950 text-sm">Event Check-in Gate</h3>
+              <span className="chip bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                ● Live Gate
+              </span>
+            </div>
+            <p className="text-xs text-ink/50">
+              {selectedEventId === 'all'
+                ? `Universal Mode: Tickets for any ongoing event are accepted and checked in automatically.`
+                : `Focused on: ${activeEvent?.name}`}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-semibold text-ink/60 shrink-0">Select Event:</label>
+          <select
+            value={selectedEventId}
+            onChange={(e) => {
+              setSelectedEventId(e.target.value)
+              setResult(null)
+            }}
+            className="input !py-1.5 text-xs font-bold text-brand-950 pr-8"
+          >
+            <option value="all">⚡ All Ongoing Events (Universal Check-in)</option>
+            {ongoingEvents.map((e) => (
+              <option key={e.id} value={e.id}>
+                ● [Ongoing] {e.name} ({state.registrations.filter((r) => r.eventId === e.id).length} registered)
+              </option>
+            ))}
+            {upcomingEvents.map((e) => (
+              <option key={e.id} value={e.id}>
+                ○ [Upcoming] {e.name} ({state.registrations.filter((r) => r.eventId === e.id).length} registered)
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Ongoing event quick chips */}
+      {selectedEventId === 'all' && ongoingEvents.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-bold text-ink/45">Ongoing Events:</span>
+          {ongoingEvents.map((ev) => {
+            const evRegs = state.registrations.filter((r) => r.eventId === ev.id)
+            const evChecked = evRegs.filter((r) => r.checkedIn)
+            return (
+              <button
+                key={ev.id}
+                type="button"
+                onClick={() => setSelectedEventId(ev.id)}
+                className="chip bg-white hover:bg-brand-50 text-brand-950 border border-brand-200 text-xs py-1 px-3 flex items-center gap-2 shadow-xs transition"
+              >
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="font-bold">{ev.name}:</span>
+                <span className="text-brand-700 font-semibold">{evChecked.length}/{evRegs.length} in</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {/* Live stats */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -485,7 +624,9 @@ export default function CheckIn() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-brand-950">{r.name}</p>
-                  <p className="truncate text-[11px] text-ink/40">{r.type} · {r.qr}{r.paymentMethod ? ` · ${r.paymentMethod}` : ''}</p>
+                  <p className="truncate text-[11px] text-ink/40">
+                    {r.type} · {r.qr}{state.events.find((e) => e.id === r.eventId) ? ` · ${state.events.find((e) => e.id === r.eventId)?.name}` : ''}{r.paymentMethod ? ` · ${r.paymentMethod}` : ''}
+                  </p>
                 </div>
                 <Badge status={r.checkedIn ? 'active' : 'todo'} label={r.checkedIn ? (r.checkedInAt ? `In ${r.checkedInAt}` : 'In') : 'Out'} />
               </div>

@@ -98,6 +98,70 @@ router.put('/:id', authRequired, requirePermission('events', 'edit'), async (req
   res.json({ event })
 })
 
+// Event Manager review endpoint: accept or decline client event
+router.put('/:id/review', authRequired, requirePermission('events', 'edit'), async (req, res) => {
+  try {
+    const { action, note, reason } = req.body // action: 'accept' | 'decline'
+    const event = await prisma.event.findUnique({
+      where: { id: req.params.id },
+      include: { client: true },
+    })
+
+    if (!event) return res.status(404).json({ error: 'Event not found' })
+
+    const isAccept = action === 'accept'
+    const newStatus = isAccept ? 'upcoming' : 'declined'
+    const updated = await prisma.event.update({
+      where: { id: req.params.id },
+      data: {
+        status: newStatus,
+        published: isAccept,
+      },
+      include: { client: true, venue: true },
+    })
+
+    // Update any linked approval requests
+    await prisma.approvalRequest.updateMany({
+      where: { entityId: req.params.id, type: 'event' },
+      data: {
+        status: isAccept ? 'approved' : 'rejected',
+        reviewNote: reason || note || (isAccept ? 'Event accepted by manager' : 'Event declined by manager'),
+        reviewedBy: req.user.id,
+      },
+    }).catch(() => {})
+
+    // Log activity
+    await prisma.activityLog.create({
+      data: {
+        userId: req.user.id,
+        text: `Event "${event.name}" ${isAccept ? 'accepted & published' : 'declined'} by Event Manager`,
+        type: 'event',
+        at: 'Just now',
+      },
+    }).catch(() => {})
+
+    // Notify client
+    if (event.clientId) {
+      await prisma.notification.create({
+        data: {
+          userId: event.clientId,
+          text: isAccept
+            ? `Good news! Your event "${event.name}" has been accepted and approved by the Event Manager.`
+            : `Your event submission "${event.name}" was declined: ${reason || note || 'Please contact your event manager for details.'}`,
+          type: 'approval',
+          at: 'Just now',
+          link: `/erp/portal/events`,
+        },
+      }).catch(() => {})
+    }
+
+    res.json({ event: updated })
+  } catch (err) {
+    console.error('Event review error:', err)
+    res.status(500).json({ error: err.message || 'Failed to review event' })
+  }
+})
+
 router.delete('/:id', authRequired, requirePermission('events', 'delete'), async (req, res) => {
   await prisma.event.delete({ where: { id: req.params.id } })
   res.json({ success: true })

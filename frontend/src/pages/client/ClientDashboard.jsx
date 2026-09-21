@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   CalendarDays, Clock, CheckCircle2, AlertCircle, TrendingUp, Wallet,
   Bell, ArrowRight, FileText, MessageSquare, Users, Ticket, Activity,
-  ChevronRight, Building2, MapPin,
+  ChevronRight, Building2, MapPin, Plus, Sparkles,
 } from 'lucide-react'
 import { useData } from '../../store/DataContext'
 import { StatCard, Badge, Progress } from '../../components/ui'
@@ -31,12 +31,13 @@ export default function ClientDashboard() {
   }, [state.registrations, myEvents])
 
   const stats = useMemo(() => {
+    const pending = myEvents.filter((e) => e.status === 'pending_review').length
     const upcoming = myEvents.filter((e) => e.status === 'upcoming').length
     const ongoing = myEvents.filter((e) => e.status === 'ongoing').length
     const completed = myEvents.filter((e) => e.status === 'completed').length
     const outstanding = myInvoices.filter((i) => i.status !== 'paid').reduce((a, i) => a + (i.amount - (i.paid || 0)), 0)
     const totalBudget = myEvents.reduce((a, e) => a + (e.budget || 0), 0)
-    return { total: myEvents.length, upcoming, ongoing, completed, outstanding, totalBudget }
+    return { total: myEvents.length, pending, upcoming, ongoing, completed, outstanding, totalBudget }
   }, [myEvents, myInvoices])
 
   const myMeetings = useMemo(() => {
@@ -61,8 +62,9 @@ export default function ClientDashboard() {
   const recentActivities = state.activities.slice(0, 5)
 
   const quickActions = [
-    { label: 'Browse Events', icon: Ticket, route: '/erp/portal/browse', tone: 'bg-brand-600' },
-    { label: 'View My Events', icon: CalendarDays, route: '/erp/portal/events', tone: 'bg-brand-500' },
+    { label: 'Add New Event', icon: Plus, route: '/erp/portal/events?create=true', tone: 'bg-brand-600' },
+    { label: 'Browse Events', icon: Ticket, route: '/erp/portal/browse', tone: 'bg-brand-500' },
+    { label: 'View My Events', icon: CalendarDays, route: '/erp/portal/events', tone: 'bg-emerald-600' },
     { label: 'Pay Invoices', icon: Wallet, route: '/erp/portal/invoices', tone: 'bg-gold-500' },
     { label: 'Contact PM', icon: MessageSquare, route: '/erp/portal/messages', tone: 'bg-ink' },
   ]

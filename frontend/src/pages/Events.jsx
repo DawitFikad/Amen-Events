@@ -4,6 +4,7 @@ import {
   ChevronRight, ArrowLeft, ListChecks, Sparkles, BarChart3, GitBranch, Boxes,
   Upload, Globe, Trash2, Info as InfoIcon, Tag, Megaphone, Ticket, Image as ImageIcon, Phone,
   ChevronDown, Check, CheckCircle2, PackageCheck, Activity,
+  Mic, Store, Truck, Search,
 } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, Avatar, Modal, ConfirmModal, Field, SearchBox, Toast, EmptyState, Th, Td, Segmented, StatCard } from '../components/ui'
@@ -71,7 +72,12 @@ const timelineDot = {
 }
 
 export default function Events() {
-  const { state, addEvent, updateEvent, addEventDoc, addTask, logActivity, patchBy, intent, clearIntent, markDone, setEventTeam, setEventBudget, allocateResource, allocateResources } = useData()
+  const {
+    state, addEvent, updateEvent, addEventDoc, addTask, logActivity, patchBy,
+    intent, clearIntent, markDone, setEventTeam, setEventBudget, allocateResource, allocateResources,
+    acceptClientEvent, declineClientEvent,
+    updateSpeaker, updateExhibitor, setEventSuppliers, addSpeaker, addExhibitor, addVendor,
+  } = useData()
   const [viewId, setViewId] = useState(null)
   const [tab, setTab] = useState('all')
   const [open, setOpen] = useState(false)
@@ -97,8 +103,41 @@ export default function Events() {
   const [noteText, setNoteText] = useState('')
   const [tlAddOpen, setTlAddOpen] = useState(false)
   const [tlAddTitle, setTlAddTitle] = useState('')
+  const [declineModalOpen, setDeclineModalOpen] = useState(false)
+  const [declineTargetId, setDeclineTargetId] = useState(null)
+  const [declineReason, setDeclineReason] = useState('')
+
+  // Stakeholders selection state for event creation
+  const [stakeholderTab, setStakeholderTab] = useState('speakers')
+  const [stakeholderSearch, setStakeholderSearch] = useState('')
+  const [quickAddType, setQuickAddType] = useState(null)
+  const [quickSpeakerForm, setQuickSpeakerForm] = useState({ name: '', company: '', topic: '', time: '' })
+  const [quickExhibitorForm, setQuickExhibitorForm] = useState({ company: '', booth: '', package: 'Standard' })
+  const [quickVendorForm, setQuickVendorForm] = useState({ name: '', type: 'Catering', phone: '' })
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
+
+  const handleAccept = async (id) => {
+    try {
+      await acceptClientEvent(id)
+      show('Event accepted and published successfully!')
+    } catch (err) {
+      show(err.message || 'Failed to accept event', 'error')
+    }
+  }
+
+  const handleDeclineSubmit = async () => {
+    if (!declineTargetId) return
+    try {
+      await declineClientEvent(declineTargetId, declineReason)
+      show('Event submission declined. Client notified.')
+      setDeclineModalOpen(false)
+      setDeclineReason('')
+      setDeclineTargetId(null)
+    } catch (err) {
+      show(err.message || 'Failed to decline event', 'error')
+    }
+  }
 
   // Demo intents
   useEffect(() => {
@@ -159,6 +198,7 @@ export default function Events() {
   }, [intent])
 
   let events = state.events
+  if (tab === 'pending_review') events = events.filter((e) => e.status === 'pending_review')
   if (tab === 'upcoming') events = events.filter((e) => e.status === 'upcoming')
   if (tab === 'ongoing') events = events.filter((e) => e.status === 'ongoing')
   if (tab === 'completed') events = events.filter((e) => e.status === 'completed')
@@ -167,6 +207,86 @@ export default function Events() {
   const active = state.events.find((e) => e.id === viewId)
   const client = (id) => state.clients.find((c) => c.id === id)
   const venue = (id) => state.venues.find((v) => v.id === id)
+
+  // Venue conflict lookup helper
+  const activeEventsWithVenues = (state.events || []).filter(
+    (e) => e.venueId && e.status !== 'completed' && e.status !== 'declined'
+  )
+  const getVenueConflict = (venueId, date, excludeId = null) => {
+    if (!venueId || !date) return null
+    return activeEventsWithVenues.find(
+      (e) => e.venueId === venueId && e.date === date && (!excludeId || e.id !== excludeId)
+    )
+  }
+
+  // Stakeholders toggles for event creation
+  const toggleSpeaker = (id) => {
+    setForm((prev) => {
+      const current = prev.speakerIds || []
+      const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id]
+      return { ...prev, speakerIds: next }
+    })
+  }
+
+  const toggleExhibitor = (id) => {
+    setForm((prev) => {
+      const current = prev.exhibitorIds || []
+      const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id]
+      return { ...prev, exhibitorIds: next }
+    })
+  }
+
+  const toggleVendor = (id) => {
+    setForm((prev) => {
+      const current = prev.vendorIds || []
+      const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id]
+      return { ...prev, vendorIds: next }
+    })
+  }
+
+  // Quick-add handlers inside event creation modal
+  const handleQuickAddSpeaker = async () => {
+    if (!quickSpeakerForm.name.trim()) { show('Speaker name is required', 'warn'); return }
+    const sp = await addSpeaker({
+      name: quickSpeakerForm.name.trim(),
+      company: quickSpeakerForm.company.trim() || 'Guest Speaker',
+      topic: quickSpeakerForm.topic.trim() || 'Keynote Presentation',
+      time: quickSpeakerForm.time.trim() || form.time || '10:00',
+      status: 'confirmed',
+    })
+    setForm((f) => ({ ...f, speakerIds: [...(f.speakerIds || []), sp.id] }))
+    setQuickSpeakerForm({ name: '', company: '', topic: '', time: '' })
+    setQuickAddType(null)
+    show(`Speaker "${sp.name}" added and selected!`)
+  }
+
+  const handleQuickAddExhibitor = async () => {
+    if (!quickExhibitorForm.company.trim()) { show('Company name is required', 'warn'); return }
+    const ex = await addExhibitor({
+      company: quickExhibitorForm.company.trim(),
+      booth: quickExhibitorForm.booth.trim() || `B${(state.exhibitors || []).length + 1}`,
+      package: quickExhibitorForm.package || 'Standard',
+      status: 'confirmed',
+    })
+    setForm((f) => ({ ...f, exhibitorIds: [...(f.exhibitorIds || []), ex.id] }))
+    setQuickExhibitorForm({ company: '', booth: '', package: 'Standard' })
+    setQuickAddType(null)
+    show(`Exhibitor "${ex.company}" added and selected!`)
+  }
+
+  const handleQuickAddVendor = async () => {
+    if (!quickVendorForm.name.trim()) { show('Vendor name is required', 'warn'); return }
+    const vn = await addVendor({
+      name: quickVendorForm.name.trim(),
+      type: quickVendorForm.type || 'Catering',
+      phone: quickVendorForm.phone.trim() || '+251 911 000 000',
+      status: 'active',
+    })
+    setForm((f) => ({ ...f, vendorIds: [...(f.vendorIds || []), vn.id] }))
+    setQuickVendorForm({ name: '', type: 'Catering', phone: '' })
+    setQuickAddType(null)
+    show(`Vendor "${vn.name}" added and selected!`)
+  }
 
   const validateStep = (s) => {
     if (s === 1) {
@@ -221,13 +341,38 @@ export default function Events() {
     for (const d of docs) {
       await addEventDoc(rec.id, d.name, d.ext || 'PDF', d.size || '-', { type: d.type || 'file', sizeBytes: d.sizeBytes, mimeType: d.mimeType })
     }
-    show(`Event "${form.name}" registered successfully!`)
+
+    // Link selected Vendors / Suppliers
+    if (form.vendorIds && form.vendorIds.length > 0) {
+      await setEventSuppliers(rec.id, form.vendorIds)
+    }
+
+    // Link selected Speakers
+    if (form.speakerIds && form.speakerIds.length > 0) {
+      for (const spId of form.speakerIds) {
+        await updateSpeaker(spId, { eventId: rec.id })
+      }
+    }
+
+    // Link selected Exhibitors
+    if (form.exhibitorIds && form.exhibitorIds.length > 0) {
+      for (const exId of form.exhibitorIds) {
+        await updateExhibitor(exId, { eventId: rec.id })
+      }
+    }
+
+    show(`Event "${form.name}" registered successfully with venue, speakers, exhibitors, and vendors!`)
     setOpen(false)
     setForm({})
     setErrors({})
     setRegStep(1)
     if (rec) {
-      setCreatedSuccessModal(rec)
+      setCreatedSuccessModal({
+        ...rec,
+        speakerCount: (form.speakerIds || []).length,
+        exhibitorCount: (form.exhibitorIds || []).length,
+        vendorCount: (form.vendorIds || []).length,
+      })
     }
   }
 
@@ -277,17 +422,21 @@ export default function Events() {
   const saveEvent = () => {
     if (!editForm.name) { show('Event name is required', 'warn'); return }
     const tags = typeof editForm.tags === 'string' ? editForm.tags.split(',').map((t) => t.trim()).filter(Boolean) : Array.isArray(editForm.tags) ? editForm.tags : []
-    patchBy('events', active.id, {
+    const updates = {
       name: editForm.name, category: editForm.category, date: editForm.date,
       time: editForm.time, endDate: editForm.endDate || '', endTime: editForm.endTime || '',
       deadline: editForm.deadline || '', capacity: Number(editForm.capacity) || 0,
       price: Number(editForm.price) || 0, status: editForm.status,
       description: editForm.description || '', tags, published: !!editForm.published,
       contactName: editForm.contactName || '', contactPhone: editForm.contactPhone || '',
-    })
+      venueId: editForm.venueId || null,
+      budget: Number(editForm.budget) || 0,
+    }
+    if (updateEvent) updateEvent(active.id, updates)
+    else patchBy('events', active.id, updates)
     logActivity(`Event "${editForm.name}" details updated`, 'event')
     setEditOpen(false)
-    show('Event updated')
+    show('Event updated successfully!')
   }
 
   const saveNote = () => {
@@ -313,6 +462,7 @@ export default function Events() {
   }
 
   const totalEvents = state.events.length
+  const pendingEvents = state.events.filter((e) => e.status === 'pending_review').length
   const upcomingEvents = state.events.filter((e) => e.status === 'upcoming').length
   const ongoingEvents = state.events.filter((e) => e.status === 'ongoing').length
   const activeEvents = upcomingEvents + ongoingEvents
@@ -334,6 +484,31 @@ export default function Events() {
 
       {!active ? (
         <>
+          {/* Client Pending Review Alert Banner */}
+          {pendingEvents > 0 && (
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-amber-300 bg-amber-50/90 p-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-200 text-amber-900 font-black text-sm">
+                  {pendingEvents}
+                </span>
+                <div>
+                  <p className="text-sm font-bold text-amber-950">
+                    {pendingEvents} event{pendingEvents > 1 ? 's' : ''} submitted by clients awaiting review
+                  </p>
+                  <p className="text-xs text-amber-800">
+                    Clients have proposed new events. Review requirements, edit details as needed, and accept or decline.
+                  </p>
+                </div>
+              </div>
+              <button
+                className="rounded-xl bg-amber-600 px-4 py-2 text-xs font-bold text-white hover:bg-amber-700 transition shadow-sm"
+                onClick={() => setTab('pending_review')}
+              >
+                Review Submissions ({pendingEvents})
+              </button>
+            </div>
+          )}
+
           {/* Live stat cards */}
           <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <StatCard label="Active Events" value={activeEvents} icon={CalendarDays} tone="brand" sub={`${upcomingEvents} upcoming · ${ongoingEvents} ongoing`} />
@@ -348,6 +523,7 @@ export default function Events() {
               onChange={setTab}
               options={[
                 { value: 'all', label: `All (${totalEvents})` },
+                { value: 'pending_review', label: `Pending Review (${pendingEvents})` },
                 { value: 'upcoming', label: `Upcoming (${upcomingEvents})` },
                 { value: 'ongoing', label: `Ongoing (${ongoingEvents})` },
                 { value: 'completed', label: `Completed (${completedEvents})` },
@@ -362,21 +538,67 @@ export default function Events() {
               const v = venue(e.venueId)
               const team = e.team?.length ? e.team : (teamByEvent[e.id] || [e.pmId])
               const pct = e.progress
+              const isPending = e.status === 'pending_review'
+              const isDeclined = e.status === 'declined'
+
               return (
-                <button key={e.id} onClick={() => setViewId(e.id)} className="card group overflow-hidden p-5 text-left transition hover:-translate-y-0.5 hover:shadow-pop">
+                <button key={e.id} onClick={() => setViewId(e.id)} className={`card group overflow-hidden p-5 text-left transition hover:-translate-y-0.5 hover:shadow-pop ${isPending ? 'ring-2 ring-amber-300 bg-amber-50/20' : ''}`}>
                   {e.image && <div className="mb-3 -mx-5 -mt-5 h-28 overflow-hidden"><img src={e.image} alt={e.name} className="h-full w-full object-cover" /></div>}
                   <div className="flex items-start justify-between">
-                    <span className={`chip ${e.status === 'upcoming' ? 'bg-gold-100 text-gold-700' : e.status === 'ongoing' ? 'bg-brand-100 text-brand-800' : 'bg-slate-100 text-slate-500'}`}>{e.status}</span>
+                    <span className={`chip ${
+                      isPending
+                        ? 'bg-amber-100 text-amber-900 ring-1 ring-amber-300 font-bold'
+                        : isDeclined
+                        ? 'bg-red-100 text-red-800 font-bold'
+                        : e.status === 'upcoming'
+                        ? 'bg-gold-100 text-gold-700'
+                        : e.status === 'ongoing'
+                        ? 'bg-brand-100 text-brand-800'
+                        : 'bg-slate-100 text-slate-500'
+                    }`}>
+                      {isPending ? '● Pending Review' : isDeclined ? 'Declined' : e.status}
+                    </span>
                     <Badge status="done" label={e.category} />
                   </div>
                   <h3 className="mt-3 text-[15px] font-bold leading-snug text-brand-950 group-hover:text-brand-700">{e.name}</h3>
-                  <p className="mt-1 text-xs text-ink/50">{c?.company} · {c?.industry}</p>
+                  <p className="mt-1 text-xs text-ink/50 font-medium">
+                    {c?.company ? `Client: ${c.company}` : 'Internal Event'} {c?.contactPerson ? `(${c.contactPerson})` : ''}
+                  </p>
 
                   <div className="mt-4 space-y-1.5 text-xs text-ink/55">
-                    <p className="flex items-center gap-2"><Clock3 size={13} className="text-brand-600" /> {e.date} at {e.time}</p>
+                    <p className="flex items-center gap-2"><Clock3 size={13} className="text-brand-600" /> {e.date || 'Date TBD'} at {e.time || '09:00'}</p>
                     <p className="flex items-center gap-2"><MapPin size={13} className="text-brand-600" /> {v?.name || 'Venue TBD'}</p>
                     <p className="flex items-center gap-2"><Wallet size={13} className="text-brand-600" /> Budget {fmt(e.budget)}</p>
                   </div>
+
+                  {isPending && (
+                    <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-900" onClick={(evt) => evt.stopPropagation()}>
+                      <p className="font-bold">Proposed by client awaiting approval.</p>
+                      <div className="mt-2 flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleAccept(e.id)}
+                          className="flex-1 rounded-md bg-brand-600 py-1 text-center text-[11px] font-bold text-white hover:bg-brand-700 transition"
+                        >
+                          ✓ Accept
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setDeclineTargetId(e.id); setDeclineModalOpen(true); }}
+                          className="flex-1 rounded-md border border-red-200 bg-red-50 py-1 text-center text-[11px] font-bold text-red-700 hover:bg-red-100 transition"
+                        >
+                          Decline
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setViewId(e.id); setEditForm({ ...e }); setEditOpen(true); }}
+                          className="rounded-md border border-brand-200 bg-white px-2 py-1 text-center text-[11px] font-bold text-brand-800 hover:bg-brand-50 transition"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="mt-4">
                     <div className="mb-1.5 flex items-center justify-between text-[11px]">
@@ -395,7 +617,7 @@ export default function Events() {
                       {team.length > 4 && <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-50 text-[10px] font-bold text-brand-800 ring-2 ring-white">+{team.length - 4}</span>}
                     </div>
                     <div className="flex items-center gap-2">
-                      {e.status !== 'completed' ? (
+                      {!isPending && e.status !== 'completed' ? (
                         <button
                           type="button"
                           onClick={(evt) => {
@@ -410,11 +632,11 @@ export default function Events() {
                         >
                           <CheckCircle2 size={12} /> Complete
                         </button>
-                      ) : (
+                      ) : !isPending ? (
                         <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-600">
                           <Check size={12} /> Done
                         </span>
-                      )}
+                      ) : null}
                       <span className="inline-flex items-center gap-1 text-xs font-bold text-brand-700 sm:opacity-0 sm:transition sm:group-hover:opacity-100">Open <ChevronRight size={14} /></span>
                     </div>
                   </div>
@@ -502,6 +724,8 @@ export default function Events() {
           detailTab={detailTab}
           setDetailTab={setDetailTab}
           show={show}
+          onAccept={handleAccept}
+          onDecline={(id) => { setDeclineTargetId(id); setDeclineModalOpen(true); }}
           teamOpen={teamOpen}
           setTeamOpen={setTeamOpen}
           resOpen={resOpen}
@@ -548,20 +772,21 @@ export default function Events() {
       )}
 
       {/* Create event - Multi-step Stepper with Top Progress Bar */}
-      <Modal open={open} onClose={() => { setOpen(false); setRegStep(1) }} title="Register New Event" width="max-w-2xl" dirty={Boolean(form.name || form.clientId || form.category || regStep > 1)}>
+      <Modal open={open} onClose={() => { setOpen(false); setRegStep(1) }} title="Register New Event" width="max-w-3xl" dirty={Boolean(form.name || form.clientId || form.category || regStep > 1)}>
         {/* Stepper Progress Bar */}
         <div className="mb-6">
           <div className="flex items-center justify-between text-[11px] font-bold text-ink/60">
-            <span className={regStep >= 1 ? 'text-brand-700' : ''}>1. Basics & Banner</span>
-            <span className={regStep >= 2 ? 'text-brand-700' : ''}>2. Schedule & Venue</span>
-            <span className={regStep >= 3 ? 'text-brand-700' : ''}>3. Ticketing & Contact</span>
-            <span className={regStep >= 4 ? 'text-brand-700' : ''}>4. Review & Docs</span>
+            <span className={regStep >= 1 ? 'text-brand-700 font-black' : ''}>1. Basics & Banner</span>
+            <span className={regStep >= 2 ? 'text-brand-700 font-black' : ''}>2. Schedule & Venue</span>
+            <span className={regStep >= 3 ? 'text-brand-700 font-black' : ''}>3. Speakers & Partners</span>
+            <span className={regStep >= 4 ? 'text-brand-700 font-black' : ''}>4. Ticketing & Contact</span>
+            <span className={regStep >= 5 ? 'text-brand-700 font-black' : ''}>5. Review & Docs</span>
           </div>
           <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-100">
             <div
               className="h-full rounded-full transition-all duration-500 ease-out"
               style={{
-                width: regStep === 1 ? '25%' : regStep === 2 ? '50%' : regStep === 3 ? '75%' : '100%',
+                width: `${(regStep / 5) * 100}%`,
                 background: 'linear-gradient(90deg, #188A2E, #39D353)',
               }}
             />
@@ -652,7 +877,7 @@ export default function Events() {
           </div>
         )}
 
-        {/* STEP 2: SCHEDULE & VENUE */}
+        {/* STEP 2: SCHEDULE & VENUE (With real-time date conflict check) */}
         {regStep === 2 && (
           <div className="space-y-4">
             <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><CalendarDays size={13} /> Schedule</p>
@@ -674,12 +899,50 @@ export default function Events() {
               <Field label="Venue">
                 <select className="input" value={form.venueId || ''} onChange={(e) => setForm({ ...form, venueId: e.target.value })}>
                   <option value="">Select venue…</option>
-                  {state.venues.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.name} ({v.city || 'Addis Ababa'})
-                    </option>
-                  ))}
+                  {state.venues.map((v) => {
+                    const conflict = form.date ? getVenueConflict(v.id, form.date) : null
+                    return (
+                      <option key={v.id} value={v.id}>
+                        {v.name} ({v.city || 'Addis Ababa'})
+                        {form.date
+                          ? conflict
+                            ? ` — ⚠️ [Booked on ${form.date}: ${conflict.name}]`
+                            : ' — ✓ Available'
+                          : ''}
+                      </option>
+                    )
+                  })}
                 </select>
+                {form.venueId && (
+                  <div className="mt-1.5">
+                    {!form.date ? (
+                      <p className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-[11px] font-medium text-amber-800">
+                        📅 Please pick a <strong>Start Date</strong> above to check venue availability and booking status.
+                      </p>
+                    ) : (() => {
+                      const conflict = getVenueConflict(form.venueId, form.date)
+                      if (conflict) {
+                        return (
+                          <div className="flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-900">
+                            <span className="text-base">⚠️</span>
+                            <div>
+                              <p className="font-bold text-amber-950">Booked on this date</p>
+                              <p className="text-[11px]">
+                                This venue is already booked for <strong>"{conflict.name}"</strong> on {form.date}. You can still proceed or select another venue.
+                              </p>
+                            </div>
+                          </div>
+                        )
+                      }
+                      return (
+                        <div className="flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
+                          <CheckCircle2 size={16} className="shrink-0 text-emerald-600" />
+                          <span>✓ Selected as booked for this event on {form.date}</span>
+                        </div>
+                      )
+                    })()}
+                  </div>
+                )}
               </Field>
               <Field label="Expected Attendees">
                 <div className="relative">
@@ -706,14 +969,419 @@ export default function Events() {
                   if (validateStep(2)) setRegStep(3)
                 }}
               >
+                Next: Speakers & Partners →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 3: SPEAKERS, EXHIBITORS & VENDORS */}
+        {regStep === 3 && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40">
+                  <Users size={13} /> Event Lineup & Stakeholders
+                </p>
+                <p className="text-xs text-ink/50 mt-0.5">
+                  Select speakers, exhibitors, and suppliers to assign to this event.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="chip bg-brand-50 text-brand-800 font-bold text-xs">
+                  {((form.speakerIds || []).length) + ((form.exhibitorIds || []).length) + ((form.vendorIds || []).length)} Total Selected
+                </span>
+              </div>
+            </div>
+
+            {/* Stakeholder Category Tabs */}
+            <div className="flex gap-2 border-b border-brand-100 pb-2">
+              <button
+                type="button"
+                onClick={() => { setStakeholderTab('speakers'); setStakeholderSearch('') }}
+                className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition ${
+                  stakeholderTab === 'speakers'
+                    ? 'bg-brand-600 text-white shadow-sm'
+                    : 'bg-brand-50/70 text-brand-900 hover:bg-brand-100'
+                }`}
+              >
+                <Mic size={14} />
+                <span>Speakers</span>
+                <span className={`ml-1 rounded-full px-1.5 py-0.2 text-[10px] ${
+                  stakeholderTab === 'speakers' ? 'bg-white/20 text-white' : 'bg-brand-200 text-brand-900'
+                }`}>
+                  {(form.speakerIds || []).length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setStakeholderTab('exhibitors'); setStakeholderSearch('') }}
+                className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition ${
+                  stakeholderTab === 'exhibitors'
+                    ? 'bg-brand-600 text-white shadow-sm'
+                    : 'bg-brand-50/70 text-brand-900 hover:bg-brand-100'
+                }`}
+              >
+                <Store size={14} />
+                <span>Exhibitors</span>
+                <span className={`ml-1 rounded-full px-1.5 py-0.2 text-[10px] ${
+                  stakeholderTab === 'exhibitors' ? 'bg-white/20 text-white' : 'bg-brand-200 text-brand-900'
+                }`}>
+                  {(form.exhibitorIds || []).length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setStakeholderTab('vendors'); setStakeholderSearch('') }}
+                className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition ${
+                  stakeholderTab === 'vendors'
+                    ? 'bg-brand-600 text-white shadow-sm'
+                    : 'bg-brand-50/70 text-brand-900 hover:bg-brand-100'
+                }`}
+              >
+                <Truck size={14} />
+                <span>Vendors & Suppliers</span>
+                <span className={`ml-1 rounded-full px-1.5 py-0.2 text-[10px] ${
+                  stakeholderTab === 'vendors' ? 'bg-white/20 text-white' : 'bg-brand-200 text-brand-900'
+                }`}>
+                  {(form.vendorIds || []).length}
+                </span>
+              </button>
+            </div>
+
+            {/* Search and Quick Add Bar */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="relative flex-1">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" />
+                <input
+                  type="text"
+                  value={stakeholderSearch}
+                  onChange={(e) => setStakeholderSearch(e.target.value)}
+                  placeholder={`Search ${stakeholderTab}…`}
+                  className="input !py-1.5 pl-9 text-xs"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setQuickAddType(stakeholderTab === 'speakers' ? 'speaker' : stakeholderTab === 'exhibitors' ? 'exhibitor' : 'vendor')}
+                className="btn-outline !py-1.5 text-xs flex items-center gap-1 shrink-0"
+              >
+                <Plus size={13} />
+                <span>Add New {stakeholderTab === 'speakers' ? 'Speaker' : stakeholderTab === 'exhibitors' ? 'Exhibitor' : 'Vendor'}</span>
+              </button>
+            </div>
+
+            {/* Quick Add Form Drawer */}
+            {quickAddType && (
+              <div className="rounded-2xl border border-brand-200 bg-brand-50/60 p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold text-brand-950 flex items-center gap-1">
+                    <Plus size={14} />
+                    Quick Add {quickAddType === 'speaker' ? 'Speaker' : quickAddType === 'exhibitor' ? 'Exhibitor' : 'Vendor'}
+                  </p>
+                  <button type="button" onClick={() => setQuickAddType(null)} className="text-xs text-ink/40 hover:text-ink/80">Cancel</button>
+                </div>
+
+                {quickAddType === 'speaker' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <label className="block text-[11px] font-bold text-ink/60 mb-0.5">Speaker Name *</label>
+                      <input
+                        className="input !py-1 text-xs"
+                        value={quickSpeakerForm.name}
+                        onChange={(e) => setQuickSpeakerForm({ ...quickSpeakerForm, name: e.target.value })}
+                        placeholder="e.g. Dr. Abebe Bikila"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-ink/60 mb-0.5">Organization / Company</label>
+                      <input
+                        className="input !py-1 text-xs"
+                        value={quickSpeakerForm.company}
+                        onChange={(e) => setQuickSpeakerForm({ ...quickSpeakerForm, company: e.target.value })}
+                        placeholder="e.g. Fintech Africa"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-[11px] font-bold text-ink/60 mb-0.5">Session Topic</label>
+                      <input
+                        className="input !py-1 text-xs"
+                        value={quickSpeakerForm.topic}
+                        onChange={(e) => setQuickSpeakerForm({ ...quickSpeakerForm, topic: e.target.value })}
+                        placeholder="e.g. Innovations in Digital Payments"
+                      />
+                    </div>
+                    <div className="sm:col-span-2 flex justify-end gap-2 pt-1">
+                      <button type="button" className="btn-outline !py-1 text-xs" onClick={() => setQuickAddType(null)}>Cancel</button>
+                      <button type="button" className="btn-primary !py-1 text-xs" onClick={handleQuickAddSpeaker}>Save & Select</button>
+                    </div>
+                  </div>
+                )}
+
+                {quickAddType === 'exhibitor' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <label className="block text-[11px] font-bold text-ink/60 mb-0.5">Company Name *</label>
+                      <input
+                        className="input !py-1 text-xs"
+                        value={quickExhibitorForm.company}
+                        onChange={(e) => setQuickExhibitorForm({ ...quickExhibitorForm, company: e.target.value })}
+                        placeholder="e.g. Telecel Group"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-ink/60 mb-0.5">Booth Number</label>
+                      <input
+                        className="input !py-1 text-xs"
+                        value={quickExhibitorForm.booth}
+                        onChange={(e) => setQuickExhibitorForm({ ...quickExhibitorForm, booth: e.target.value })}
+                        placeholder="e.g. A-12"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-ink/60 mb-0.5">Package</label>
+                      <select
+                        className="input !py-1 text-xs"
+                        value={quickExhibitorForm.package}
+                        onChange={(e) => setQuickExhibitorForm({ ...quickExhibitorForm, package: e.target.value })}
+                      >
+                        <option value="Standard">Standard</option>
+                        <option value="Silver Sponsor">Silver Sponsor</option>
+                        <option value="Gold Sponsor">Gold Sponsor</option>
+                        <option value="Platinum Sponsor">Platinum Sponsor</option>
+                      </select>
+                    </div>
+                    <div className="sm:col-span-3 flex justify-end gap-2 pt-1">
+                      <button type="button" className="btn-outline !py-1 text-xs" onClick={() => setQuickAddType(null)}>Cancel</button>
+                      <button type="button" className="btn-primary !py-1 text-xs" onClick={handleQuickAddExhibitor}>Save & Select</button>
+                    </div>
+                  </div>
+                )}
+
+                {quickAddType === 'vendor' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <label className="block text-[11px] font-bold text-ink/60 mb-0.5">Vendor Name *</label>
+                      <input
+                        className="input !py-1 text-xs"
+                        value={quickVendorForm.name}
+                        onChange={(e) => setQuickVendorForm({ ...quickVendorForm, name: e.target.value })}
+                        placeholder="e.g. Apex Sound & Light"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-ink/60 mb-0.5">Service Category</label>
+                      <select
+                        className="input !py-1 text-xs"
+                        value={quickVendorForm.type}
+                        onChange={(e) => setQuickVendorForm({ ...quickVendorForm, type: e.target.value })}
+                      >
+                        <option value="Catering">Catering</option>
+                        <option value="Audio-Visual & Staging">Audio-Visual & Staging</option>
+                        <option value="Security & Guard Services">Security & Guard Services</option>
+                        <option value="Decor & Stage Production">Decor & Stage Production</option>
+                        <option value="Badge Printing & Lanyards">Badge Printing & Lanyards</option>
+                        <option value="Transport & Logistics">Transport & Logistics</option>
+                        <option value="Translation & Interpretation">Translation & Interpretation</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-ink/60 mb-0.5">Phone Contact</label>
+                      <input
+                        className="input !py-1 text-xs"
+                        value={quickVendorForm.phone}
+                        onChange={(e) => setQuickVendorForm({ ...quickVendorForm, phone: e.target.value })}
+                        placeholder="+251 911 ..."
+                      />
+                    </div>
+                    <div className="sm:col-span-3 flex justify-end gap-2 pt-1">
+                      <button type="button" className="btn-outline !py-1 text-xs" onClick={() => setQuickAddType(null)}>Cancel</button>
+                      <button type="button" className="btn-primary !py-1 text-xs" onClick={handleQuickAddVendor}>Save & Select</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* List for Speakers */}
+            {stakeholderTab === 'speakers' && (
+              <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+                {(state.speakers || [])
+                  .filter((s) => !stakeholderSearch || s.name.toLowerCase().includes(stakeholderSearch.toLowerCase()) || (s.company || '').toLowerCase().includes(stakeholderSearch.toLowerCase()) || (s.topic || '').toLowerCase().includes(stakeholderSearch.toLowerCase()))
+                  .map((sp) => {
+                    const isSelected = (form.speakerIds || []).includes(sp.id)
+                    const assignedEvent = sp.eventId ? state.events.find((e) => e.id === sp.eventId) : null
+                    return (
+                      <div
+                        key={sp.id}
+                        onClick={() => toggleSpeaker(sp.id)}
+                        className={`flex items-center justify-between rounded-xl border p-2.5 transition cursor-pointer ${
+                          isSelected
+                            ? 'border-brand-500 bg-brand-50/60 ring-1 ring-brand-400'
+                            : 'border-brand-100 bg-white hover:bg-brand-50/20'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSpeaker(sp.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                          />
+                          <Avatar name={sp.name} initials={sp.initials} color={sp.color} size="sm" />
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-brand-950 truncate">{sp.name}</p>
+                            <p className="text-[11px] text-ink/50 truncate">{sp.company} · {sp.topic || 'Speaker'}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {assignedEvent ? (
+                            <span className="text-[10px] font-semibold text-ink/50 bg-gray-100 px-2 py-0.5 rounded-full">
+                              On: {assignedEvent.name.slice(0, 16)}…
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                              Available
+                            </span>
+                          )}
+                          <span className={`text-xs font-bold ${isSelected ? 'text-brand-700' : 'text-ink/30'}`}>
+                            {isSelected ? '✓ Selected' : '+ Select'}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                {(state.speakers || []).length === 0 && (
+                  <p className="py-6 text-center text-xs text-ink/40">No speakers registered yet. Use "Add New Speaker" above.</p>
+                )}
+              </div>
+            )}
+
+            {/* List for Exhibitors */}
+            {stakeholderTab === 'exhibitors' && (
+              <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+                {(state.exhibitors || [])
+                  .filter((ex) => !stakeholderSearch || ex.company.toLowerCase().includes(stakeholderSearch.toLowerCase()) || (ex.contact || '').toLowerCase().includes(stakeholderSearch.toLowerCase()) || (ex.booth || '').toLowerCase().includes(stakeholderSearch.toLowerCase()))
+                  .map((ex) => {
+                    const isSelected = (form.exhibitorIds || []).includes(ex.id)
+                    const assignedEvent = ex.eventId ? state.events.find((e) => e.id === ex.eventId) : null
+                    return (
+                      <div
+                        key={ex.id}
+                        onClick={() => toggleExhibitor(ex.id)}
+                        className={`flex items-center justify-between rounded-xl border p-2.5 transition cursor-pointer ${
+                          isSelected
+                            ? 'border-brand-500 bg-brand-50/60 ring-1 ring-brand-400'
+                            : 'border-brand-100 bg-white hover:bg-brand-50/20'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleExhibitor(ex.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                          />
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-50 text-sky-700 font-bold text-xs">
+                            <Store size={16} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-brand-950 truncate">{ex.company}</p>
+                            <p className="text-[11px] text-ink/50 truncate">Booth {ex.booth || '-'} · {ex.package || 'Exhibitor'}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {assignedEvent ? (
+                            <span className="text-[10px] font-semibold text-ink/50 bg-gray-100 px-2 py-0.5 rounded-full">
+                              On: {assignedEvent.name.slice(0, 16)}…
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                              Available
+                            </span>
+                          )}
+                          <span className={`text-xs font-bold ${isSelected ? 'text-brand-700' : 'text-ink/30'}`}>
+                            {isSelected ? '✓ Selected' : '+ Select'}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                {(state.exhibitors || []).length === 0 && (
+                  <p className="py-6 text-center text-xs text-ink/40">No exhibitors registered yet. Use "Add New Exhibitor" above.</p>
+                )}
+              </div>
+            )}
+
+            {/* List for Vendors */}
+            {stakeholderTab === 'vendors' && (
+              <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+                {(state.vendors || [])
+                  .filter((v) => !stakeholderSearch || v.name.toLowerCase().includes(stakeholderSearch.toLowerCase()) || (v.type || '').toLowerCase().includes(stakeholderSearch.toLowerCase()))
+                  .map((vn) => {
+                    const isSelected = (form.vendorIds || []).includes(vn.id)
+                    return (
+                      <div
+                        key={vn.id}
+                        onClick={() => toggleVendor(vn.id)}
+                        className={`flex items-center justify-between rounded-xl border p-2.5 transition cursor-pointer ${
+                          isSelected
+                            ? 'border-brand-500 bg-brand-50/60 ring-1 ring-brand-400'
+                            : 'border-brand-100 bg-white hover:bg-brand-50/20'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleVendor(vn.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                          />
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-700 font-bold text-xs">
+                            <Truck size={16} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-brand-950 truncate">{vn.name}</p>
+                            <p className="text-[11px] text-ink/50 truncate">{vn.type} · {vn.phone || 'No phone'}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-[10px] font-semibold text-brand-800 bg-brand-50 px-2 py-0.5 rounded-full">
+                            {vn.type}
+                          </span>
+                          <span className={`text-xs font-bold ${isSelected ? 'text-brand-700' : 'text-ink/30'}`}>
+                            {isSelected ? '✓ Selected' : '+ Select'}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                {(state.vendors || []).length === 0 && (
+                  <p className="py-6 text-center text-xs text-ink/40">No vendors registered yet. Use "Add New Vendor" above.</p>
+                )}
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-between pt-2 border-t border-gray-100">
+              <button type="button" className="btn-outline" onClick={() => setRegStep(2)}>← Back</button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => setRegStep(4)}
+              >
                 Next: Ticketing & Contact →
               </button>
             </div>
           </div>
         )}
 
-        {/* STEP 3: PUBLIC & TICKETING */}
-        {regStep === 3 && (
+        {/* STEP 4: PUBLIC & TICKETING */}
+        {regStep === 4 && (
           <div className="space-y-4">
             <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><Megaphone size={13} /> Public Site & Ticketing</p>
             <div className="grid grid-cols-2 gap-3">
@@ -764,14 +1432,14 @@ export default function Events() {
             </div>
 
             <div className="mt-6 flex justify-between pt-2 border-t border-gray-100">
-              <button type="button" className="btn-outline" onClick={() => setRegStep(2)}>← Back</button>
-              <button type="button" className="btn-primary" onClick={() => setRegStep(4)}>Next: Review & Docs →</button>
+              <button type="button" className="btn-outline" onClick={() => setRegStep(3)}>← Back</button>
+              <button type="button" className="btn-primary" onClick={() => setRegStep(5)}>Next: Review & Docs →</button>
             </div>
           </div>
         )}
 
-        {/* STEP 4: DOCUMENTS & REVIEW */}
-        {regStep === 4 && (
+        {/* STEP 5: DOCUMENTS & REVIEW */}
+        {regStep === 5 && (
           <div className="space-y-4">
             {/* Review summary cards */}
             <div className="rounded-2xl border border-brand-100 bg-brand-50/40 p-4">
@@ -791,7 +1459,14 @@ export default function Events() {
                 </div>
                 <div className="rounded-xl bg-white p-2.5 shadow-sm">
                   <p className="text-[10px] text-ink/40 font-bold uppercase">Venue</p>
-                  <p className="font-bold text-brand-950 truncate mt-0.5">{state.venues.find(v => v.id === form.venueId)?.name || 'Venue TBD'}</p>
+                  <p className="font-bold text-brand-950 truncate mt-0.5">
+                    {state.venues.find(v => v.id === form.venueId)?.name || 'Venue TBD'}
+                  </p>
+                  {form.venueId && (
+                    <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded mt-0.5 inline-block">
+                      Selected & Booked
+                    </span>
+                  )}
                 </div>
                 <div className="rounded-xl bg-white p-2.5 shadow-sm">
                   <p className="text-[10px] text-ink/40 font-bold uppercase">Budget</p>
@@ -800,6 +1475,39 @@ export default function Events() {
                 <div className="rounded-xl bg-white p-2.5 shadow-sm">
                   <p className="text-[10px] text-ink/40 font-bold uppercase">Project Manager</p>
                   <p className="font-bold text-brand-950 truncate mt-0.5">{state.staff.find(s => s.id === form.pmId)?.name || '-'}</p>
+                </div>
+              </div>
+
+              {/* Stakeholders Review Breakdown */}
+              <div className="mt-3 pt-3 border-t border-brand-100/80 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                <div className="rounded-xl bg-white p-2.5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] text-ink/40 font-bold uppercase">Speakers</p>
+                    <span className="chip bg-brand-50 text-brand-700 font-bold text-[10px]">{(form.speakerIds || []).length} Selected</span>
+                  </div>
+                  <p className="text-xs text-ink/80 mt-1 truncate">
+                    {state.speakers.filter(s => (form.speakerIds || []).includes(s.id)).map(s => s.name).join(', ') || 'None selected'}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-white p-2.5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] text-ink/40 font-bold uppercase">Exhibitors</p>
+                    <span className="chip bg-sky-50 text-sky-700 font-bold text-[10px]">{(form.exhibitorIds || []).length} Selected</span>
+                  </div>
+                  <p className="text-xs text-ink/80 mt-1 truncate">
+                    {state.exhibitors.filter(x => (form.exhibitorIds || []).includes(x.id)).map(x => x.company).join(', ') || 'None selected'}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-white p-2.5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] text-ink/40 font-bold uppercase">Vendors / Suppliers</p>
+                    <span className="chip bg-amber-50 text-amber-700 font-bold text-[10px]">{(form.vendorIds || []).length} Selected</span>
+                  </div>
+                  <p className="text-xs text-ink/80 mt-1 truncate">
+                    {state.vendors.filter(v => (form.vendorIds || []).includes(v.id)).map(v => v.name).join(', ') || 'None selected'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -827,7 +1535,7 @@ export default function Events() {
             )}
 
             <div className="mt-6 flex justify-between pt-2 border-t border-gray-100">
-              <button type="button" className="btn-outline" onClick={() => setRegStep(3)}>← Back</button>
+              <button type="button" className="btn-outline" onClick={() => setRegStep(4)}>← Back</button>
               <button type="button" className="btn-primary !px-6" onClick={submit}>
                 <Sparkles size={16} /> Complete & Register Event
               </button>
@@ -856,8 +1564,14 @@ export default function Events() {
             <div className="my-4 rounded-xl border border-brand-100 bg-brand-50/50 p-3 text-left text-xs space-y-1.5">
               <p><strong className="text-brand-900">Client:</strong> {state.clients.find(c => c.id === createdSuccessModal.clientId)?.company || '-'}</p>
               <p><strong className="text-brand-900">Date & Time:</strong> {createdSuccessModal.date} at {createdSuccessModal.time}</p>
+              <p><strong className="text-brand-900">Venue:</strong> {state.venues.find(v => v.id === createdSuccessModal.venueId)?.name || 'Venue TBD'}</p>
               <p><strong className="text-brand-900">Budget:</strong> {fmt(createdSuccessModal.budget)}</p>
               <p><strong className="text-brand-900">Project Manager:</strong> {state.staff.find(s => s.id === createdSuccessModal.pmId)?.name || '-'}</p>
+              <div className="pt-2 mt-2 border-t border-brand-200/50 flex items-center justify-between text-[11px] font-semibold text-brand-950">
+                <span>🎙️ {createdSuccessModal.speakerCount || 0} Speakers</span>
+                <span>🏢 {createdSuccessModal.exhibitorCount || 0} Exhibitors</span>
+                <span>🚚 {createdSuccessModal.vendorCount || 0} Vendors</span>
+              </div>
             </div>
 
             <div className="flex gap-2">
@@ -910,12 +1624,50 @@ export default function Events() {
         </Modal>
       )}
 
+      {/* Decline Event Modal */}
+      <Modal
+        open={declineModalOpen}
+        onClose={() => { setDeclineModalOpen(false); setDeclineTargetId(null); setDeclineReason('') }}
+        title="Decline Event Proposal"
+        width="max-w-md"
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-ink/70">
+            Provide a note explaining why this event proposal cannot be accommodated or what adjustments are needed from the client.
+          </p>
+          <Field label="Reason / Notes for Client (Optional)">
+            <textarea
+              className="input min-h-[90px] text-xs"
+              placeholder="e.g., Dates clash with Millennium Hall major summit; recommend alternative dates next week."
+              value={declineReason}
+              onChange={(e) => setDeclineReason(e.target.value)}
+            />
+          </Field>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              className="btn-outline"
+              onClick={() => { setDeclineModalOpen(false); setDeclineTargetId(null); setDeclineReason('') }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700 transition"
+              onClick={handleDeclineSubmit}
+            >
+              Confirm Decline
+            </button>
+          </div>
+        </div>
+      </Modal>
+
       <Toast toast={toast} />
     </div>
   )
 }
 
-function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, detailTab, setDetailTab, show, teamOpen, setTeamOpen, resOpen, setResOpen, budgetOpen, setBudgetOpen, budgetVal, setBudgetVal, completeOpen, setCompleteOpen, setEventTeam, setEventBudget, allocateResource, allocateResources, budgetEvent, openBudgetModal, markDone, timeline, tlOpen, setTlOpen, tlMap, editOpen, setEditOpen, editForm, setEditForm, noteOpen, setNoteOpen, noteText, setNoteText, tlAddOpen, setTlAddOpen, tlAddTitle, setTlAddTitle, saveEvent, patchBy, saveNote, saveTimelineEntry, onEditOpen, onAddTimeline, notes, onAddNote, logActivity }) {
+function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, detailTab, setDetailTab, show, onAccept, onDecline, teamOpen, setTeamOpen, resOpen, setResOpen, budgetOpen, setBudgetOpen, budgetVal, setBudgetVal, completeOpen, setCompleteOpen, setEventTeam, setEventBudget, allocateResource, allocateResources, budgetEvent, openBudgetModal, markDone, timeline, tlOpen, setTlOpen, tlMap, editOpen, setEditOpen, editForm, setEditForm, noteOpen, setNoteOpen, noteText, setNoteText, tlAddOpen, setTlAddOpen, tlAddTitle, setTlAddTitle, saveEvent, patchBy, saveNote, saveTimelineEntry, onEditOpen, onAddTimeline, notes, onAddNote, logActivity }) {
   const { toggleChecklist, addChecklistItem, setEventSuppliers, patch, addEventDoc, deleteEvent } = useData()
   const [errors, setErrors] = useState({})
   const [budgetErr, setBudgetErr] = useState('')
@@ -997,6 +1749,54 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
       {/* Header */}
       <div className="card overflow-hidden">
         {event.image && <div className="relative h-44 w-full"><img src={event.image} alt={event.name} className="h-full w-full object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-brand-950/70 to-transparent" /></div>}
+
+        {/* Pending Review Action Banner for Event Manager */}
+        {event.status === 'pending_review' && (
+          <div className="bg-amber-500 text-amber-950 px-6 py-4 flex flex-wrap items-center justify-between gap-4 border-b border-amber-600/30">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-400 text-amber-950 font-black text-lg">!</span>
+              <div>
+                <p className="font-black text-sm uppercase tracking-wide">Client Submission Awaiting Review</p>
+                <p className="text-xs text-amber-900">This event was submitted by client &quot;{client?.company || 'Client'}&quot; and is awaiting approval. Review the proposal, adjust details or venue/budget, and accept or decline.</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => onAccept && onAccept(event.id)}
+                className="rounded-xl bg-brand-700 px-4 py-2 text-xs font-black text-white hover:bg-brand-800 transition shadow-sm flex items-center gap-1.5"
+              >
+                <CheckCircle2 size={15} /> Accept Event
+              </button>
+              <button
+                type="button"
+                onClick={() => onDecline && onDecline(event.id)}
+                className="rounded-xl border border-red-300 bg-white/90 px-4 py-2 text-xs font-black text-red-700 hover:bg-white transition shadow-sm"
+              >
+                Decline Submission
+              </button>
+              <button
+                type="button"
+                onClick={() => { setEditForm({ ...event }); setEditOpen(true) }}
+                className="rounded-xl border border-amber-700/40 bg-amber-100 px-4 py-2 text-xs font-black text-amber-950 hover:bg-amber-200 transition"
+              >
+                Edit Details
+              </button>
+            </div>
+          </div>
+        )}
+        {event.status === 'declined' && (
+          <div className="bg-red-100 text-red-900 px-6 py-3 flex items-center justify-between gap-4 border-b border-red-200">
+            <p className="text-xs font-bold">This client event proposal was declined. You can reconsider and accept it anytime, or modify details.</p>
+            <button
+              type="button"
+              onClick={() => onAccept && onAccept(event.id)}
+              className="rounded-lg bg-brand-700 px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-800 transition"
+            >
+              Accept Event
+            </button>
+          </div>
+        )}
         <div className="bg-brand-900 p-6 text-white">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -1351,14 +2151,14 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
               <div className="mb-4 flex items-center justify-between">
                 <div>
                   <h3 className="text-base font-bold text-brand-950">Exhibitors & Booths</h3>
-                  <p className="text-xs text-ink/50">Trade show floor exhibitors and booth assignments</p>
+                  <p className="text-xs text-ink/50">Trade show floor exhibitors and booth assignments for this event</p>
                 </div>
                 <span className="chip bg-brand-50 text-brand-700 font-bold">
-                  {(state.exhibitors || []).length} Exhibitors
+                  {(state.exhibitors || []).filter((ex) => ex.eventId === event.id).length} Confirmed
                 </span>
               </div>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {(state.exhibitors || []).map((ex) => (
+                {(state.exhibitors || []).filter((ex) => ex.eventId === event.id).map((ex) => (
                   <div key={ex.id} className="card p-4 flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between">
@@ -1382,9 +2182,9 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
                     )}
                   </div>
                 ))}
-                {(state.exhibitors || []).length === 0 && (
+                {(state.exhibitors || []).filter((ex) => ex.eventId === event.id).length === 0 && (
                   <div className="col-span-full rounded-xl border border-dashed border-brand-100 p-8 text-center text-sm text-ink/40">
-                    No exhibitors registered. Add exhibitors in the Exhibition module.
+                    No exhibitors assigned to this event yet. Link exhibitors during event registration or in Exhibition management.
                   </div>
                 )}
               </div>
@@ -1440,6 +2240,35 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
           <Field label="End Date"><input type="date" className="input" value={editForm.endDate || ''} onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })} /></Field>
           <Field label="End Time"><input type="time" className="input" value={editForm.endTime || ''} onChange={(e) => setEditForm({ ...editForm, endTime: e.target.value })} /></Field>
           <Field label="Reg. Deadline"><input type="date" className="input" value={editForm.deadline || ''} onChange={(e) => setEditForm({ ...editForm, deadline: e.target.value })} /></Field>
+          <Field label="Venue">
+            <select className="input" value={editForm.venueId || ''} onChange={(e) => setEditForm({ ...editForm, venueId: e.target.value })}>
+              <option value="">Venue TBD</option>
+              {state.venues.map((v) => {
+                const conflict = editForm.date ? getVenueConflict(v.id, editForm.date, editForm.id) : null
+                return (
+                  <option key={v.id} value={v.id}>
+                    {v.name} {editForm.date ? (conflict ? `— ⚠️ [Booked: ${conflict.name}]` : '— ✓ Available') : ''}
+                  </option>
+                )
+              })}
+            </select>
+            {editForm.venueId && (
+              <div className="mt-1 text-xs">
+                {editForm.date ? (() => {
+                  const conflict = getVenueConflict(editForm.venueId, editForm.date, editForm.id)
+                  if (conflict) {
+                    return <span className="inline-block rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">⚠️ Booked on {editForm.date} for "{conflict.name}"</span>
+                  }
+                  return <span className="inline-block rounded-md border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">✓ Selected as booked for this event on {editForm.date}</span>
+                })() : (
+                  <span className="text-[11px] text-ink/50">Pick a start date to check venue booking status</span>
+                )}
+              </div>
+            )}
+          </Field>
+          <Field label="Budget (ETB)">
+            <input type="number" className="input" value={editForm.budget ?? ''} onChange={(e) => setEditForm({ ...editForm, budget: e.target.value })} placeholder="850000" />
+          </Field>
           <Field label="Capacity"><input type="number" className="input" value={editForm.capacity || ''} onChange={(e) => setEditForm({ ...editForm, capacity: e.target.value })} placeholder="e.g. 800" /></Field>
           <Field label="Ticket price (ETB)"><input type="number" className="input" value={editForm.price ?? ''} onChange={(e) => setEditForm({ ...editForm, price: e.target.value })} placeholder="0 = free" /></Field>
           <Field label="Contact Person"><input className="input" value={editForm.contactName || ''} onChange={(e) => setEditForm({ ...editForm, contactName: e.target.value })} /></Field>

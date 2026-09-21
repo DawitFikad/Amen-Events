@@ -1,20 +1,31 @@
-import React, { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useMemo, useState, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   CalendarDays, MapPin, Building2, Wallet, CheckCircle2, Clock,
-  Search, ArrowRight, Ticket,
+  Search, ArrowRight, Ticket, Plus, AlertCircle, Sparkles,
 } from 'lucide-react'
 import { useData } from '../../store/DataContext'
 import { Badge, Progress, StatCard } from '../../components/ui'
 import { fmtCompact } from '../../store/data'
+import ClientAddEventModal from '../../components/ClientAddEventModal'
 
 export default function ClientEvents() {
   const { state } = useData()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const clientId = state.currentUserId
   const client = state.clients.find((c) => c.id === clientId)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
+  const [createOpen, setCreateOpen] = useState(false)
+
+  useEffect(() => {
+    if (searchParams.get('create') === 'true') {
+      setCreateOpen(true)
+      searchParams.delete('create')
+      setSearchParams(searchParams, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   const allMyEvents = useMemo(() => {
     return state.events.filter((e) => {
@@ -26,6 +37,7 @@ export default function ClientEvents() {
     })
   }, [state.events, state.registrations, clientId, client?.email])
 
+  const pendingCount = allMyEvents.filter((e) => e.status === 'pending_review').length
   const upcomingCount = allMyEvents.filter((e) => e.status === 'upcoming').length
   const ongoingCount = allMyEvents.filter((e) => e.status === 'ongoing').length
   const activeCount = upcomingCount + ongoingCount
@@ -43,6 +55,7 @@ export default function ClientEvents() {
 
   const filters = [
     { key: 'all', label: `All (${allMyEvents.length})` },
+    { key: 'pending_review', label: `Pending Review (${pendingCount})`, badge: pendingCount > 0 ? 'bg-amber-100 text-amber-800' : null },
     { key: 'upcoming', label: `Upcoming (${upcomingCount})` },
     { key: 'ongoing', label: `Ongoing (${ongoingCount})` },
     { key: 'completed', label: `Completed (${completedCount})` },
@@ -54,8 +67,14 @@ export default function ClientEvents() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-black text-brand-950">My Events</h1>
-          <p className="text-sm text-ink/50">Track and manage all your events</p>
+          <p className="text-sm text-ink/50">Track, manage and propose your events</p>
         </div>
+        <button
+          className="btn-primary"
+          onClick={() => setCreateOpen(true)}
+        >
+          <Plus size={15} /> Add Event
+        </button>
       </div>
 
       {/* Stat Cards */}
@@ -109,19 +128,63 @@ export default function ClientEvents() {
             const totalInv = myInvoices.reduce((a, i) => a + i.amount, 0)
             const outstanding = totalInv - paid
 
+            const isPending = e.status === 'pending_review'
+            const isDeclined = e.status === 'declined'
+
             return (
               <div key={e.id} className="card overflow-hidden transition hover:shadow-lg">
                 {/* Card header */}
-                <div className="relative h-24 bg-gradient-to-br from-brand-600 to-brand-800 p-4">
+                <div className={`relative h-24 p-4 ${
+                  isPending
+                    ? 'bg-gradient-to-br from-amber-600 to-amber-800'
+                    : isDeclined
+                    ? 'bg-gradient-to-br from-red-700 to-red-900'
+                    : 'bg-gradient-to-br from-brand-600 to-brand-800'
+                }`}>
                   <div className="absolute right-3 top-3 flex gap-1.5">
                     <span className="chip bg-white/20 text-white">{e.category}</span>
-                    <span className={`chip ${e.status === 'upcoming' ? 'bg-gold-400 text-white' : e.status === 'ongoing' ? 'bg-brand-400 text-white' : 'bg-ink/60 text-white'}`}>{e.status}</span>
+                    <span className={`chip ${
+                      isPending
+                        ? 'bg-amber-300 text-amber-950 font-bold'
+                        : isDeclined
+                        ? 'bg-red-300 text-red-950 font-bold'
+                        : e.status === 'upcoming'
+                        ? 'bg-gold-400 text-white'
+                        : e.status === 'ongoing'
+                        ? 'bg-brand-400 text-white'
+                        : 'bg-ink/60 text-white'
+                    }`}>
+                      {isPending ? '● Pending Review' : isDeclined ? 'Declined' : e.status}
+                    </span>
                   </div>
-                  <p className="absolute bottom-3 left-4 text-lg font-bold text-white">{e.name}</p>
+                  <p className="absolute bottom-3 left-4 text-lg font-bold text-white truncate max-w-[80%]">{e.name}</p>
                 </div>
 
                 {/* Card body */}
                 <div className="p-4">
+                  {/* Status Banner for Pending / Declined */}
+                  {isPending && (
+                    <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900">
+                      <div className="flex items-center gap-1.5 font-bold text-amber-950">
+                        <Clock size={14} className="text-amber-600" /> Awaiting Event Manager Review
+                      </div>
+                      <p className="mt-1 text-[11px] text-amber-800">
+                        Your event was submitted and is in the review queue. The event manager will review the requirements and accept or adjust it before publishing.
+                      </p>
+                    </div>
+                  )}
+
+                  {isDeclined && (
+                    <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-900">
+                      <div className="flex items-center gap-1.5 font-bold text-red-700">
+                        <AlertCircle size={14} /> Submission Declined
+                      </div>
+                      <p className="mt-1 text-[11px] text-red-700">
+                        {e.declineReason || 'This event request could not be approved. Please contact your event manager for details.'}
+                      </p>
+                    </div>
+                  )}
+
                   {/* Info grid */}
                   <div className="mb-4 grid grid-cols-2 gap-3 text-sm">
                     <div className="flex items-center gap-2 text-ink/60">
@@ -134,7 +197,7 @@ export default function ClientEvents() {
                     </div>
                     <div className="flex items-center gap-2 text-ink/60">
                       <Building2 size={14} className="text-brand-600" />
-                      <span className="truncate">{pm?.name || 'Unassigned'}</span>
+                      <span className="truncate">{pm?.name || (isPending ? 'Awaiting PM' : 'Unassigned')}</span>
                     </div>
                     <div className="flex items-center gap-2 text-ink/60">
                       <Wallet size={14} className="text-brand-600" />
@@ -194,6 +257,15 @@ export default function ClientEvents() {
           })}
         </div>
       )}
+
+      {/* Client Add Event Modal */}
+      <ClientAddEventModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSuccess={(newEvent) => {
+          setFilter('pending_review')
+        }}
+      />
     </div>
   )
 }

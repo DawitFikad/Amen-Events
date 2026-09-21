@@ -7,7 +7,7 @@ import {
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, Avatar, Modal, ConfirmModal, Field, PriorityDot, SearchBox, Toast, EmptyState, Segmented, Th, Td } from '../components/ui'
 import { fmt, todayISO } from '../store/data'
-import { textRequired, optional, dateRequired, validate } from '../store/validation'
+import { required, textRequired, optional, dateRequired, validate } from '../store/validation'
 
 const columns = [
   { key: 'todo', label: 'To Do', color: 'text-slate-500', bg: 'bg-slate-100' },

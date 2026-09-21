@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Calendar, MapPin, Users, ArrowRight, Search, SlidersHorizontal, X, Star } from 'lucide-react'
+import { useData } from '../../store/DataContext'
 import { portalCategoriesFallback, portalEventsFallback } from '../../store/portalFallback'
 import { supabaseFetchPublicEvents } from '../../store/supabase'
 
@@ -15,6 +16,7 @@ const SORTS = [
 ]
 
 export default function PortalEventList() {
+  const { state } = useData() || {}
   const [searchParams] = useSearchParams()
   const [events, setEvents] = useState([])
   const [categories, setCategories] = useState([])
@@ -27,11 +29,48 @@ export default function PortalEventList() {
   })
   const [showFilters, setShowFilters] = useState(false)
 
+  const publicEvents = useMemo(() => {
+    if (!state?.events || state.events.length === 0) return []
+    let list = state.events.filter((e) => e.status !== 'pending_review' && e.status !== 'declined' && e.published !== false)
+    if (filters.category && filters.category !== 'all') {
+      list = list.filter((e) => e.category?.toLowerCase() === filters.category.toLowerCase())
+    }
+    if (filters.search) {
+      const q = filters.search.toLowerCase()
+      list = list.filter((e) => e.name?.toLowerCase().includes(q) || e.category?.toLowerCase().includes(q))
+    }
+    if (filters.sort === 'newest') {
+      list = [...list].sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+    } else if (filters.sort === 'price-low') {
+      list = [...list].sort((a, b) => (a.price || 0) - (b.price || 0))
+    } else if (filters.sort === 'price-high') {
+      list = [...list].sort((a, b) => (b.price || 0) - (a.price || 0))
+    } else {
+      list = [...list].sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+    }
+
+    return list.map((e) => {
+      const v = state.venues?.find((venue) => venue.id === e.venueId)
+      const c = state.clients?.find((client) => client.id === e.clientId)
+      const regCount = (state.registrations || []).filter((r) => r.eventId === e.id).length
+      return {
+        ...e,
+        venue: e.venue || v || { name: 'Addis Ababa', city: 'Addis Ababa' },
+        client: e.client || c || { company: 'Amen Events' },
+        _count: { registrations: regCount || e._count?.registrations || 0 },
+      }
+    })
+  }, [state?.events, state?.venues, state?.clients, state?.registrations, filters.category, filters.search, filters.sort])
+
   useEffect(() => {
     fetch(`${API_URL}/portal/categories`).then((r) => r.json()).then((d) => setCategories(d.categories || portalCategoriesFallback())).catch(() => setCategories(portalCategoriesFallback()))
   }, [])
 
   useEffect(() => {
+    if (publicEvents.length > 0) {
+      setLoading(false)
+      return
+    }
     setLoading(true)
     async function loadEvents() {
       try {
@@ -65,18 +104,20 @@ export default function PortalEventList() {
         })
     }
     loadEvents()
-  }, [filters.search, filters.category, filters.sort])
+  }, [filters.search, filters.category, filters.sort, publicEvents.length])
+
+  const activeList = publicEvents.length > 0 ? publicEvents : events
 
   const cities = useMemo(() => {
     const set = new Set()
-    events.forEach((e) => { if (e.venue?.city) set.add(e.venue.city) })
+    activeList.forEach((e) => { if (e.venue?.city) set.add(e.venue.city) })
     return Array.from(set)
-  }, [events])
+  }, [activeList])
 
   const filtered = useMemo(() => {
-    if (filters.city === 'all') return events
-    return events.filter((e) => e.venue?.city?.toLowerCase().includes(filters.city.toLowerCase()))
-  }, [events, filters.city])
+    if (filters.city === 'all') return activeList
+    return activeList.filter((e) => e.venue?.city?.toLowerCase().includes(filters.city.toLowerCase()))
+  }, [activeList, filters.city])
 
   return (
     <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
@@ -223,29 +264,35 @@ function EventCard({ event, delay = 0 }) {
       style={{ animationDelay: `${delay}s`, boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}
     >
       <div className="relative h-44 overflow-hidden" style={{ background: 'linear-gradient(135deg, #166534 0%, #3AAA1C 100%)' }}>
-        <div className="absolute inset-0 opacity-15" style={{ backgroundImage: 'radial-gradient(circle at 30% 50%, white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
-        <div className="absolute inset-0 flex items-center justify-center transition duration-500 group-hover:scale-110">
-          <Calendar size={48} className="text-white/30" />
-        </div>
+        {event.image ? (
+          <img src={event.image} alt={event.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-110" />
+        ) : (
+          <>
+            <div className="absolute inset-0 opacity-15" style={{ backgroundImage: 'radial-gradient(circle at 30% 50%, white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+            <div className="absolute inset-0 flex items-center justify-center transition duration-500 group-hover:scale-110">
+              <Calendar size={48} className="text-white/30" />
+            </div>
+          </>
+        )}
         <div className="absolute left-4 top-4">
           <span className={`rounded-full px-3 py-1 text-xs font-bold backdrop-blur ${event.status === 'ongoing' ? 'bg-white/90 text-portal-600' : 'bg-white/80 text-gray-700'}`}>
             {event.status === 'ongoing' ? '● Live' : 'Upcoming'}
           </span>
         </div>
         <div className="absolute right-4 top-4">
-          <span className="rounded-full bg-black/30 px-3 py-1 text-xs font-semibold text-white backdrop-blur">{event.category}</span>
+          <span className="rounded-full bg-black/40 px-3 py-1 text-xs font-semibold text-white backdrop-blur">{event.category}</span>
         </div>
       </div>
       <div className="p-5">
-        <h3 className="font-bold leading-snug text-gray-900 transition group-hover:text-portal-600">{event.name}</h3>
+        <h3 className="font-bold leading-snug text-gray-900 transition group-hover:text-portal-600 line-clamp-1">{event.name}</h3>
         <div className="mt-3 space-y-2">
-          <div className="flex items-center gap-2 text-sm text-gray-500"><Calendar size={15} className="text-portal-500" /> {dateStr} · {event.time || '09:00'}</div>
-          <div className="flex items-center gap-2 text-sm text-gray-500"><MapPin size={15} className="text-portal-500" /> {event.venue?.name || 'TBA'}{event.venue?.city && `, ${event.venue.city}`}</div>
-          <div className="flex items-center gap-2 text-sm text-gray-500"><Users size={15} className="text-portal-500" /> {regCount} registered</div>
+          <div className="flex items-center gap-2 text-sm text-gray-500"><Calendar size={15} className="text-portal-500 shrink-0" /> {dateStr} · {event.time || '09:00'}</div>
+          <div className="flex items-center gap-2 text-sm text-gray-500 truncate"><MapPin size={15} className="text-portal-500 shrink-0" /> {event.venue?.name || 'TBA'}{event.venue?.city ? `, ${event.venue.city}` : ''}</div>
+          <div className="flex items-center gap-2 text-sm text-gray-500"><Users size={15} className="text-portal-500 shrink-0" /> {regCount} registered</div>
         </div>
         <div className="mt-4 flex items-center justify-between border-t border-gray-50 pt-4">
-          <span className="text-xs text-gray-400">{event.client?.company || 'Amen Events'}</span>
-          <span className="inline-flex items-center gap-1 text-sm font-bold text-portal-600 transition-all group-hover:gap-2">View Details <ArrowRight size={15} /></span>
+          <span className="text-xs text-gray-400 font-medium truncate max-w-[140px]">{event.client?.company || 'Amen Events'}</span>
+          <span className="inline-flex items-center gap-1 text-sm font-bold text-portal-600 transition-all group-hover:gap-2 shrink-0">View Details <ArrowRight size={15} /></span>
         </div>
       </div>
     </Link>

@@ -1,9 +1,8 @@
 import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Users, CheckCircle2, Clock, Crown, Download, FileText, ArrowRight, Plus } from 'lucide-react'
+import { Search, Users, CheckCircle2, Clock, Crown, Download, FileText, ArrowRight } from 'lucide-react'
 import { useData } from '../../store/DataContext'
 import { Badge, Th, Td } from '../../components/ui'
-import RegisterAttendeeModal from '../../components/RegisterAttendeeModal'
 import { fmt } from '../../store/data'
 import { exportTableToPDF } from '../../store/exportUtils'
 
@@ -13,7 +12,6 @@ export default function ClientAttendees() {
   const clientId = state.currentUserId
   const [search, setSearch] = useState('')
   const [selectedEvent, setSelectedEvent] = useState('all')
-  const [regOpen, setRegOpen] = useState(false)
 
   const client = state.clients.find((c) => c.id === clientId)
   const myEvents = useMemo(() => {
@@ -51,11 +49,8 @@ export default function ClientAttendees() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-black text-brand-950">Attendees</h1>
-          <p className="text-sm text-ink/50">View and manage event attendees</p>
+          <p className="text-sm text-ink/50">View and track your event attendees</p>
         </div>
-        <button className="btn-primary" onClick={() => setRegOpen(true)}>
-          <Plus size={15} /> Register Attendee
-        </button>
       </div>
 
       {/* Stats */}
@@ -128,12 +123,6 @@ export default function ClientAttendees() {
           </div>
         )}
       </div>
-
-      <RegisterAttendeeModal
-        open={regOpen}
-        onClose={() => setRegOpen(false)}
-        defaultEventId={selectedEvent !== 'all' ? selectedEvent : myEvents[0]?.id}
-      />
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import {
   CheckCircle2, XCircle, RotateCcw, FileText, DollarSign, Handshake,
-  ShoppingBag, Wallet, Clock, Sparkles, ArrowRight, ShieldCheck, Paperclip, ExternalLink
+  ShoppingBag, Wallet, Clock, Sparkles, ArrowRight, ShieldCheck, Paperclip, ExternalLink, CalendarDays
 } from 'lucide-react'
 import api from '../store/api'
 import { useData } from '../store/DataContext'
@@ -9,6 +9,7 @@ import { PageHeader, Badge, Avatar, Toast, StatCard } from '../components/ui'
 import { fmtCompact } from '../store/data'
 
 const TYPE_ICONS = {
+  event: CalendarDays,
   budget: Wallet,
   contract: FileText,
   sponsorship: Handshake,
@@ -76,6 +77,15 @@ export default function Approvals() {
       await setApprovalStatus(id, status, note)
       if (action === 'approve' && target?.type === 'registration' && target?.entityId) {
         patchBy('registrations', target.entityId, { paid: true })
+      }
+      if (target?.type === 'event' && target?.entityId) {
+        if (action === 'approve') {
+          patchBy('events', target.entityId, { status: 'upcoming', published: true })
+          logActivity(`Event proposal "${target.entityName}" approved`, 'event')
+        } else if (action === 'reject') {
+          patchBy('events', target.entityId, { status: 'declined', published: false })
+          logActivity(`Event proposal "${target.entityName}" declined`, 'event')
+        }
       }
       show(`Request ${action}d`)
     } catch (err) {
@@ -182,6 +192,18 @@ export default function Approvals() {
                         </div>
                       )
                     })()}
+                    {a.type === 'event' && a.entityId && (
+                      <div className="mt-2">
+                        <a
+                          href="/erp/admin/events"
+                          className="inline-flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-900 bg-brand-50 px-2 py-1 rounded-md"
+                        >
+                          <CalendarDays size={12} />
+                          <span>View & Edit in Events Workspace</span>
+                          <ExternalLink size={11} className="opacity-60" />
+                        </a>
+                      </div>
+                    )}
                     {a.reviewNote && <p className="text-xs text-ink/55 mt-1">Review: "{a.reviewNote}"</p>}
                     <div className="flex items-center gap-2 mt-2 text-[11px] text-ink/40">
                       {a.submittedByUser && (

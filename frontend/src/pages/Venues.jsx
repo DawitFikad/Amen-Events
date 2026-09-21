@@ -160,9 +160,24 @@ export default function Venues() {
     </>
   )
 
+  // Dynamic bookings from active events that have assigned this venue
+  const activeBookings = state.events
+    .filter((e) => e.venueId && e.status !== 'completed' && e.status !== 'declined')
+    .map((e) => ({
+      id: `bk-${e.id}`,
+      venueId: e.venueId,
+      eventId: e.id,
+      eventName: e.name,
+      date: e.date,
+      status: e.status === 'ongoing' ? 'ongoing' : 'confirmed',
+      contact: state.staff.find((s) => s.id === e.pmId)?.name || 'Event Manager',
+    }))
+
+  const allBookings = [...activeBookings, ...bookings.filter(b => !activeBookings.some(ab => ab.venueId === b.venueId && ab.date === b.date))]
+
   const totalVenues = state.venues.length
-  const availableVenues = state.venues.filter((v) => v.status === 'available').length
-  const bookedVenues = state.venues.filter((v) => v.status === 'booked').length
+  const bookedVenues = state.venues.filter((v) => allBookings.some((b) => b.venueId === v.id) || v.status === 'booked').length
+  const availableVenues = Math.max(0, totalVenues - bookedVenues)
   const totalCapacity = state.venues.reduce((s, v) => s + (Number(v.capacity) || 0), 0)
 
   return (
@@ -188,13 +203,26 @@ export default function Venues() {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {filtered.map((v) => {
-          const bks = bookings.filter((b) => b.venueId === v.id)
+          const vBookings = allBookings.filter((b) => b.venueId === v.id)
+          const isBooked = vBookings.length > 0 || v.status === 'booked'
+          const nextBooking = vBookings[0]
+
           return (
             <div key={v.id} className="card overflow-hidden">
               <div className="relative h-32">
                 <VenueMedia v={v} className="h-full w-full" />
                 {!v.image && <div className={`absolute inset-0 flex items-end bg-gradient-to-br to-black/40 p-4 ${v.color}`}><span className="text-3xl font-black text-white/90">{v.abbr}</span></div>}
-                <span className="absolute right-3 top-3"><Badge status={v.status} label={v.status} /></span>
+                <span className="absolute right-3 top-3">
+                  {isBooked ? (
+                    <span className="chip bg-gold-100 text-gold-800 font-bold text-xs ring-1 ring-gold-300">
+                      ● Booked
+                    </span>
+                  ) : (
+                    <span className="chip bg-emerald-100 text-emerald-800 font-bold text-xs ring-1 ring-emerald-300">
+                      ✓ Available
+                    </span>
+                  )}
+                </span>
               </div>
               <div className="p-4">
                 <h3 className="font-bold text-brand-950">{v.name}</h3>
@@ -202,16 +230,28 @@ export default function Venues() {
                 <div className="mt-3 grid grid-cols-3 gap-2 text-center">
                   <div className="rounded-lg bg-brand-50 p-2"><p className="text-[10px] font-semibold text-ink/40">Capacity</p><p className="flex items-center justify-center gap-1 text-sm font-black text-brand-900"><Users size={12} />{v.capacity.toLocaleString()}</p></div>
                   <div className="rounded-lg bg-gold-50 p-2"><p className="text-[10px] font-semibold text-ink/40">Daily Rate</p><p className="text-sm font-black text-gold-700">{fmt(v.price)}</p></div>
-                  <div className="rounded-lg bg-brand-50 p-2"><p className="text-[10px] font-semibold text-ink/40">Bookings</p><p className="text-sm font-black text-brand-900">{bks.length}</p></div>
+                  <div className="rounded-lg bg-brand-50 p-2"><p className="text-[10px] font-semibold text-ink/40">Bookings</p><p className="text-sm font-black text-brand-900">{vBookings.length}</p></div>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {(v.equipment || []).map((e) => <span key={e} className="chip bg-brand-50 text-brand-800">{e}</span>)}
                 </div>
-                <div className="mt-4 flex items-center justify-between gap-2">
-                  <button onClick={() => setDetail(v)} className="btn-outline !py-1.5 text-xs">View Detail</button>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-brand-50 pt-3">
+                  <div>
+                    {isBooked && nextBooking ? (
+                      <span className="text-[11px] font-semibold text-gold-800 flex items-center gap-1">
+                        <CalendarDays size={12} className="text-gold-600" />
+                        <span>Booked for {nextBooking.date || 'Event'}</span>
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-semibold text-emerald-700 flex items-center gap-1">
+                        <CheckCircle2 size={12} className="text-emerald-600" />
+                        <span>Available for booking</span>
+                      </span>
+                    )}
+                  </div>
                   <div className="flex gap-2">
+                    <button onClick={() => setDetail(v)} className="btn-outline !py-1.5 text-xs">View Detail</button>
                     <button onClick={() => openEdit(v)} className="btn-ghost !px-2.5 !py-1.5 text-xs">Edit</button>
-                    <button onClick={() => bookVenue(v)} disabled={v.status === 'booked' || v.status === 'maintenance'} className="btn-primary !py-1.5 text-xs">{v.status === 'booked' ? 'Booked' : 'Book Venue'}</button>
                   </div>
                 </div>
               </div>
@@ -227,17 +267,20 @@ export default function Venues() {
           <span className="text-xs text-ink/45">Upcoming bookings</span>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {bookings.map((b) => {
+          {allBookings.slice(0, 8).map((b) => {
             const v = state.venues.find((x) => x.id === b.venueId)
             const ev = state.events.find((e) => e.id === b.eventId)
+            const d = b.date ? new Date(b.date + 'T00:00') : new Date()
             return (
               <div key={b.id} className="rounded-xl border border-brand-100 p-3.5">
                 <div className="mb-1.5 flex items-center justify-between">
-                  <span className="text-sm font-black text-brand-900">{new Date(b.date + 'T00:00').getDate()} <span className="text-[10px] uppercase text-ink/40">{new Date(b.date + 'T00:00').toLocaleDateString('en', { month: 'short' })}</span></span>
+                  <span className="text-sm font-black text-brand-900">
+                    {d.getDate()} <span className="text-[10px] uppercase text-ink/40">{d.toLocaleDateString('en', { month: 'short' })}</span>
+                  </span>
                   <Badge status={b.status} label={b.status} />
                 </div>
-                <p className="text-[13px] font-semibold text-brand-950">{ev?.name}</p>
-                <p className="text-[11px] text-ink/45">{v?.name}</p>
+                <p className="text-[13px] font-semibold text-brand-950 truncate">{b.eventName || ev?.name || 'Event Booking'}</p>
+                <p className="text-[11px] text-ink/45 truncate">{v?.name || 'Venue'}</p>
               </div>
             )
           })}

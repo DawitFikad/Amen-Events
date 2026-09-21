@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { Calendar, MapPin, Users, ArrowRight, Sparkles, Ticket, Shield, Zap, Heart, ChevronDown, Star, Building2, Search, Mic, Award, Clock } from 'lucide-react'
+import { useData } from '../../store/DataContext'
 import { portalEventsFallback } from '../../store/portalFallback'
 import { supabaseFetchPublicEvents } from '../../store/supabase'
 
@@ -33,12 +34,34 @@ const FAQS = [
 ]
 
 export default function Landing() {
+  const { state } = useData() || {}
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [openFaq, setOpenFaq] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
 
+  const publicEvents = useMemo(() => {
+    if (!state?.events || state.events.length === 0) return []
+    return state.events
+      .filter((e) => e.status !== 'pending_review' && e.status !== 'declined' && e.published !== false)
+      .map((e) => {
+        const v = state.venues?.find((venue) => venue.id === e.venueId)
+        const c = state.clients?.find((client) => client.id === e.clientId)
+        const regCount = (state.registrations || []).filter((r) => r.eventId === e.id).length
+        return {
+          ...e,
+          venue: e.venue || v || { name: 'Addis Ababa', city: 'Addis Ababa' },
+          client: e.client || c || { company: 'Amen Events' },
+          _count: { registrations: regCount || e._count?.registrations || 0 },
+        }
+      })
+  }, [state?.events, state?.venues, state?.clients, state?.registrations])
+
   useEffect(() => {
+    if (publicEvents.length > 0) {
+      setLoading(false)
+      return
+    }
     async function loadEvents() {
       try {
         const sbEvents = await supabaseFetchPublicEvents({ sort: 'popular', limit: 6 })
@@ -63,9 +86,10 @@ export default function Landing() {
         })
     }
     loadEvents()
-  }, [])
+  }, [publicEvents.length])
 
-  const featured = events[0]
+  const displayEvents = publicEvents.length > 0 ? publicEvents : events
+  const featured = displayEvents[0]
 
   return (
     <div>
@@ -143,12 +167,18 @@ export default function Landing() {
             style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}
           >
             <div className="grid lg:grid-cols-2">
-              {/* Image area - gradient placeholder */}
+              {/* Image area - photo or gradient placeholder */}
               <div className="relative h-64 overflow-hidden lg:h-full" style={{ background: 'linear-gradient(135deg, #166534 0%, #3AAA1C 50%, #4ade80 100%)' }}>
-                <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 30% 50%, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Calendar size={80} className="text-white/30" />
-                </div>
+                {featured.image ? (
+                  <img src={featured.image} alt={featured.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                ) : (
+                  <>
+                    <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 30% 50%, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Calendar size={80} className="text-white/30" />
+                    </div>
+                  </>
+                )}
                 <div className="absolute left-5 top-5">
                   <span className="rounded-full bg-white/90 px-3 py-1.5 text-xs font-bold text-portal-600 backdrop-blur">★ Featured</span>
                 </div>
@@ -203,7 +233,7 @@ export default function Landing() {
           </div>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {events.map((event, i) => (
+            {displayEvents.slice(0, 6).map((event, i) => (
               <EventCard key={event.id} event={event} delay={i * 0.05} />
             ))}
           </div>
@@ -312,38 +342,44 @@ function EventCard({ event, delay = 0 }) {
       className="group animate-portal-fade-up block overflow-hidden rounded-[20px] border border-gray-100 bg-white transition hover:-translate-y-1 hover:shadow-xl"
       style={{ animationDelay: `${delay}s`, boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}
     >
-      {/* Image area - gradient placeholder with zoom on hover */}
+      {/* Image area - photo or gradient placeholder with zoom on hover */}
       <div className="relative h-44 overflow-hidden" style={{ background: 'linear-gradient(135deg, #166534 0%, #3AAA1C 100%)' }}>
-        <div className="absolute inset-0 opacity-15" style={{ backgroundImage: 'radial-gradient(circle at 30% 50%, white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
-        <div className="absolute inset-0 flex items-center justify-center transition duration-500 group-hover:scale-110">
-          <Calendar size={48} className="text-white/30" />
-        </div>
+        {event.image ? (
+          <img src={event.image} alt={event.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-110" />
+        ) : (
+          <>
+            <div className="absolute inset-0 opacity-15" style={{ backgroundImage: 'radial-gradient(circle at 30% 50%, white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+            <div className="absolute inset-0 flex items-center justify-center transition duration-500 group-hover:scale-110">
+              <Calendar size={48} className="text-white/30" />
+            </div>
+          </>
+        )}
         <div className="absolute left-4 top-4 flex gap-2">
           <span className={`rounded-full px-3 py-1 text-xs font-bold backdrop-blur ${event.status === 'ongoing' ? 'bg-white/90 text-portal-600' : 'bg-white/80 text-gray-700'}`}>
             {event.status === 'ongoing' ? '● Live' : 'Upcoming'}
           </span>
         </div>
         <div className="absolute right-4 top-4">
-          <span className="rounded-full bg-black/30 px-3 py-1 text-xs font-semibold text-white backdrop-blur">{event.category}</span>
+          <span className="rounded-full bg-black/40 px-3 py-1 text-xs font-semibold text-white backdrop-blur">{event.category}</span>
         </div>
       </div>
       {/* Content */}
       <div className="p-5">
-        <h3 className="font-bold leading-snug text-gray-900 transition group-hover:text-portal-600">{event.name}</h3>
+        <h3 className="font-bold leading-snug text-gray-900 transition group-hover:text-portal-600 line-clamp-1">{event.name}</h3>
         <div className="mt-3 space-y-2">
           <div className="flex items-center gap-2 text-sm text-gray-500">
-            <Calendar size={15} className="text-portal-500" /> {dateStr} · {event.time || '09:00'}
+            <Calendar size={15} className="text-portal-500 shrink-0" /> {dateStr} · {event.time || '09:00'}
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-500 truncate">
+            <MapPin size={15} className="text-portal-500 shrink-0" /> {event.venue?.name || 'TBA'}{event.venue?.city ? `, ${event.venue.city}` : ''}
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-500">
-            <MapPin size={15} className="text-portal-500" /> {event.venue?.name || 'TBA'}{event.venue?.city && `, ${event.venue.city}`}
-          </div>
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <Users size={15} className="text-portal-500" /> {regCount} registered
+            <Users size={15} className="text-portal-500 shrink-0" /> {regCount} registered
           </div>
         </div>
         <div className="mt-4 flex items-center justify-between border-t border-gray-50 pt-4">
-          <span className="text-xs text-gray-400">{event.client?.company || 'Amen Events'}</span>
-          <span className="inline-flex items-center gap-1 text-sm font-bold text-portal-600 transition-all group-hover:gap-2">
+          <span className="text-xs text-gray-400 font-medium truncate max-w-[140px]">{event.client?.company || 'Amen Events'}</span>
+          <span className="inline-flex items-center gap-1 text-sm font-bold text-portal-600 transition-all group-hover:gap-2 shrink-0">
             Buy Ticket <ArrowRight size={15} />
           </span>
         </div>

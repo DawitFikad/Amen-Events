@@ -77,6 +77,8 @@ const statusStyles = {
   rejected: 'bg-red-100 text-red-700',
   invited: 'bg-sky-100 text-sky-700',
   declined: 'bg-red-100 text-red-700',
+  pending_review: 'bg-amber-100 text-amber-800 ring-1 ring-amber-300',
+  under_review: 'bg-amber-100 text-amber-800 ring-1 ring-amber-300',
   canceled: 'bg-slate-100 text-slate-500',
   cancelled: 'bg-slate-100 text-slate-500',
   expired: 'bg-red-100 text-red-700',

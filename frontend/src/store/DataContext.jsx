@@ -591,6 +591,144 @@ export function DataProvider({ children }) {
     }
   }, [backendOnline, patchBy])
 
+  const submitClientEvent = useCallback(async (data) => {
+    const clientId = state.currentUserId
+    const client = state.clients.find((c) => c.id === clientId)
+    const clientName = client?.company || client?.contactPerson || 'Client'
+    const eventPayload = {
+      ...data,
+      clientId,
+      status: 'pending_review',
+      published: false,
+      stage: 0,
+      progress: 10,
+      budget: Number(data.budget) || 0,
+      capacity: Number(data.capacity) || 0,
+      price: Number(data.price) || 0,
+    }
+
+    let createdEvent = null
+    // 1. Try backend API portal.createEvent
+    if (backendOnline) {
+      try {
+        const res = await api.portal.createEvent(eventPayload)
+        if (res.event) createdEvent = res.event
+      } catch (err) {
+        console.warn('API portal.createEvent failed, falling back to Supabase/local:', err)
+      }
+    }
+
+    // 2. Fallback to Supabase if not yet created
+    if (!createdEvent) {
+      try {
+        createdEvent = await supabaseAddEvent(eventPayload)
+      } catch (sbErr) {
+        console.warn('Supabase addEvent fallback:', sbErr)
+        createdEvent = {
+          id: 'ev_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+          ...eventPayload,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          client: client ? { company: client.company } : null,
+          venue: state.venues.find((v) => v.id === data.venueId) || null,
+        }
+      }
+    }
+
+    const venueObj = state.venues.find((v) => v.id === createdEvent.venueId)
+    const enriched = {
+      ...createdEvent,
+      client: createdEvent.client || (client ? { company: client.company, contactPerson: client.contactPerson } : null),
+      venue: createdEvent.venue || (venueObj ? { name: venueObj.name, city: venueObj.city, capacity: venueObj.capacity } : null),
+    }
+
+    setState((s) => ({ ...s, events: [enriched, ...s.events.filter((e) => e.id !== enriched.id)] }))
+
+    addApprovalRequest({
+      type: 'event',
+      entityId: enriched.id,
+      entityName: enriched.name,
+      amount: enriched.budget || 0,
+      note: data.notes || `Client "${clientName}" requested new event: ${enriched.name}`,
+    })
+
+    logActivity(`Event "${enriched.name}" submitted by client "${clientName}" for review`, 'event')
+    addNotification({
+      text: `New event submission: "${enriched.name}" by ${clientName}. Awaiting review.`,
+      type: 'approval',
+    })
+
+    return enriched
+  }, [backendOnline, state.currentUserId, state.clients, state.venues, addApprovalRequest, logActivity, addNotification])
+
+  const acceptClientEvent = useCallback(async (eventId, reviewNote = '') => {
+    const ev = state.events.find((e) => e.id === eventId)
+    const eventName = ev?.name || 'Event'
+    const updates = { status: 'upcoming', published: true }
+
+    try {
+      if (backendOnline) {
+        await api.events.review(eventId, { action: 'accept', note: reviewNote }).catch(() => {})
+      }
+    } catch (e) {}
+
+    try {
+      await supabaseUpdateEvent(eventId, updates).catch(() => {})
+    } catch (e) {}
+
+    patchBy('events', eventId, (e) => ({ ...e, ...updates }))
+
+    patch('approvals', (list) =>
+      list.map((a) =>
+        a.entityId === eventId ? { ...a, status: 'approved', reviewNote: reviewNote || 'Approved by manager' } : a
+      )
+    )
+
+    logActivity(`Event "${eventName}" accepted and published by Event Manager`, 'event')
+
+    if (ev?.clientId) {
+      addNotification({
+        text: `Good news! Your event "${eventName}" has been accepted and approved by the Event Manager!`,
+        type: 'approval',
+        userId: ev.clientId,
+      })
+    }
+  }, [backendOnline, state.events, patchBy, patch, logActivity, addNotification])
+
+  const declineClientEvent = useCallback(async (eventId, reason = '') => {
+    const ev = state.events.find((e) => e.id === eventId)
+    const eventName = ev?.name || 'Event'
+    const updates = { status: 'declined', published: false, declineReason: reason }
+
+    try {
+      if (backendOnline) {
+        await api.events.review(eventId, { action: 'decline', reason }).catch(() => {})
+      }
+    } catch (e) {}
+
+    try {
+      await supabaseUpdateEvent(eventId, { status: 'declined', published: false }).catch(() => {})
+    } catch (e) {}
+
+    patchBy('events', eventId, (e) => ({ ...e, ...updates }))
+
+    patch('approvals', (list) =>
+      list.map((a) =>
+        a.entityId === eventId ? { ...a, status: 'rejected', reviewNote: reason || 'Declined by manager' } : a
+      )
+    )
+
+    logActivity(`Event "${eventName}" declined by Event Manager`, 'event')
+
+    if (ev?.clientId) {
+      addNotification({
+        text: `Your event submission "${eventName}" was declined: ${reason || 'Contact event manager for details.'}`,
+        type: 'approval',
+        userId: ev.clientId,
+      })
+    }
+  }, [backendOnline, state.events, patchBy, patch, logActivity, addNotification])
+
   const deleteEvent = useCallback(async (id) => {
     try {
       await supabaseDeleteEvent(id)
@@ -1427,6 +1565,7 @@ export function DataProvider({ children }) {
     state, patch, patchBy, logActivity, addNotification,
     addClient, updateClient, deleteClient,
     addEvent, updateEvent, deleteEvent,
+    submitClientEvent, acceptClientEvent, declineClientEvent,
     addTask, updateTask, deleteTask,
     registerAttendee, checkIn,
     recordExpense, recordPayment, addInvoice,

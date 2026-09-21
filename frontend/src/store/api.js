@@ -135,6 +135,7 @@ export const auth = {
 export const portal = {
   getDashboard: () => apiFetch('/portal/dashboard'),
   getEvents: () => apiFetch('/portal/events'),
+  createEvent: (data) => apiFetch('/portal/events', { method: 'POST', body: JSON.stringify(data) }),
   getInvoices: () => apiFetch('/portal/invoices'),
   getRegistrations: () => apiFetch('/portal/registrations'),
 }
@@ -207,6 +208,7 @@ export const events = {
   list: () => apiFetch('/events'),
   create: (data) => apiFetch('/events', { method: 'POST', body: JSON.stringify(data) }),
   update: (id, data) => apiFetch(`/events/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  review: (id, data) => apiFetch(`/events/${id}/review`, { method: 'PUT', body: JSON.stringify(data) }),
   remove: (id) => apiFetch(`/events/${id}`, { method: 'DELETE' }),
   setTeam: (id, memberIds) => apiFetch(`/events/${id}/team`, { method: 'PUT', body: JSON.stringify({ memberIds }) }),
   setBudget: (id, budget) => apiFetch(`/events/${id}/budget`, { method: 'PUT', body: JSON.stringify({ budget }) }),
