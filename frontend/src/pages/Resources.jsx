@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { Package, Plus, Wrench, Truck, Boxes, AlertTriangle, CheckCircle2, Upload, Trash2, Image, Info, CircleDollarSign, Store, CalendarClock } from 'lucide-react'
+import { Package, Plus, Wrench, Truck, Boxes, AlertTriangle, CheckCircle2, Upload, Trash2, Image, Info, CircleDollarSign, Store, CalendarClock, FileText } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, SearchBox, Toast, EmptyState, Th, Td, Avatar, Modal, Field } from '../components/ui'
 import { textRequired, required, numberPositive, optional, dateRequired, nameOnly, validate } from '../store/validation'
+import { exportTableToPDF } from '../store/exportUtils'
 
 const categories = ['LED Screens', 'Sound Systems', 'Lighting', 'Stages', 'Furniture', 'Decoration', 'Vehicles', 'Generators', 'Branding', 'Tents & Marquees', 'Catering Equipment', 'Laptops & Tablets', 'Cameras & Video', 'Printers & Plotting', 'Barricades & Fencing', 'Photocopy Machines', 'WiFi Boosters', 'Projectors', 'Power Distribution']
 
@@ -20,6 +21,7 @@ export default function Resources() {
   const [toast, setToast] = useState(null)
   const [cat, setCat] = useState('All')
   const [open, setOpen] = useState(false)
+  const [assetStep, setAssetStep] = useState(1)
   const [form, setForm] = useState({})
   const [editOpen, setEditOpen] = useState(false)
   const [editForm, setEditForm] = useState({})
@@ -39,7 +41,7 @@ export default function Resources() {
           const rec = addResource(seed)
           show(`Asset "${rec?.name || seed.name}" added automatically`); setOpen(false); setForm({})
         }, 1100)
-      } else { setOpen(true); setErrors({}) }
+      } else { openAssetWizard() }
       clearIntent()
     }
   }, [intent])
@@ -67,8 +69,25 @@ export default function Resources() {
     if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
     addResource({ ...form, category: form.category || 'Branding', code: form.code || 'A-AS-' + String(Math.floor(Math.random() * 99)).padStart(2, '0'), unitCost: Number(form.unitCost) || 0 })
     show(`Asset "${form.name}" added to inventory`)
-    setOpen(false); setForm({}); setErrors({})
+    setOpen(false); setAssetStep(1); setForm({}); setErrors({})
   }
+
+  const openAssetWizard = () => { setOpen(true); setAssetStep(1); setForm({}); setErrors({}) }
+  const closeAssetWizard = () => { setOpen(false); setAssetStep(1); setForm({}); setErrors({}) }
+
+  const handleAssetNext = () => {
+    if (assetStep === 1) {
+      const res = validate(form, { name: [textRequired('Asset name', { min: 2, max: 100 })] })
+      if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
+    } else if (assetStep === 2) {
+      const res = validate(form, { qty: [numberPositive('Quantity', { integer: true })] })
+      if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
+    }
+    setErrors({})
+    setAssetStep((s) => Math.min(s + 1, 4))
+  }
+
+  const handleAssetBack = () => setAssetStep((s) => Math.max(s - 1, 1))
 
   const openEdit = (r) => {
     setEditId(r.id)
@@ -169,7 +188,18 @@ export default function Resources() {
         title="Resource & Asset Inventory"
         subtitle="Assets, availability, maintenance and allocation."
         icon={Package}
-        actions={<button className="btn-primary" onClick={() => { setOpen(true); setErrors({}) }}><Plus size={15} /> Add Asset</button>}
+        actions={
+          <>
+            <button className="btn-outline" onClick={() => exportTableToPDF(
+              'asset-inventory',
+              'Asset & Resource Inventory Report',
+              ['Asset Name', 'Category', 'Code', 'Stock', 'Allocated', 'Status', 'Location', 'Unit Cost (ETB)'],
+              state.resources.map((r) => [r.name, r.category, r.code, r.qty, r.allocated || 0, r.status, r.location, r.unitCost || 0]),
+              { rightAlignCols: [7], subtitle: `Total Assets: ${state.resources.length}  ·  Available: ${counts.available}  ·  In Use: ${counts.inUse}` }
+            )}><FileText size={15} /> Export PDF</button>
+            <button className="btn-primary" onClick={openAssetWizard}><Plus size={15} /> Add Asset</button>
+          </>
+        }
       />
 
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -291,12 +321,194 @@ export default function Resources() {
         </div>
       </div>
 
-      <Modal open={open} onClose={() => setOpen(false)} title="Register Asset to Inventory" width="max-w-2xl">
-        {renderFields(form, setForm)}
-        <div className="mt-5 flex justify-end gap-2">
-          <button className="btn-outline" onClick={() => setOpen(false)}>Cancel</button>
-          <button className="btn-primary" onClick={submit}><Plus size={14} /> Add Asset</button>
+      {/* 4-Step Register Asset Wizard */}
+      <Modal
+        open={open}
+        onClose={closeAssetWizard}
+        title="Register Asset to Inventory"
+        width="max-w-2xl"
+        dirty={Boolean(form.name || form.code || form.qty || form.unitCost || assetStep > 1)}
+      >
+        {/* Progress Bar */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between text-[11px] font-bold text-ink/60">
+            <span className={assetStep >= 1 ? 'text-brand-700' : ''}>1. Asset Identity (25%)</span>
+            <span className={assetStep >= 2 ? 'text-brand-700' : ''}>2. Inventory & Specs (50%)</span>
+            <span className={assetStep >= 3 ? 'text-brand-700' : ''}>3. Procurement (75%)</span>
+            <span className={assetStep >= 4 ? 'text-brand-700' : ''}>4. Review & Confirm (100%)</span>
+          </div>
+          <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-gray-100">
+            <div
+              className="h-full rounded-full transition-all duration-500 ease-out"
+              style={{
+                width: assetStep === 1 ? '25%' : assetStep === 2 ? '50%' : assetStep === 3 ? '75%' : '100%',
+                background: 'linear-gradient(90deg, #188A2E, #39D353)',
+              }}
+            />
+          </div>
         </div>
+
+        {/* STEP 1: Asset Identity & Photo */}
+        {assetStep === 1 && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="rounded-xl border border-brand-100 bg-brand-50/40 p-3.5 flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white"><Package size={20} /></span>
+              <div>
+                <p className="text-xs font-bold text-brand-950">Asset Identity & Photo</p>
+                <p className="text-[11px] text-ink/55">Upload asset photo, specify name, category, and tracking code.</p>
+              </div>
+            </div>
+            <div className="mb-4 flex items-center gap-4">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-brand-50 ring-1 ring-brand-100">
+                {form?.image
+                  ? <img src={form.image} alt="Asset" className="h-full w-full object-cover" />
+                  : <Upload size={24} className="text-brand-400" />}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-brand-950">Asset Photo</p>
+                <p className="text-xs text-ink/50">Show the item on inventory and allocation views (JPG, PNG - max 5MB).</p>
+                <div className="mt-2 flex gap-2">
+                  <label className="btn-outline !py-1.5 cursor-pointer text-xs">
+                    <Upload size={14} /> Choose image
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => onPhoto(e, setForm)} />
+                  </label>
+                  {form?.image && <button className="btn-ghost !py-1.5 text-xs !text-red-600" onClick={() => setForm((x) => ({ ...x, image: '' }))}><Trash2 size={13} /> Remove</button>}
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Asset Name *" className="col-span-2">
+                <input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Par LED Lights (10)" />
+                {errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}
+              </Field>
+              <Field label="Category">
+                <select className="input" value={form.category || 'Branding'} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+                  {categories.map((c) => <option key={c}>{c}</option>)}
+                  <option>Other</option>
+                </select>
+              </Field>
+              <Field label="Asset Code">
+                <input className="input font-mono" value={form.code || ''} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="A-LE-01" />
+              </Field>
+            </div>
+            <div className="mt-4 flex justify-between border-t border-gray-100 pt-4">
+              <button className="btn-outline" onClick={closeAssetWizard}>Cancel</button>
+              <button className="btn-primary" onClick={handleAssetNext}>Next: Inventory & Specs →</button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 2: Inventory & Technical Specs */}
+        {assetStep === 2 && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="rounded-xl border border-brand-100 bg-brand-50/40 p-3.5 flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white"><Boxes size={20} /></span>
+              <div>
+                <p className="text-xs font-bold text-brand-950">Inventory & Technical Specs</p>
+                <p className="text-[11px] text-ink/55">Specify stock quantity, physical warehouse location, and current status.</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Quantity *">
+                <input type="number" className="input" value={form.qty || ''} onChange={(e) => setForm({ ...form, qty: e.target.value })} placeholder="e.g. 10" />
+                {errors.qty && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.qty}</p>}
+              </Field>
+              <Field label="Status">
+                <select className="input" value={form.status || 'available'} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+                  {statuses.map((s) => <option key={s} value={s}>{s[0].toUpperCase() + s.slice(1)}</option>)}
+                  <option value="Other">Other</option>
+                </select>
+              </Field>
+              <Field label="Storage Location" className="col-span-2">
+                <input className="input" value={form.location || 'Main Warehouse'} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="e.g. Main Warehouse / Stage B" />
+              </Field>
+              <Field label="Condition / Serial Number" className="col-span-2">
+                <input className="input" value={form.condition || ''} onChange={(e) => setForm({ ...form, condition: e.target.value })} placeholder="e.g. Brand new, Serial: SN-99820-2026" />
+              </Field>
+            </div>
+            <div className="mt-4 flex justify-between border-t border-gray-100 pt-4">
+              <button className="btn-outline" onClick={handleAssetBack}>← Back</button>
+              <button className="btn-primary" onClick={handleAssetNext}>Next: Procurement →</button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 3: Procurement & Financials */}
+        {assetStep === 3 && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="rounded-xl border border-brand-100 bg-brand-50/40 p-3.5 flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white"><CircleDollarSign size={20} /></span>
+              <div>
+                <p className="text-xs font-bold text-brand-950">Procurement & Financials</p>
+                <p className="text-[11px] text-ink/55">Unit replacement cost, supplier, purchase date, and warranty.</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Unit Cost (ETB)">
+                <div className="relative">
+                  <CircleDollarSign size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" />
+                  <input type="number" className="input pl-9" value={form.unitCost || ''} onChange={(e) => setForm({ ...form, unitCost: e.target.value })} placeholder="e.g. 120000" />
+                </div>
+                {errors.unitCost && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.unitCost}</p>}
+              </Field>
+              <Field label="Purchase Date">
+                <div className="relative">
+                  <CalendarClock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" />
+                  <input type="date" className="input pl-9" value={form.purchaseDate || ''} onChange={(e) => setForm({ ...form, purchaseDate: e.target.value })} />
+                </div>
+                {errors.purchaseDate && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.purchaseDate}</p>}
+              </Field>
+              <Field label="Supplier / Vendor" className="col-span-2">
+                <div className="relative">
+                  <Store size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" />
+                  <input className="input pl-9" value={form.supplier || ''} onChange={(e) => setForm({ ...form, supplier: e.target.value })} placeholder="e.g. Addis AV Traders" />
+                </div>
+                {errors.supplier && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.supplier}</p>}
+              </Field>
+              <Field label="Warranty / Invoice Reference" className="col-span-2">
+                <input className="input" value={form.warranty || ''} onChange={(e) => setForm({ ...form, warranty: e.target.value })} placeholder="e.g. 2-year warranty / INV-2026-081" />
+              </Field>
+            </div>
+            <div className="mt-4 flex justify-between border-t border-gray-100 pt-4">
+              <button className="btn-outline" onClick={handleAssetBack}>← Back</button>
+              <button className="btn-primary" onClick={handleAssetNext}>Next: Review & Confirm →</button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 4: Maintenance Policy & Review */}
+        {assetStep === 4 && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="rounded-xl border border-brand-100 bg-brand-50/40 p-3.5 flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white"><CheckCircle2 size={20} /></span>
+              <div>
+                <p className="text-xs font-bold text-brand-950">Review & Register Asset</p>
+                <p className="text-[11px] text-ink/55">Verify asset details and add specifications or maintenance notes.</p>
+              </div>
+            </div>
+            <Field label="Notes / Specifications / Maintenance Instructions">
+              <textarea className="input min-h-[65px] resize-y" value={form.notes || ''} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Condition, specifications, serial numbers, maintenance cycle…" />
+            </Field>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+              <div className="rounded-xl border border-brand-100 bg-white p-3.5">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-brand-800 mb-2">Asset Details</p>
+                <p className="text-sm font-bold text-brand-950">{form.name}</p>
+                <p className="text-xs text-ink/60">{form.category || 'Branding'} · Code: {form.code || 'Auto-generated'}</p>
+                <p className="text-xs text-ink/50 mt-1">Location: {form.location || 'Main Warehouse'}</p>
+              </div>
+              <div className="rounded-xl border border-brand-100 bg-white p-3.5">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-brand-800 mb-2">Inventory & Cost</p>
+                <p className="text-sm font-bold text-brand-950">{form.qty || 1} Units ({form.status || 'available'})</p>
+                <p className="text-xs text-ink/60">Unit Cost: {form.unitCost ? `ETB ${Number(form.unitCost).toLocaleString()}` : 'Not set'}</p>
+                {form.supplier && <p className="text-xs text-ink/50 mt-1">Supplier: {form.supplier}</p>}
+              </div>
+            </div>
+            <div className="mt-4 flex justify-between border-t border-gray-100 pt-4">
+              <button className="btn-outline" onClick={handleAssetBack}>← Back</button>
+              <button className="btn-primary !px-6" onClick={submit}><CheckCircle2 size={16} /> Register Asset</button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit Asset" width="max-w-2xl">

@@ -163,14 +163,36 @@ export function Td({ children, className = '' }) {
 }
 
 // ---- Modal ---- 
-export function Modal({ open, onClose, title, children, width = 'max-w-lg' }) {
+export function Modal({ open, onClose, title, children, width = 'max-w-lg', dirty = false }) {
   const ref = useRef(null)
+  const [showDiscardPrompt, setShowDiscardPrompt] = useState(false)
+
+  // Reset prompt when modal is toggled
+  useEffect(() => {
+    if (!open) setShowDiscardPrompt(false)
+  }, [open])
+
+  const handleAttemptClose = () => {
+    if (dirty) {
+      setShowDiscardPrompt(true)
+    } else if (onClose) {
+      onClose()
+    }
+  }
 
   useEffect(() => {
-    const onKey = (e) => e.key === 'Escape' && onClose && onClose()
+    const onKey = (e) => {
+      if (e.key === 'Escape' && open) {
+        if (showDiscardPrompt) {
+          setShowDiscardPrompt(false)
+        } else {
+          handleAttemptClose()
+        }
+      }
+    }
     if (open) window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose])
+  }, [open, onClose, dirty, showDiscardPrompt])
 
   // Prevent background scrolling while modal is open
   useEffect(() => {
@@ -189,7 +211,7 @@ export function Modal({ open, onClose, title, children, width = 'max-w-lg' }) {
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 overflow-y-auto">
       <div
         className="fixed inset-0 bg-brand-950/50 backdrop-blur-[2px] transition-opacity"
-        onClick={onClose}
+        onClick={handleAttemptClose}
         aria-hidden="true"
       />
       <div
@@ -200,19 +222,123 @@ export function Modal({ open, onClose, title, children, width = 'max-w-lg' }) {
         <div className="flex items-center justify-between px-5 py-4 border-b border-brand-100 shrink-0">
           <h3 className="font-bold text-brand-950">{title}</h3>
           <button
-            onClick={onClose}
+            onClick={handleAttemptClose}
             className="rounded-lg p-1.5 text-ink/40 hover:bg-brand-50 hover:text-brand-800 transition"
             aria-label="Close modal"
           >
             <X size={18} />
           </button>
         </div>
-        <div className="overflow-y-auto px-5 py-4 flex-1">{children}</div>
+        <div className="overflow-y-auto px-5 py-4 flex-1 relative">
+          {children}
+
+          {/* Unsaved Changes Confirmation Overlay */}
+          {showDiscardPrompt && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-brand-950/40 backdrop-blur-sm p-6 rounded-b-2xl animate-fade-in">
+              <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl border border-amber-200 text-center">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+                  <AlertTriangle size={24} />
+                </div>
+                <h4 className="text-base font-bold text-brand-950">Unsaved Changes</h4>
+                <p className="mt-1.5 text-xs text-ink/65 leading-relaxed">
+                  You have entered information that has not been saved. If you close now, your progress will be discarded.
+                </p>
+                <div className="mt-5 flex items-center justify-end gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowDiscardPrompt(false)}
+                    className="btn-outline flex-1 text-xs py-2"
+                  >
+                    Keep Editing
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDiscardPrompt(false)
+                      onClose && onClose()
+                    }}
+                    className="rounded-xl bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700 transition flex-1 shadow-sm"
+                  >
+                    Discard & Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
 
   return typeof document !== 'undefined' ? createPortal(modalElement, document.body) : modalElement
+}
+
+// ---- Confirmation Modal (For Deletions, Edits, Critical Actions) ----
+export function ConfirmModal({
+  open,
+  onClose,
+  onConfirm,
+  title = 'Confirm Action',
+  message = 'Are you sure you want to proceed?',
+  confirmText = 'Confirm',
+  cancelText = 'Cancel',
+  confirmTone = 'danger', // 'danger' | 'primary' | 'warning'
+  icon: CustomIcon,
+  loading = false,
+}) {
+  if (!open) return null
+
+  const tones = {
+    danger: {
+      bg: 'bg-red-100 text-red-600',
+      btn: 'bg-red-600 hover:bg-red-700 text-white',
+      defaultIcon: AlertTriangle,
+    },
+    primary: {
+      bg: 'bg-brand-100 text-brand-700',
+      btn: 'btn-primary',
+      defaultIcon: Check,
+    },
+    warning: {
+      bg: 'bg-amber-100 text-amber-600',
+      btn: 'bg-amber-600 hover:bg-amber-700 text-white',
+      defaultIcon: AlertTriangle,
+    },
+  }
+
+  const toneConfig = tones[confirmTone] || tones.danger
+  const IconComponent = CustomIcon || toneConfig.defaultIcon
+
+  return (
+    <Modal open={open} onClose={onClose} title={title} width="max-w-md">
+      <div className="text-center py-2">
+        <div className={`mx-auto mb-3.5 flex h-14 w-14 items-center justify-center rounded-2xl ${toneConfig.bg}`}>
+          <IconComponent size={28} />
+        </div>
+        <h4 className="text-base font-bold text-brand-950 mb-1.5">{title}</h4>
+        <p className="text-sm text-ink/70 leading-relaxed max-w-sm mx-auto">{message}</p>
+        <div className="mt-6 flex items-center justify-end gap-3">
+          <button
+            type="button"
+            disabled={loading}
+            onClick={onClose}
+            className="btn-outline flex-1 py-2 text-sm"
+          >
+            {cancelText}
+          </button>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={onConfirm}
+            className={`flex-1 py-2 text-sm font-semibold rounded-xl transition shadow-sm inline-flex items-center justify-center gap-2 ${toneConfig.btn}`}
+          >
+            {loading && <Loader2 size={16} className="animate-spin" />}
+            {confirmText}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  )
 }
 
 // ---- Field wrapper ---- 

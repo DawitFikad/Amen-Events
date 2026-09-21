@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Mic2, Plus, CalendarDays, Award, Upload, Clock3, Video, UserCheck, Pencil, Phone, Mail } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, Toast, EmptyState, Th, Td, Avatar, Segmented, Modal, Field } from '../components/ui'
-import { downloadCSV } from '../store/exportUtils'
+import { exportTableToPDF } from '../store/exportUtils'
 import { nameOnly, textRequired, emailValid, phoneValid, optional, validate } from '../store/validation'
 
 export default function Speakers() {
@@ -71,18 +71,32 @@ export default function Speakers() {
   }
 
   const issueCertificate = (c) => {
-    downloadCSV(`speaker-certificate-${c.name.replace(/\s+/g, '-').toLowerCase()}.csv`,
-      ['Certificate of Appreciation', '', ''],
-      [['Speaker', c.name, ''], ['Session', c.session, ''], ['Event', state.events[0]?.name || 'Amen Events', ''], ['Issued', new Date().toLocaleDateString(), '']])
+    exportTableToPDF(
+      `speaker-certificate-${c.name.replace(/\s+/g, '-').toLowerCase()}`,
+      'Certificate of Appreciation',
+      ['Field', 'Details'],
+      [
+        ['Awarded To', c.name],
+        ['Session / Talk', c.session],
+        ['Event', state.events[0]?.name || 'Amen Events'],
+        ['Issued On', new Date().toLocaleDateString('en-US', { dateStyle: 'long' })],
+        ['Certificate No.', `AEO-CERT-${Date.now().toString(36).toUpperCase()}`],
+      ],
+      { orientation: 'portrait', subtitle: 'Issued by Amen Event Organizer — Addis Ababa, Ethiopia' }
+    )
     patch('certificateHolders', (arr) => arr.map((x) => (x.id === c.id ? { ...x, issued: true } : x)))
     logActivity(`Certificate issued to ${c.name}`, 'speakers')
     show(`Certificate generated for ${c.name}`)
   }
 
   const generateAll = () => {
-    downloadCSV('speaker-certificates-all.csv',
-      ['Speaker', 'Session', 'Event', 'Status'],
-      certificateHolders.map((c) => [c.name, c.session, state.events[0]?.name || 'Amen Events', 'Issued']))
+    exportTableToPDF(
+      'speaker-certificates-all',
+      'Speaker Certificates of Appreciation — Bulk Issue',
+      ['Speaker', 'Session / Talk', 'Event', 'Status', 'Certificate No.'],
+      certificateHolders.map((c) => [c.name, c.session, state.events[0]?.name || 'Amen Events', 'Issued', `AEO-CERT-${c.id.toUpperCase()}`]),
+      { subtitle: `${certificateHolders.length} certificates issued  ·  ${state.events[0]?.name || 'Amen Events'}` }
+    )
     patch('certificateHolders', (arr) => arr.map((c) => ({ ...c, issued: true })))
     logActivity(`Bulk certificates generated for ${certificateHolders.length} speakers`, 'speakers')
     show(`Generated ${certificateHolders.length} certificates`)

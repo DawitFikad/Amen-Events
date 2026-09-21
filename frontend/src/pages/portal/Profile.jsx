@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { User, Ticket, Heart, Bell, Lock, Trash2, Check, ArrowRight, Settings, Calendar, Camera } from 'lucide-react'
 import { useAttendee } from '../../store/AttendeeContext'
+import { ConfirmModal } from '../../components/ui'
 import { nameOnly, emailValid, phoneValid, textRequired, optional, validate, clearError } from '../../store/validation'
 
 export default function Profile() {
@@ -10,6 +11,7 @@ export default function Profile() {
   const [tab, setTab] = useState('info')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [form, setForm] = useState({
     firstName: attendee?.firstName || '',
     lastName: attendee?.lastName || '',
@@ -69,8 +71,12 @@ export default function Profile() {
     else { setPwd({ current: '', next: '', confirm: '' }); setSaved(true); setTimeout(() => setSaved(false), 2000) }
   }
 
-  const handleDelete = async () => {
-    if (!confirm('Are you sure? This action cannot be undone.')) return
+  const handleDelete = () => {
+    setDeleteConfirmOpen(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    setDeleteConfirmOpen(false)
     await authFetch('/portal/me', { method: 'DELETE' })
     logout()
     navigate('/')
@@ -206,6 +212,17 @@ export default function Profile() {
           </div>
         )}
       </div>
+
+      {/* Delete Account Confirmation Modal */}
+      <ConfirmModal
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Account"
+        message="Are you sure you want to permanently delete your account? All your tickets, event bookings, and personal data will be completely erased. This action cannot be undone."
+        confirmText="Delete My Account"
+        confirmTone="danger"
+      />
     </div>
   )
 }

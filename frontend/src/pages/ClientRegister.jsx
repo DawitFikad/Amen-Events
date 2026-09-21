@@ -107,11 +107,14 @@ export default function ClientRegister() {
     e.preventDefault()
     setError(null)
 
-    if (!form.company.trim()) return setError('Company name is required')
-    if (!form.contactPerson.trim()) return setError('Contact person name is required')
-    if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(form.email.trim())) {
+    if (!form.company.trim()) return setError('Please fill out this field')
+    if (!form.contactPerson.trim()) return setError('Please fill out this field')
+    if (!form.email.trim()) return setError('Please fill out this field')
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(form.email.trim())) {
       return setError('A valid corporate email address is required')
     }
+    if (!form.password) return setError('Please fill out this field')
+    if (!form.confirmPassword) return setError('Please fill out this field')
     if (form.password.length < 8) return setError('Password must be at least 8 characters long')
     if (!/[A-Z]/.test(form.password)) return setError('Password must contain at least one uppercase letter')
     if (!/[0-9]/.test(form.password)) return setError('Password must contain at least one number')

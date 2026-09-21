@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { MapPin, Plus, CalendarDays, Users, LayoutTemplate, Phone, Mail, Image, Upload, Trash2, Info, Globe, Building2 } from 'lucide-react'
+import { MapPin, Plus, CalendarDays, Users, LayoutTemplate, Phone, Mail, Image, Upload, Trash2, Info, Globe, Building2, CheckCircle2 } from 'lucide-react'
 import { useData } from '../store/DataContext'
-import { PageHeader, Badge, SearchBox, Toast, Modal, Field } from '../components/ui'
+import { PageHeader, Badge, SearchBox, Toast, Modal, Field, StatCard } from '../components/ui'
 import { fmt } from '../store/data'
 import { textRequired, nameOnly, numberPositive, optional, phoneValid, emailValid, validate } from '../store/validation'
 
@@ -160,6 +160,11 @@ export default function Venues() {
     </>
   )
 
+  const totalVenues = state.venues.length
+  const availableVenues = state.venues.filter((v) => v.status === 'available').length
+  const bookedVenues = state.venues.filter((v) => v.status === 'booked').length
+  const totalCapacity = state.venues.reduce((s, v) => s + (Number(v.capacity) || 0), 0)
+
   return (
     <div>
       <PageHeader
@@ -168,6 +173,14 @@ export default function Venues() {
         icon={MapPin}
         actions={<button className="btn-primary" onClick={() => { setOpen(true); setErrors({}) }}><Plus size={15} /> Add Venue</button>}
       />
+
+      {/* Live stat cards */}
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard label="Total Venues" value={totalVenues} icon={Building2} tone="brand" sub="managed facilities" />
+        <StatCard label="Available" value={availableVenues} icon={CheckCircle2} tone="brand" sub="ready to book" />
+        <StatCard label="Booked" value={bookedVenues} icon={CalendarDays} tone="gold" sub="active bookings" />
+        <StatCard label="Total Capacity" value={totalCapacity.toLocaleString()} icon={Users} tone="brand" sub="seats across halls" />
+      </div>
 
       <div className="mb-5">
         <SearchBox value={q} onChange={setQ} placeholder="Search venues…" className="w-full sm:w-80" />

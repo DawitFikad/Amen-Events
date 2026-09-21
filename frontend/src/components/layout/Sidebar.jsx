@@ -55,32 +55,44 @@ const groups = [
   },
 ]
 
-function Section({ group, collapsed, setMobileNav }) {
+function Section({ group, collapsed, setMobileNav, counts = {} }) {
   return (
     <div className="mb-5">
       {!collapsed && (
         <p className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-widest text-brand-300/70">{group.label}</p>
       )}
       <div className="space-y-0.5">
-        {group.items.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.end}
-            title={item.label}
-            onClick={() => setMobileNav && setMobileNav(false)}
-            className={({ isActive }) =>
-              `flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition ${
-                isActive
-                  ? 'bg-gold-400/15 text-gold-200 ring-1 ring-gold-400/25'
-                  : 'text-brand-100/70 hover:bg-white/5 hover:text-white'
-              }`
-            }
-          >
-            <item.icon size={17} className="shrink-0" />
-            {!collapsed && <span className="truncate">{item.label}</span>}
-          </NavLink>
-        ))}
+        {group.items.map((item) => {
+          const badgeCount = counts[item.to]
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              title={item.label}
+              onClick={() => setMobileNav && setMobileNav(false)}
+              className={({ isActive }) =>
+                `flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition ${
+                  isActive
+                    ? 'bg-gold-400/15 text-gold-200 ring-1 ring-gold-400/25'
+                    : 'text-brand-100/70 hover:bg-white/5 hover:text-white'
+                }`
+              }
+            >
+              <item.icon size={17} className="shrink-0" />
+              {!collapsed && (
+                <>
+                  <span className="flex-1 truncate">{item.label}</span>
+                  {badgeCount !== undefined && badgeCount > 0 && (
+                    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-gold-400/20 px-1.5 text-[10px] font-bold text-gold-300 ring-1 ring-gold-400/30">
+                      {badgeCount}
+                    </span>
+                  )}
+                </>
+              )}
+            </NavLink>
+          )
+        })}
       </div>
     </div>
   )
@@ -121,6 +133,18 @@ export default function Sidebar({ collapsed, setCollapsed, mobileNav, setMobileN
       }))
       .filter((g) => g.items.length > 0)
   }, [rbac, searchQuery])
+
+  const counts = useMemo(() => ({
+    '/erp/admin/events': state.events.filter((e) => e.status === 'upcoming' || e.status === 'ongoing').length,
+    '/erp/projects': state.tasks.filter((t) => t.status !== 'done').length,
+    '/erp/notifications': state.notifications.length,
+    '/erp/approvals': state.approvals.filter((a) => a.status === 'pending').length,
+    '/erp/crm': state.clients.length,
+    '/erp/resources': state.resources.length,
+    '/erp/staff': state.staff.filter((s) => s.status === 'active').length,
+    '/erp/portal/events': state.events.filter((e) => (e.clientId === state.currentUserId) && (e.status === 'upcoming' || e.status === 'ongoing')).length,
+    '/erp/portal/invoices': state.invoices.filter((i) => i.clientId === state.currentUserId && i.status !== 'paid').length,
+  }), [state.events, state.tasks, state.notifications, state.approvals, state.clients, state.resources, state.staff, state.invoices, state.currentUserId])
 
   return (
     <aside
@@ -179,7 +203,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileNav, setMobileN
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
-        {visibleGroups.map((g) => <Section key={g.label} group={g} collapsed={collapsed} setMobileNav={setMobileNav} />)}
+        {visibleGroups.map((g) => <Section key={g.label} group={g} collapsed={collapsed} setMobileNav={setMobileNav} counts={counts} />)}
         {visibleGroups.length === 0 && (
           <p className="py-6 text-center text-xs text-brand-200/50">No matching menu items</p>
         )}

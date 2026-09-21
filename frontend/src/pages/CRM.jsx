@@ -5,9 +5,9 @@ import {
   MessageSquare, ShieldCheck, Eye, ArrowRight, Upload, Globe, Link, Trash2, Info,
 } from 'lucide-react'
 import { useData } from '../store/DataContext'
-import { PageHeader, Badge, SearchBox, Avatar, Modal, Field, EmptyState, Toast, Th, Td } from '../components/ui'
+import { PageHeader, Badge, SearchBox, Avatar, Modal, ConfirmModal, Field, EmptyState, Toast, Th, Td, StatCard } from '../components/ui'
 import { fmt, todayISO } from '../store/data'
-import { downloadCSV } from '../store/exportUtils'
+import { exportTableToPDF } from '../store/exportUtils'
 import { required, nameOnly, emailValid, phoneValid, textRequired, numberPositive, dateRequired, dateRange, optional, validate } from '../store/validation'
 
 const inquiries = [
@@ -35,12 +35,15 @@ const pipelineStages = ['lead', 'opportunity', 'quotation', 'negotiation', 'cont
 const pipelineLabels = { lead: 'Lead', opportunity: 'Opportunity', quotation: 'Quotation', negotiation: 'Negotiation', contract: 'Contract', Other: 'Other' }
 
 export default function CRM() {
-  const { state, addClient, updateClient, patchBy, patch, logActivity, intent, clearIntent, addContract, updateContractStatus, addClientDoc, setDemoFlag } = useData()
+  const { state, addClient, updateClient, deleteClient, patchBy, patch, logActivity, intent, clearIntent, addContract, updateContractStatus, addClientDoc, setDemoFlag } = useData()
   const [tab, setTab] = useState('clients')
   const [q, setQ] = useState('')
   const [open, setOpen] = useState(false)
+  const [clientStep, setClientStep] = useState(1)
   const [editOpen, setEditOpen] = useState(false)
   const [editForm, setEditForm] = useState({})
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [confirmEditOpen, setConfirmEditOpen] = useState(false)
   const [toast, setToast] = useState(null)
   const [view, setView] = useState(null) // client detail
   const [form, setForm] = useState({})
@@ -102,12 +105,14 @@ export default function CRM() {
   const activeFilterCount = Object.values(filters).filter(Boolean).length
 
   const exportClients = () => {
-    downloadCSV(
-      'clients.csv',
+    exportTableToPDF(
+      'clients-directory',
+      'Client & Partner Directory Report',
       ['Company', 'Contact Person', 'Role', 'Industry', 'City', 'Pipeline Stage', 'Status', 'Email', 'Phone', 'Value (ETB)'],
-      filtered.map((c) => [c.company, c.contactPerson, c.role, c.industry, c.city, pipelineLabels[c.stage] || c.stage, c.status, c.email, c.phone, c.totalValue])
+      filtered.map((c) => [c.company, c.contactPerson, c.role, c.industry, c.city, pipelineLabels[c.stage] || c.stage, c.status, c.email, c.phone, c.totalValue]),
+      { rightAlignCols: [9], subtitle: `Pipeline: ${filters.stage ? pipelineLabels[filters.stage] : 'All Stages'}  ·  Filtered: ${filtered.length} clients` }
     )
-    show(`Exported ${filtered.length} client(s) to CSV`)
+    show(`Exported ${filtered.length} client(s) to PDF`)
   }
 
   const pipeline = pipelineStages.map((st) => ({
@@ -124,8 +129,26 @@ export default function CRM() {
       await addClientDoc(client.id, d.name, d.ext || 'PDF', d.size || '-', { type: d.type || 'company_doc', sizeBytes: d.sizeBytes, mimeType: d.mimeType })
     }
     show(`Client "${form.company}" created - added to pipeline${docs.length ? ` with ${docs.length} document(s)` : ''}`)
-    setOpen(false); setForm({}); setErrors({}); clearIntent()
+    setOpen(false); setClientStep(1); setForm({}); setErrors({}); clearIntent()
   }
+
+  const openClientWizard = () => { setOpen(true); setClientStep(1); setForm({}); setErrors({}) }
+  const closeClientWizard = () => { setOpen(false); setClientStep(1); setForm({}); setErrors({}) }
+
+  const handleClientNext = () => {
+    if (clientStep === 1) {
+      const res = validate(form, { company: [textRequired('Company name', { max: 120 })] })
+      if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
+    } else if (clientStep === 2) {
+      const res = validate(form, { contactPerson: [nameOnly('Contact person')], phone: [phoneValid('Phone')], email: [emailValid('Email')] })
+      if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
+    }
+    setErrors({})
+    setClientStep((s) => Math.min(s + 1, 4))
+  }
+
+  const handleClientBack = () => setClientStep((s) => Math.max(s - 1, 1))
+
 
   const onPhoto = (e) => {
     const file = e.target.files?.[0]
@@ -147,9 +170,24 @@ export default function CRM() {
   const editSave = async () => {
     const res = validate(editForm, clientSchema)
     if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
+    setErrors({})
+    setConfirmEditOpen(true)
+  }
+
+  const handleConfirmEdit = async () => {
+    setConfirmEditOpen(false)
     await updateClient(detail.id, { ...editForm, contactRole: editForm.role || editForm.contactRole || '' })
     show(`Client "${editForm.company}" updated`)
     setEditOpen(false); setEditForm({}); setErrors({})
+  }
+
+  const handleConfirmDelete = () => {
+    setDeleteConfirmOpen(false)
+    if (deleteClient) deleteClient(detail.id)
+    else patch('clients', (list) => list.filter((c) => c.id !== detail.id))
+    logActivity(`Deleted client "${detail.company}"`, 'crm')
+    show(`Client "${detail.company}" deleted`)
+    setView(null)
   }
 
   const onEditPhoto = (e) => {
@@ -280,7 +318,7 @@ export default function CRM() {
         setTimeout(() => { addContract(seed); show('Contract drafted automatically'); setContractOpen(false); setContractForm({}) }, 1100)
       }
     } else {
-      if (intent === 'new-client') { setOpen(true); setErrors({}); setTab('clients') }
+      if (intent === 'new-client') { openClientWizard(); setTab('clients') }
       if (intent === 'new-quote') { setQuoteOpen(true); setQuoteForm({}); setErrors({}); setTab('quotations') }
       if (intent === 'new-contract') { setContractOpen(true); setContractForm({ clientId: state.demo.lastClientId || '' }); setErrors({}); setTab('clients') }
     }
@@ -296,14 +334,29 @@ export default function CRM() {
         actions={
           <>
             <button className="btn-outline" onClick={() => setFilterOpen(true)}><Filter size={15} /> Filter{activeFilterCount > 0 && <span className="ml-1 rounded-full bg-brand-700 px-1.5 text-[10px] font-bold text-white">{activeFilterCount}</span>}</button>
-            <button className="btn-outline" onClick={exportClients}><FileText size={15} /> Export</button>
-            <button className="btn-primary" onClick={() => { setOpen(true); setErrors({}) }}><Plus size={15} /> New Client</button>
+            <button className="btn-outline" onClick={exportClients}><FileText size={15} /> Export PDF</button>
+            <button className="btn-primary" onClick={openClientWizard}><Plus size={15} /> New Client</button>
           </>
         }
       />
 
+      {/* Live stat cards */}
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard label="Total Clients" value={state.clients.length} icon={Building2} tone="brand" sub="registered accounts" />
+        <StatCard label="Active Clients" value={state.clients.filter((c) => c.status === 'active').length} icon={Users} tone="brand" sub="in current pipeline" />
+        <StatCard label="Inquiries" value={convList.length} icon={StickyNote} tone="gold" sub="prospects" />
+        <StatCard label="Contracts" value={state.contracts.filter((c) => c.status === 'active' || c.status === 'signed').length} icon={ShieldCheck} tone="brand" sub="active & signed" />
+      </div>
+
       <div className="mb-5 flex flex-wrap gap-1.5">
-        {[['clients', 'Client Database', Building2], ['pipeline', 'Pipeline', ArrowRight], ['inquiries', 'Inquiries', StickyNote], ['quotations', 'Quotations', FileText], ['contracts', 'Contracts', ShieldCheck], ['comms', 'Communication', MessageSquare]].map(([v, l, I]) => (
+        {[
+          ['clients', `Client Database (${state.clients.length})`, Building2],
+          ['pipeline', 'Pipeline', ArrowRight],
+          ['inquiries', `Inquiries (${convList.length})`, StickyNote],
+          ['quotations', `Quotations (${quotes.length})`, FileText],
+          ['contracts', `Contracts (${state.contracts.length})`, ShieldCheck],
+          ['comms', 'Communication', MessageSquare],
+        ].map(([v, l, I]) => (
           <button key={v} onClick={() => setTab(v)} className={`tab ${tab === v ? 'tab-active' : 'tab-idle'}`}>
             <I size={15} /> {l}
           </button>
@@ -502,78 +555,247 @@ export default function CRM() {
         </div>
       )}
 
-      {/* New client modal */}
-      <Modal open={open} onClose={() => setOpen(false)} title="Register New Client" width="max-w-2xl">
-        {/* Profile image */}
-        <div className="mb-4 flex items-center gap-4">
-          <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-brand-50 ring-1 ring-brand-100">
-            {form.photo
-              ? <img src={form.photo} alt="Client" className="h-full w-full object-cover" />
-              : <span className="text-xl font-black text-brand-400"><Upload size={24} /></span>}
+      {/* New client 4-Step Wizard */}
+      <Modal
+        open={open}
+        onClose={closeClientWizard}
+        title="Register New Client"
+        width="max-w-2xl"
+        dirty={Boolean(form.company || form.contactPerson || form.email || form.phone || clientStep > 1)}
+      >
+        {/* Progress Bar */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between text-[11px] font-bold text-ink/60">
+            <span className={clientStep >= 1 ? 'text-brand-700' : ''}>1. Corporate Identity (25%)</span>
+            <span className={clientStep >= 2 ? 'text-brand-700' : ''}>2. Key Contacts (50%)</span>
+            <span className={clientStep >= 3 ? 'text-brand-700' : ''}>3. Commercial Profile (75%)</span>
+            <span className={clientStep >= 4 ? 'text-brand-700' : ''}>4. Documents & Review (100%)</span>
           </div>
-          <div className="flex-1">
-            <p className="text-sm font-bold text-brand-950">Company Logo / Photo</p>
-            <p className="text-xs text-ink/50">Upload a logo or representative image for this client (JPG, PNG - max 5MB).</p>
-            <div className="mt-2 flex gap-2">
-              <label className="btn-outline !py-1.5 cursor-pointer text-xs">
-                <Upload size={14} /> Choose image
-                <input type="file" accept="image/*" className="hidden" onChange={onPhoto} />
-              </label>
-              {form.photo && <button className="btn-ghost !py-1.5 text-xs !text-red-600" onClick={() => setForm((f) => ({ ...f, photo: '' }))}><Trash2 size={13} /> Remove</button>}
-            </div>
+          <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-gray-100">
+            <div
+              className="h-full rounded-full transition-all duration-500 ease-out"
+              style={{ width: clientStep === 1 ? '25%' : clientStep === 2 ? '50%' : clientStep === 3 ? '75%' : '100%', background: 'linear-gradient(90deg, #188A2E, #39D353)' }}
+            />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Company Name *"><input className="input" value={form.company || ''} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="e.g. Walia Telecom" />{errors.company && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.company}</p>}</Field>
-          <Field label="Industry"><select className="input" value={form.industry || ''} onChange={(e) => setForm({ ...form, industry: e.target.value })}><option value="">Select…</option><option>Financial Services</option><option>Telecommunications</option><option>Healthcare</option><option>Banking</option><option>Education</option><option>Hospitality</option><option>Construction</option><option>Technology</option><option>Retail & Consumer Goods</option><option>Manufacturing</option><option>Energy & Utilities</option><option>Agriculture</option><option>Media & Entertainment</option><option>Government</option><option>Nonprofit / NGO</option><option>Transportation & Logistics</option><option>Mining</option><option>Pharmaceuticals</option><option>Insurance</option><option>Legal Services</option><option>Real Estate</option><option>Travel & Tourism</option><option>Other</option></select></Field>
-          <Field label="Contact Person *"><input className="input" value={form.contactPerson || ''} onChange={(e) => setForm({ ...form, contactPerson: e.target.value })} />{errors.contactPerson && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.contactPerson}</p>}</Field>
-          <Field label="Role"><input className="input" value={form.role || ''} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder="Events Director" /></Field>
-          <Field label="Phone *"><input className="input" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+251 911 000 000" />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</Field>
-          <Field label="Email *"><input className="input" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="contact@company.com" />{errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}</Field>
-          <Field label="City"><input className="input" value={form.city || 'Addis Ababa'} onChange={(e) => setForm({ ...form, city: e.target.value })} /></Field>
-          <Field label="Pipeline Stage"><select className="input" value={form.stage || 'lead'} onChange={(e) => setForm({ ...form, stage: e.target.value })}>{pipelineStages.map((s) => <option key={s} value={s}>{pipelineLabels[s]}</option>)}</select></Field>
-        </div>
-
-        {/* Additional registration details */}
-        <p className="mt-5 mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><Info size={13} /> Additional Details</p>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Website"><div className="relative"><Globe size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" /><input className="input pl-9" value={form.website || ''} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://company.com" /></div>{errors.website && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.website}</p>}</Field>
-          <Field label="Tax ID (TIN)"><input className="input" value={form.taxId || ''} onChange={(e) => setForm({ ...form, taxId: e.target.value })} placeholder="e.g. ET-ABC-2020-12345" /></Field>
-          <Field label="Street Address" className="col-span-2"><div className="relative"><MapPin size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" /><input className="input pl-9" value={form.address || ''} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Street, building, city" /></div></Field>
-          <Field label="Notes" className="col-span-2"><textarea className="input min-h-[70px] resize-y" value={form.notes || ''} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Background, preferences, requirements…" /></Field>
-        </div>
-
-        {/* Documents */}
-        <p className="mt-5 mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><FileText size={13} /> Registration Documents</p>
-        <label className="flex w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-brand-200 bg-brand-50/40 py-5 text-center transition hover:border-brand-400 hover:bg-brand-50">
-          <Upload size={20} className="text-brand-500" />
-          <span className="text-xs font-bold text-brand-700">Click to attach documents</span>
-          <span className="text-[11px] text-ink/45">Contracts, briefs, licenses, company profile… (multiple files)</span>
-          <input type="file" multiple className="hidden" onChange={onDocs} />
-        </label>
-        {(form.docs || []).length > 0 && (
-          <div className="mt-2 space-y-1.5">
-            {(form.docs || []).map((d) => (
-              <div key={d.id} className="flex items-center justify-between rounded-lg border border-brand-100 bg-white px-3 py-2">
-                <span className="flex min-w-0 items-center gap-2 text-sm text-ink/80"><FileText size={14} className="shrink-0 text-brand-600" /><span className="truncate">{d.name}</span></span>
-                <span className="flex shrink-0 items-center gap-2">
-                  <span className="chip bg-brand-50 text-brand-800">{d.ext} · {d.size}</span>
-                  <button onClick={() => removeSelectedDoc(d.id)} className="rounded-md p-1 text-ink/40 hover:bg-red-50 hover:text-red-600"><Trash2 size={14} /></button>
-                </span>
+        {/* STEP 1: Corporate Identity */}
+        {clientStep === 1 && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="rounded-xl border border-brand-100 bg-brand-50/40 p-3.5 flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white"><Building2 size={20} /></span>
+              <div>
+                <p className="text-xs font-bold text-brand-950">Corporate Identity & Industry</p>
+                <p className="text-[11px] text-ink/55">Company profile, industry sector, TIN and address.</p>
               </div>
-            ))}
+            </div>
+            <div className="mb-4 flex items-center gap-4">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-brand-50 ring-1 ring-brand-100">
+                {form.photo ? <img src={form.photo} alt="Client" className="h-full w-full object-cover" /> : <Upload size={24} className="text-brand-400" />}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-brand-950">Company Logo</p>
+                <p className="text-xs text-ink/50">Upload a company logo or representative image (JPG, PNG, max 5MB).</p>
+                <div className="mt-2 flex gap-2">
+                  <label className="btn-outline !py-1.5 cursor-pointer text-xs"><Upload size={14} /> Choose image<input type="file" accept="image/*" className="hidden" onChange={onPhoto} /></label>
+                  {form.photo && <button className="btn-ghost !py-1.5 text-xs !text-red-600" onClick={() => setForm((f) => ({ ...f, photo: '' }))}><Trash2 size={13} /> Remove</button>}
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Company Name *" className="col-span-2">
+                <input className="input" value={form.company || ''} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="e.g. Walia Telecom" />
+                {errors.company && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.company}</p>}
+              </Field>
+              <Field label="Industry">
+                <select className="input" value={form.industry || ''} onChange={(e) => setForm({ ...form, industry: e.target.value })}>
+                  <option value="">Select…</option>
+                  {['Financial Services','Telecommunications','Healthcare','Banking','Education','Hospitality','Construction','Technology','Retail & Consumer Goods','Manufacturing','Energy & Utilities','Agriculture','Media & Entertainment','Government','Nonprofit / NGO','Transportation & Logistics','Mining','Pharmaceuticals','Insurance','Legal Services','Real Estate','Travel & Tourism','Other'].map((i) => <option key={i}>{i}</option>)}
+                </select>
+              </Field>
+              <Field label="Tax ID (TIN)">
+                <input className="input font-mono" value={form.taxId || ''} onChange={(e) => setForm({ ...form, taxId: e.target.value })} placeholder="e.g. ET-ABC-2020-12345" />
+              </Field>
+              <Field label="City">
+                <input className="input" value={form.city || 'Addis Ababa'} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+              </Field>
+              <Field label="Website">
+                <div className="relative"><Globe size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" /><input className="input pl-9" value={form.website || ''} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://company.com" /></div>
+                {errors.website && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.website}</p>}
+              </Field>
+              <Field label="Street Address" className="col-span-2">
+                <div className="relative"><MapPin size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" /><input className="input pl-9" value={form.address || ''} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Street, building, city" /></div>
+              </Field>
+            </div>
+            <div className="mt-4 flex justify-between border-t border-gray-100 pt-4">
+              <button className="btn-outline" onClick={closeClientWizard}>Cancel</button>
+              <button className="btn-primary" onClick={handleClientNext}>Next: Key Contacts →</button>
+            </div>
           </div>
         )}
 
-        <div className="mt-5 flex justify-end gap-2">
-          <button className="btn-outline" onClick={() => setOpen(false)}>Cancel</button>
-          <button className="btn-primary" onClick={submit}>Create Client</button>
-        </div>
+        {/* STEP 2: Key Contacts & Communication */}
+        {clientStep === 2 && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="rounded-xl border border-brand-100 bg-brand-50/40 p-3.5 flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white"><Users size={20} /></span>
+              <div>
+                <p className="text-xs font-bold text-brand-950">Key Contacts & Communication Channels</p>
+                <p className="text-[11px] text-ink/55">Primary and secondary contacts for all client communications.</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Contact Person *" className="col-span-2">
+                <input className="input" value={form.contactPerson || ''} onChange={(e) => setForm({ ...form, contactPerson: e.target.value })} placeholder="e.g. Selamawit Desta" />
+                {errors.contactPerson && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.contactPerson}</p>}
+              </Field>
+              <Field label="Role / Title">
+                <input className="input" value={form.role || ''} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder="Events Director" />
+              </Field>
+              <Field label="Phone *">
+                <input className="input" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+251 911 000 000" />
+                {errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}
+              </Field>
+              <Field label="Email *">
+                <input type="email" className="input" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="contact@company.com" />
+                {errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}
+              </Field>
+              <Field label="Secondary Contact Name">
+                <input className="input" value={form.contact2 || ''} onChange={(e) => setForm({ ...form, contact2: e.target.value })} placeholder="Backup contact person" />
+              </Field>
+              <Field label="Secondary Phone">
+                <input className="input" value={form.phone2 || ''} onChange={(e) => setForm({ ...form, phone2: e.target.value })} placeholder="+251 9XX XXX XXX" />
+              </Field>
+              <Field label="Preferred Channel">
+                <select className="input" value={form.preferredChannel || 'Email'} onChange={(e) => setForm({ ...form, preferredChannel: e.target.value })}>
+                  <option>Email</option><option>Phone</option><option>WhatsApp</option><option>Telegram</option><option>In Person</option>
+                </select>
+              </Field>
+            </div>
+            <div className="mt-4 flex justify-between border-t border-gray-100 pt-4">
+              <button className="btn-outline" onClick={handleClientBack}>← Back</button>
+              <button className="btn-primary" onClick={handleClientNext}>Next: Commercial Profile →</button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 3: Commercial Profile & Engagement */}
+        {clientStep === 3 && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="rounded-xl border border-brand-100 bg-brand-50/40 p-3.5 flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white"><StickyNote size={20} /></span>
+              <div>
+                <p className="text-xs font-bold text-brand-950">Commercial Profile & Engagement</p>
+                <p className="text-[11px] text-ink/55">Pipeline, annual budget, event frequency, and terms.</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Pipeline Stage">
+                <select className="input" value={form.stage || 'lead'} onChange={(e) => setForm({ ...form, stage: e.target.value })}>
+                  {pipelineStages.map((s) => <option key={s} value={s}>{pipelineLabels[s]}</option>)}
+                </select>
+              </Field>
+              <Field label="Status">
+                <select className="input" value={form.status || 'active'} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+                  <option value="active">Active</option><option value="inactive">Inactive</option><option value="prospect">Prospect</option>
+                </select>
+              </Field>
+              <Field label="Annual Event Budget (ETB)">
+                <input type="number" className="input" value={form.annualBudget || ''} onChange={(e) => setForm({ ...form, annualBudget: e.target.value })} placeholder="e.g. 2000000" />
+              </Field>
+              <Field label="Events Per Year">
+                <input type="number" className="input" value={form.eventFrequency || ''} onChange={(e) => setForm({ ...form, eventFrequency: e.target.value })} placeholder="e.g. 4" />
+              </Field>
+              <Field label="Payment Terms">
+                <select className="input" value={form.paymentTerms || 'Net 30'} onChange={(e) => setForm({ ...form, paymentTerms: e.target.value })}>
+                  <option>Net 15</option><option>Net 30</option><option>Net 45</option><option>Net 60</option><option>Advance Full</option><option>50% Advance</option>
+                </select>
+              </Field>
+              <Field label="Client Value (ETB)">
+                <input type="number" className="input" value={form.totalValue || ''} onChange={(e) => setForm({ ...form, totalValue: e.target.value })} placeholder="Estimated total contract value" />
+              </Field>
+              <Field label="Strategic Notes" className="col-span-2">
+                <textarea className="input min-h-[70px] resize-y" value={form.notes || ''} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Background, preferences, history, special requirements…" />
+              </Field>
+            </div>
+            <div className="mt-4 flex justify-between border-t border-gray-100 pt-4">
+              <button className="btn-outline" onClick={handleClientBack}>← Back</button>
+              <button className="btn-primary" onClick={handleClientNext}>Next: Documents & Review →</button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 4: Documents, Verification & Review */}
+        {clientStep === 4 && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="rounded-xl border border-brand-100 bg-brand-50/40 p-3.5 flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white"><ShieldCheck size={20} /></span>
+              <div>
+                <p className="text-xs font-bold text-brand-950">Documents, Verification & Final Review</p>
+                <p className="text-[11px] text-ink/55">Attach supporting documents and confirm the registration.</p>
+              </div>
+            </div>
+            {/* Document upload */}
+            <label className="flex w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-brand-200 bg-brand-50/40 py-5 text-center transition hover:border-brand-400 hover:bg-brand-50">
+              <Upload size={20} className="text-brand-500" />
+              <span className="text-xs font-bold text-brand-700">Attach Registration Documents</span>
+              <span className="text-[11px] text-ink/45">Contracts, company profile, TIN certificate, licenses (multiple files)</span>
+              <input type="file" multiple className="hidden" onChange={onDocs} />
+            </label>
+            {(form.docs || []).length > 0 && (
+              <div className="space-y-1.5">
+                {(form.docs || []).map((d) => (
+                  <div key={d.id} className="flex items-center justify-between rounded-lg border border-brand-100 bg-white px-3 py-2">
+                    <span className="flex min-w-0 items-center gap-2 text-sm text-ink/80"><FileText size={14} className="shrink-0 text-brand-600" /><span className="truncate">{d.name}</span></span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      <span className="chip bg-brand-50 text-brand-800">{d.ext} · {d.size}</span>
+                      <button onClick={() => removeSelectedDoc(d.id)} className="rounded-md p-1 text-ink/40 hover:bg-red-50 hover:text-red-600"><Trash2 size={14} /></button>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+              <div className="rounded-xl border border-brand-100 bg-white p-3.5">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-brand-800 mb-2">Corporate Identity</p>
+                <p className="text-sm font-bold text-brand-950">{form.company}</p>
+                <p className="text-xs text-ink/60">{form.industry || 'Industry not set'}</p>
+                {form.city && <p className="text-xs text-ink/50 mt-0.5">{form.city}</p>}
+                {form.taxId && <p className="text-xs font-mono text-ink/40 mt-0.5">{form.taxId}</p>}
+              </div>
+              <div className="rounded-xl border border-brand-100 bg-white p-3.5">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-brand-800 mb-2">Key Contact</p>
+                <p className="text-sm font-bold text-brand-950">{form.contactPerson}</p>
+                {form.role && <p className="text-xs text-ink/60">{form.role}</p>}
+                <p className="text-xs text-ink/55 mt-1">{form.phone}</p>
+                <p className="text-xs text-ink/45">{form.email}</p>
+              </div>
+              <div className="sm:col-span-2 rounded-xl border border-brand-200 bg-brand-50/60 p-3.5">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                  <div><span className="text-[10px] text-ink/45 block">Stage</span><span className="font-semibold capitalize">{form.stage || 'lead'}</span></div>
+                  <div><span className="text-[10px] text-ink/45 block">Payment Terms</span><span className="font-semibold">{form.paymentTerms || 'Net 30'}</span></div>
+                  <div><span className="text-[10px] text-ink/45 block">Annual Budget</span><span className="font-semibold">{form.annualBudget ? `ETB ${Number(form.annualBudget).toLocaleString()}` : '-'}</span></div>
+                  <div><span className="text-[10px] text-ink/45 block">Documents</span><span className="font-semibold">{(form.docs || []).length} attached</span></div>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 flex justify-between border-t border-gray-100 pt-4">
+              <button className="btn-outline" onClick={handleClientBack}>← Back</button>
+              <button className="btn-primary !px-6" onClick={submit}><ShieldCheck size={16} /> Create Client Profile</button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* Edit client modal */}
-      <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit Client Profile" width="max-w-2xl">
+      <Modal
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        title="Edit Client Profile"
+        width="max-w-2xl"
+        dirty={Boolean(editForm.company !== detail?.company || editForm.contactPerson !== detail?.contactPerson || editForm.email !== detail?.email || editForm.phone !== detail?.phone)}
+      >
         <div className="mb-4 flex items-center gap-4">
           <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-brand-50 ring-1 ring-brand-100">
             {editForm.photo
@@ -618,6 +840,28 @@ export default function CRM() {
         </div>
       </Modal>
 
+      {/* Delete Client Confirmation Modal */}
+      <ConfirmModal
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Client"
+        message={`Are you sure you want to delete "${detail?.company}"? All client information, quotations, and contract records will be permanently removed.`}
+        confirmText="Delete Client"
+        confirmTone="danger"
+      />
+
+      {/* Edit Client Confirmation Modal */}
+      <ConfirmModal
+        open={confirmEditOpen}
+        onClose={() => setConfirmEditOpen(false)}
+        onConfirm={handleConfirmEdit}
+        title="Save Changes to Client"
+        message={`Are you sure you want to update "${editForm.company || detail?.company}"?`}
+        confirmText="Apply Changes"
+        confirmTone="primary"
+      />
+
       {/* Client detail drawer */}
       {detail && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[9999] flex justify-end">
@@ -634,8 +878,11 @@ export default function CRM() {
                     <p className="text-sm text-brand-200">{detail.industry} · {detail.city}</p>
                   </div>
                 </div>
-                <button className="btn-gold !px-3 !py-1.5 text-xs" onClick={openEdit}>Edit Profile</button>
-                <button onClick={() => setView(null)} className="rounded-lg p-1.5 text-brand-200 hover:bg-white/10"><XIcon /></button>
+                <div className="flex items-center gap-2">
+                  <button className="btn-gold !px-3 !py-1.5 text-xs" onClick={openEdit}>Edit Profile</button>
+                  <button className="rounded-lg border border-red-400/40 bg-red-500/20 px-2.5 py-1.5 text-xs font-bold text-red-100 hover:bg-red-500/30 transition flex items-center gap-1" onClick={() => setDeleteConfirmOpen(true)} title="Delete Client"><Trash2 size={13} /> Delete</button>
+                  <button onClick={() => setView(null)} className="rounded-lg p-1.5 text-brand-200 hover:bg-white/10"><XIcon /></button>
+                </div>
               </div>
               <div className="mt-4 flex items-center gap-2 text-xs text-brand-200">
                 <Badge status={detail.status} label={detail.status} />

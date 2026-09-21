@@ -1297,6 +1297,11 @@ export function DataProvider({ children }) {
   const scheduleMaintenance = useCallback(async (resourceId, date, task) => {
     const rec = { id: 'mt-' + Math.random().toString(36).slice(2, 8), resourceId, date, task, status: 'scheduled' }
     if (backendOnline) { try { await api.resources.scheduleMaintenance?.(resourceId, date, task) } catch (e) {} }
+    try {
+      if (supabase && resourceId && !String(resourceId).startsWith('rc-')) {
+        await supabase.from('Resource').update({ status: 'maintenance' }).eq('id', resourceId)
+      }
+    } catch (e) {}
     patch('maintenance', (a) => [rec, ...a])
     patchBy('resources', resourceId, (r) => ({ ...r, status: 'maintenance', maintenance: (r.maintenance || 0) + 1 }))
     const name = state.resources.find((r) => r.id === resourceId)?.name || 'asset'
@@ -1304,10 +1309,19 @@ export function DataProvider({ children }) {
     return rec
   }, [backendOnline, patch, patchBy, logActivity, state.resources])
 
-  const completeMaintenance = useCallback((id) => {
+  const completeMaintenance = useCallback(async (id) => {
+    const mt = state.maintenance?.find((m) => m.id === id)
+    if (mt?.resourceId) {
+      try {
+        if (supabase && !String(mt.resourceId).startsWith('rc-')) {
+          await supabase.from('Resource').update({ status: 'available' }).eq('id', mt.resourceId)
+        }
+      } catch (e) {}
+      patchBy('resources', mt.resourceId, { status: 'available' })
+    }
     patchBy('maintenance', id, { status: 'done' })
     logActivity('Maintenance completed', 'inventory')
-  }, [patchBy, logActivity])
+  }, [patchBy, logActivity, state.maintenance])
 
   const unreadNotifications = useMemo(() => state.notifications.length, [state.notifications])
 
@@ -1411,9 +1425,11 @@ export function DataProvider({ children }) {
 
   const value = {
     state, patch, patchBy, logActivity, addNotification,
-    addClient, addEvent, addTask, updateTask, registerAttendee, checkIn,
+    addClient, updateClient, deleteClient,
+    addEvent, updateEvent, deleteEvent,
+    addTask, updateTask, deleteTask,
+    registerAttendee, checkIn,
     recordExpense, recordPayment, addInvoice,
-    updateClient,
     addVenue, addResource, addVendor, addStaffMember, addSpeaker, addExhibitor, addSponsor, addCampaign, addCoupon,
     updateVenue, updateResource, updateStaffMember, updateExhibitor, updateSpeaker, updateSponsor, updateCampaign,
     setEventTeam, setEventBudget, allocateResource, allocateResources, viewQr,

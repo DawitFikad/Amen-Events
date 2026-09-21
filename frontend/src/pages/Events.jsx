@@ -3,10 +3,11 @@ import {
   CalendarDays, Plus, MapPin, Users, Wallet, ClipboardCheck, FileText, Clock3,
   ChevronRight, ArrowLeft, ListChecks, Sparkles, BarChart3, GitBranch, Boxes,
   Upload, Globe, Trash2, Info as InfoIcon, Tag, Megaphone, Ticket, Image as ImageIcon, Phone,
-  ChevronDown, Check, CheckCircle2, PackageCheck,
+  ChevronDown, Check, CheckCircle2, PackageCheck, Activity,
 } from 'lucide-react'
 import { useData } from '../store/DataContext'
-import { PageHeader, Badge, Progress, Avatar, Modal, Field, SearchBox, Toast, EmptyState, Th, Td, Segmented } from '../components/ui'
+import { PageHeader, Badge, Progress, Avatar, Modal, ConfirmModal, Field, SearchBox, Toast, EmptyState, Th, Td, Segmented, StatCard } from '../components/ui'
+import RegisterAttendeeModal from '../components/RegisterAttendeeModal'
 import { fmt, todayISO } from '../store/data'
 import { required, textRequired, numberPositive, dateRequired, optional, validate } from '../store/validation'
 
@@ -70,7 +71,7 @@ const timelineDot = {
 }
 
 export default function Events() {
-  const { state, addEvent, addEventDoc, addTask, logActivity, patchBy, intent, clearIntent, markDone, setEventTeam, setEventBudget, allocateResource, allocateResources } = useData()
+  const { state, addEvent, updateEvent, addEventDoc, addTask, logActivity, patchBy, intent, clearIntent, markDone, setEventTeam, setEventBudget, allocateResource, allocateResources } = useData()
   const [viewId, setViewId] = useState(null)
   const [tab, setTab] = useState('all')
   const [open, setOpen] = useState(false)
@@ -311,6 +312,12 @@ export default function Events() {
     setBudgetOpen(true)
   }
 
+  const totalEvents = state.events.length
+  const upcomingEvents = state.events.filter((e) => e.status === 'upcoming').length
+  const ongoingEvents = state.events.filter((e) => e.status === 'ongoing').length
+  const activeEvents = upcomingEvents + ongoingEvents
+  const completedEvents = state.events.filter((e) => e.status === 'completed').length
+
   return (
     <div>
       <PageHeader
@@ -327,8 +334,25 @@ export default function Events() {
 
       {!active ? (
         <>
+          {/* Live stat cards */}
+          <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <StatCard label="Active Events" value={activeEvents} icon={CalendarDays} tone="brand" sub={`${upcomingEvents} upcoming · ${ongoingEvents} ongoing`} />
+            <StatCard label="Upcoming" value={upcomingEvents} icon={Clock3} tone="gold" sub="in planning" />
+            <StatCard label="Ongoing" value={ongoingEvents} icon={Activity} tone="brand" sub="live execution" />
+            <StatCard label="Completed" value={completedEvents} icon={CheckCircle2} tone="brand" sub="finished events" />
+          </div>
+
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <Segmented value={tab} onChange={setTab} options={[{ value: 'all', label: 'All' }, { value: 'upcoming', label: 'Upcoming' }, { value: 'ongoing', label: 'Ongoing' }, { value: 'completed', label: 'Completed' }]} />
+            <Segmented
+              value={tab}
+              onChange={setTab}
+              options={[
+                { value: 'all', label: `All (${totalEvents})` },
+                { value: 'upcoming', label: `Upcoming (${upcomingEvents})` },
+                { value: 'ongoing', label: `Ongoing (${ongoingEvents})` },
+                { value: 'completed', label: `Completed (${completedEvents})` },
+              ]}
+            />
             <SearchBox value={q} onChange={setQ} placeholder="Search events…" className="w-full sm:w-72" />
           </div>
 
@@ -370,7 +394,29 @@ export default function Events() {
                       })}
                       {team.length > 4 && <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-50 text-[10px] font-bold text-brand-800 ring-2 ring-white">+{team.length - 4}</span>}
                     </div>
-                    <span className="inline-flex items-center gap-1 text-xs font-bold text-brand-700 sm:opacity-0 sm:transition sm:group-hover:opacity-100">Open <ChevronRight size={14} /></span>
+                    <div className="flex items-center gap-2">
+                      {e.status !== 'completed' ? (
+                        <button
+                          type="button"
+                          onClick={(evt) => {
+                            evt.stopPropagation()
+                            if (updateEvent) updateEvent(e.id, { status: 'completed' })
+                            else patchBy('events', e.id, { status: 'completed' })
+                            logActivity(`Event "${e.name}" marked as completed`, 'event')
+                            show(`"${e.name}" completed! 🎉`)
+                          }}
+                          className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700 ring-1 ring-emerald-200/60 hover:bg-emerald-100 transition"
+                          title="Mark event as completed"
+                        >
+                          <CheckCircle2 size={12} /> Complete
+                        </button>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-600">
+                          <Check size={12} /> Done
+                        </span>
+                      )}
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-brand-700 sm:opacity-0 sm:transition sm:group-hover:opacity-100">Open <ChevronRight size={14} /></span>
+                    </div>
                   </div>
 
                   {/* Expandable Assigned Details */}
@@ -502,7 +548,7 @@ export default function Events() {
       )}
 
       {/* Create event - Multi-step Stepper with Top Progress Bar */}
-      <Modal open={open} onClose={() => { setOpen(false); setRegStep(1) }} title="Register New Event" width="max-w-2xl">
+      <Modal open={open} onClose={() => { setOpen(false); setRegStep(1) }} title="Register New Event" width="max-w-2xl" dirty={Boolean(form.name || form.clientId || form.category || regStep > 1)}>
         {/* Stepper Progress Bar */}
         <div className="mb-6">
           <div className="flex items-center justify-between text-[11px] font-bold text-ink/60">
@@ -870,10 +916,12 @@ export default function Events() {
 }
 
 function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, detailTab, setDetailTab, show, teamOpen, setTeamOpen, resOpen, setResOpen, budgetOpen, setBudgetOpen, budgetVal, setBudgetVal, completeOpen, setCompleteOpen, setEventTeam, setEventBudget, allocateResource, allocateResources, budgetEvent, openBudgetModal, markDone, timeline, tlOpen, setTlOpen, tlMap, editOpen, setEditOpen, editForm, setEditForm, noteOpen, setNoteOpen, noteText, setNoteText, tlAddOpen, setTlAddOpen, tlAddTitle, setTlAddTitle, saveEvent, patchBy, saveNote, saveTimelineEntry, onEditOpen, onAddTimeline, notes, onAddNote, logActivity }) {
-  const { toggleChecklist, addChecklistItem, setEventSuppliers, patch, addEventDoc } = useData()
+  const { toggleChecklist, addChecklistItem, setEventSuppliers, patch, addEventDoc, deleteEvent } = useData()
   const [errors, setErrors] = useState({})
   const [budgetErr, setBudgetErr] = useState('')
   const [edFile, setEdFile] = useState('')
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [confirmEditOpen, setConfirmEditOpen] = useState(false)
   const eventDocs = (state.eventDocs || []).filter((d) => d.eventId === event.id)
 
   const onEventDocFile = (e) => {
@@ -898,7 +946,22 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
     const res = validate(editForm, { name: [textRequired('Event name', { min: 2, max: 120 })], date: [dateRequired('Date')] })
     if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
     setErrors({})
+    setConfirmEditOpen(true)
+  }
+
+  const handleConfirmEdit = () => {
+    setConfirmEditOpen(false)
     saveEvent()
+    show('Event updated successfully!')
+  }
+
+  const handleConfirmDelete = () => {
+    setDeleteConfirmOpen(false)
+    if (deleteEvent) deleteEvent(event.id)
+    else patch('events', (list) => list.filter((e) => e.id !== event.id))
+    logActivity(`Deleted event "${event.name}"`, 'event')
+    show(`Event "${event.name}" deleted`)
+    onBack()
   }
   const team = event.team?.length ? event.team : (teamByEvent[event.id] || [event.pmId])
   const myCheck = (state.eventChecklists || []).filter((c) => c.eventId === event.id)
@@ -952,6 +1015,7 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
             <div className="flex gap-2">
               <button className="btn-gold" onClick={onStatus}>{event.status === 'ongoing' ? 'Mark Completed' : event.status === 'completed' ? 'Reopen' : 'Start Event'}</button>
               <button className="btn-outline !border-white/20 !bg-white/10 !text-white hover:!bg-white/20" onClick={() => { setEditForm({ ...event }); setEditOpen(true) }}>Edit</button>
+              <button className="rounded-xl border border-red-400/40 bg-red-500/20 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/30 transition flex items-center gap-1" onClick={() => setDeleteConfirmOpen(true)} title="Delete Event"><Trash2 size={14} /> Delete</button>
             </div>
           </div>
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -1360,7 +1424,13 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
       </Modal>
 
       {/* Edit event modal */}
-      <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit Event" width="max-w-2xl">
+      <Modal
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        title="Edit Event"
+        width="max-w-2xl"
+        dirty={Boolean(editForm.name !== event.name || editForm.date !== event.date || editForm.category !== event.category || editForm.capacity !== event.capacity || editForm.price !== event.price)}
+      >
         <div className="grid grid-cols-2 gap-3">
           <Field label="Event Name *" className="col-span-2"><input className="input" value={editForm.name || ''} onChange={(e) => { setEditForm({ ...editForm, name: e.target.value }); if (errors.name) setErrors({ ...errors, name: undefined }) }} />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
           <Field label="Category"><select className="input" value={editForm.category || ''} onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}>{eventTypes.map((t) => <option key={t}>{t}</option>)}<option>Other</option></select></Field>
@@ -1397,6 +1467,28 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
           <button className="btn-primary" onClick={editSave}>Save Changes</button>
         </div>
       </Modal>
+
+      {/* Delete Event Confirmation Modal */}
+      <ConfirmModal
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Event"
+        message={`Are you sure you want to delete "${event.name}"? This action cannot be undone and will permanently remove this event and its associated records.`}
+        confirmText="Delete Event"
+        confirmTone="danger"
+      />
+
+      {/* Edit Event Confirmation Modal */}
+      <ConfirmModal
+        open={confirmEditOpen}
+        onClose={() => setConfirmEditOpen(false)}
+        onConfirm={handleConfirmEdit}
+        title="Save Changes to Event"
+        message={`Are you sure you want to apply the updates to "${editForm.name || event.name}"?`}
+        confirmText="Apply Changes"
+        confirmTone="primary"
+      />
 
       {/* Add note modal */}
       <Modal open={noteOpen} onClose={() => setNoteOpen(false)} title="Add Internal Note" width="max-w-md">
@@ -1867,6 +1959,7 @@ function MiniStat({ label, value, tone = '' }) {
 function EventAttendeesTab({ event, state, show }) {
   const { checkIn } = useData()
   const [q, setQ] = useState('')
+  const [regOpen, setRegOpen] = useState(false)
   const regs = (state.registrations || []).filter((r) => r.eventId === event.id)
   const filtered = regs.filter((r) => {
     if (!q) return true
@@ -1896,13 +1989,18 @@ function EventAttendeesTab({ event, state, show }) {
           <h3 className="text-base font-bold text-brand-950">Registered Attendees ({regs.length})</h3>
           <p className="text-xs text-ink/50">{checkedInCount} checked in · ETB {totalRevenue.toLocaleString()} revenue collected</p>
         </div>
-        <input
-          type="text"
-          className="input max-w-xs text-xs"
-          placeholder="Search by name, email, or QR code…"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            className="input max-w-xs text-xs"
+            placeholder="Search by name, email, or QR code…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+          <button className="btn-primary text-xs !py-2 shrink-0" onClick={() => setRegOpen(true)}>
+            <Plus size={14} /> Register Attendee
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-3 mb-4">
@@ -1974,6 +2072,13 @@ function EventAttendeesTab({ event, state, show }) {
           </div>
         )}
       </div>
+
+      <RegisterAttendeeModal
+        open={regOpen}
+        onClose={() => setRegOpen(false)}
+        defaultEventId={event.id}
+        onSuccess={() => show('Attendee registered for ' + event.name)}
+      />
     </div>
   )
 }

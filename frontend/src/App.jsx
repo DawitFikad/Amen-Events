@@ -130,7 +130,7 @@ function Shell() {
       <div className={`${collapsed ? 'lg:pl-[72px]' : 'lg:pl-64'} transition-all duration-300`}>
         <Topbar onMenuClick={() => setMobileNav(true)} />
         <main key={location.pathname} className="mx-auto max-w-[1400px] overflow-x-hidden px-5 py-6 animate-page-enter">
-          {/* KPI OFF */}
+          <LiveKpiBar scope="staff" />
           <Outlet />
           <PoweredFooter />
         </main>

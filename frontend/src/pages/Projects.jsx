@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import {
   KanbanSquare, Plus, CalendarDays, Calendar, Grid3x3, Users, MessageSquare,
-  Paperclip, Clock3, ChevronRight, ArrowRight, LayoutGrid,
+  Paperclip, Clock3, ChevronRight, ArrowRight, LayoutGrid, Trash2,
 } from 'lucide-react'
 import { useData } from '../store/DataContext'
-import { PageHeader, Badge, Progress, Avatar, Modal, Field, PriorityDot, SearchBox, Toast, EmptyState, Segmented, Th, Td } from '../components/ui'
+import { PageHeader, Badge, Progress, Avatar, Modal, ConfirmModal, Field, PriorityDot, SearchBox, Toast, EmptyState, Segmented, Th, Td } from '../components/ui'
 import { fmt, todayISO } from '../store/data'
 import { textRequired, optional, dateRequired, validate } from '../store/validation'
 
@@ -270,7 +270,7 @@ export default function Projects() {
       )}
 
       {/* New task modal */}
-      <Modal open={open} onClose={() => setOpen(false)} title="Create Task" width="max-w-xl">
+      <Modal open={open} onClose={() => setOpen(false)} title="Create Task" width="max-w-xl" dirty={Boolean(form.title || form.eventId || form.assigneeId || form.due)}>
         {Object.keys(errors).length > 0 && (
           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
             ⚠️ Please fill all mandatory fields marked with an asterisk (*).
@@ -344,39 +344,58 @@ export default function Projects() {
 function avatarMini(m) { return m ? { name: m.name, initials: m.initials, color: m.color } : { name: '?', initials: '?', color: 'bg-brand-400' } }
 
 function TaskModal({ task, state, onClose, show, updateTask }) {
+  const { deleteTask } = useData()
   const [edit, setEdit] = useState({ title: task.title || '', eventId: task.eventId || 'ev1', assigneeId: task.assigneeId || '', priority: task.priority || 'medium', status: task.status || 'todo', due: task.due || '', progress: task.progress || 0, description: task.description || '' })
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [confirmEditOpen, setConfirmEditOpen] = useState(false)
   const [comments, setComments] = useState([
     'Locking stage layout with client this week.',
     'Confirmed - tracker updated.',
   ])
   const [draft, setDraft] = useState('')
+
+  const isDirty = Boolean(
+    edit.title !== task.title ||
+    edit.eventId !== task.eventId ||
+    edit.assigneeId !== task.assigneeId ||
+    edit.priority !== task.priority ||
+    edit.status !== task.status ||
+    edit.due !== task.due ||
+    Number(edit.progress) !== Number(task.progress || 0) ||
+    edit.description !== (task.description || '')
+  )
+
   const addComment = () => {
     if (!draft.trim()) return
     setComments((c) => [...c, draft.trim()])
     setDraft('')
     show('Comment added')
   }
+
   const save = () => {
     const res = validate(edit, { title: [textRequired('Task title', { min: 3, max: 120 })], due: [optional(dateRequired('Due date'))] })
     if (!res.ok) { show(res.first, 'warn'); return }
-    updateTask(task.id, { ...edit, progress: Number(edit.progress) || 0 })
-    show('Task updated')
+    setConfirmEditOpen(true)
   }
-  useEffect(() => {
-    const originalOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = originalOverflow
-    }
-  }, [])
 
-  const modalElement = (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 overflow-y-auto">
-      <div className="fixed inset-0 bg-brand-950/40 backdrop-blur-[2px] transition-opacity" onClick={onClose} />
-      <div className="relative max-h-[90vh] w-full max-w-lg my-auto overflow-y-auto rounded-2xl bg-white p-6 shadow-pop z-10 animate-scale-in">
+  const handleConfirmSave = () => {
+    setConfirmEditOpen(false)
+    updateTask(task.id, { ...edit, progress: Number(edit.progress) || 0 })
+    show('Task updated successfully!')
+  }
+
+  const handleConfirmDelete = () => {
+    setDeleteConfirmOpen(false)
+    if (deleteTask) deleteTask(task.id)
+    show('Task deleted')
+    onClose()
+  }
+
+  return (
+    <>
+      <Modal open={true} onClose={onClose} title="Task Details" width="max-w-lg" dirty={isDirty}>
         <div className="mb-3 flex items-center justify-between">
           <div className="flex gap-2"><Badge status={edit.priority} label={edit.priority} /><Badge status={edit.status} label={edit.status.replace('-', ' ')} /></div>
-          <button onClick={onClose} className="rounded-lg p-1 text-ink/40 hover:bg-brand-50"><X /></button>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -424,15 +443,44 @@ function TaskModal({ task, state, onClose, show, updateTask }) {
           <button className="btn-primary" onClick={addComment}>Comment</button>
         </div>
 
-        <div className="mt-5 flex items-center justify-end gap-2 border-t border-brand-50 pt-4">
-          <button className="btn-outline" onClick={onClose}>Close</button>
-          <button className="btn-primary" onClick={save}>Save Changes</button>
+        <div className="mt-5 flex items-center justify-between gap-2 border-t border-brand-50 pt-4">
+          <button
+            type="button"
+            className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 transition flex items-center gap-1"
+            onClick={() => setDeleteConfirmOpen(true)}
+          >
+            <Trash2 size={13} /> Delete Task
+          </button>
+          <div className="flex items-center gap-2">
+            <button className="btn-outline" onClick={onClose}>Close</button>
+            <button className="btn-primary" onClick={save}>Save Changes</button>
+          </div>
         </div>
-      </div>
-    </div>
-  )
+      </Modal>
 
-  return typeof document !== 'undefined' ? createPortal(modalElement, document.body) : modalElement
+      {/* Delete Task Confirmation */}
+      <ConfirmModal
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Task"
+        message={`Are you sure you want to delete "${task.title}"? This cannot be undone.`}
+        confirmText="Delete Task"
+        confirmTone="danger"
+      />
+
+      {/* Save Task Confirmation */}
+      <ConfirmModal
+        open={confirmEditOpen}
+        onClose={() => setConfirmEditOpen(false)}
+        onConfirm={handleConfirmSave}
+        title="Save Changes to Task"
+        message={`Are you sure you want to update task "${edit.title || task.title}"?`}
+        confirmText="Save Changes"
+        confirmTone="primary"
+      />
+    </>
+  )
 }
 
 function X() {

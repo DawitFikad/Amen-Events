@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import api from '../store/api'
 import { useData } from '../store/DataContext'
-import { PageHeader, Badge, Avatar, Toast } from '../components/ui'
+import { PageHeader, Badge, Avatar, Toast, StatCard } from '../components/ui'
 import { fmtCompact } from '../store/data'
 
 const TYPE_ICONS = {
@@ -114,6 +114,14 @@ export default function Approvals() {
         subtitle={`${pendingCount} pending approval${pendingCount !== 1 ? 's' : ''} - budget, contracts, sponsorships, vendor payments, purchase requests`}
         icon={FileText}
       />
+
+      {/* Live stat cards */}
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard label="Total Requests" value={list.length} icon={FileText} tone="brand" sub="workflow requests" />
+        <StatCard label="Pending" value={pendingCount} icon={Clock} tone="gold" sub="awaiting review" />
+        <StatCard label="Approved" value={list.filter((a) => a.status === 'approved').length} icon={CheckCircle2} tone="brand" sub="cleared" />
+        <StatCard label="Rejected" value={list.filter((a) => a.status === 'rejected').length} icon={XCircle} tone="red" sub="declined" />
+      </div>
 
       {/* Filter tabs */}
       <div className="mb-4 flex flex-wrap gap-1.5">

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { UserCog, Plus, CalendarDays, Award, Clock3, ShieldCheck, Upload, Trash2, Info, MapPin, Wallet } from 'lucide-react'
+import { UserCog, Plus, CalendarDays, Award, Clock3, ShieldCheck, Upload, Trash2, Info, MapPin, Wallet, Users, CheckCircle2 } from 'lucide-react'
 import { useData } from '../store/DataContext'
-import { PageHeader, Badge, Progress, SearchBox, Toast, Th, Td, Avatar, Segmented, Modal, Field } from '../components/ui'
+import { PageHeader, Badge, Progress, SearchBox, Toast, Th, Td, Avatar, Segmented, Modal, Field, StatCard } from '../components/ui'
 import { nameOnly, phoneValid, emailValid, numberPositive, optional, dateRequired, textRequired, validate } from '../store/validation'
 
 const attendance = [
@@ -126,6 +126,16 @@ export default function Staff() {
     </>
   )
 
+  const totalStaff = state.staff.length
+  const activeStaff = state.staff.filter((s) => s.status === 'active').length
+  const assignedIds = new Set()
+  state.events.filter((e) => e.status === 'upcoming' || e.status === 'ongoing').forEach((e) => {
+    if (e.pmId) assignedIds.add(e.pmId)
+    if (e.team) e.team.forEach((id) => assignedIds.add(id))
+  })
+  const assignedStaffCount = state.staff.filter((s) => assignedIds.has(s.id)).length
+  const availableStaffCount = totalStaff - assignedStaffCount
+
   return (
     <div>
       <PageHeader
@@ -135,8 +145,16 @@ export default function Staff() {
         actions={<button className="btn-primary" onClick={() => { setOpen(true); setErrors({}) }}><Plus size={15} /> Add Team Member</button>}
       />
 
+      {/* Live stat cards */}
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard label="Total Staff" value={totalStaff} icon={Users} tone="brand" sub="registered members" />
+        <StatCard label="Active Staff" value={activeStaff} icon={CheckCircle2} tone="brand" sub="in service" />
+        <StatCard label="Assigned to Events" value={assignedStaffCount} icon={CalendarDays} tone="gold" sub="on active events" />
+        <StatCard label="Available" value={availableStaffCount} icon={UserCog} tone="brand" sub="ready for assignment" />
+      </div>
+
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <Segmented value={view} onChange={setView} options={[{ value: 'directory', label: 'Directory' }, { value: 'attendance', label: 'Attendance' }, { value: 'performance', label: 'Performance' }]} />
+        <Segmented value={view} onChange={setView} options={[{ value: 'directory', label: `Directory (${totalStaff})` }, { value: 'attendance', label: 'Attendance' }, { value: 'performance', label: 'Performance' }]} />
         <SearchBox value={q} onChange={setQ} placeholder="Search team…" className="w-full sm:w-64" />
       </div>
 

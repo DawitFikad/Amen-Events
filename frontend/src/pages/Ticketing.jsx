@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Ticket, Plus, QrCode, Users, Download, Search, Clock3, XCircle, CheckCircle2 } from 'lucide-react'
+import { Ticket, Plus, QrCode, Users, Download, FileText, Search, Clock3, XCircle, CheckCircle2 } from 'lucide-react'
 import { QRCodeCanvas } from 'qrcode.react'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, SearchBox, Toast, EmptyState, Th, Td, Segmented, Modal, Field } from '../components/ui'
+import RegisterAttendeeModal from '../components/RegisterAttendeeModal'
 import { fmt } from '../store/data'
-import { downloadCSV } from '../store/exportUtils'
+import { exportTableToPDF } from '../store/exportUtils'
 import { ticketPayload, encodeTicket, eventTicketCode } from '../store/ticket'
 import { nameOnly, emailValid, phoneValid, optional, validate } from '../store/validation'
 
@@ -43,10 +44,14 @@ export default function Ticketing() {
   }, [qrView])
 
   const exportList = () => {
-    downloadCSV('ticket-registrations.csv',
-      ['Event', 'Attendee', 'Type', 'Amount', 'Paid', 'QR Code', 'Status'],
-      regs.map((r) => [activeEvent?.name || '-', r.name, r.type, r.amount, r.paid ? 'Paid' : 'Unpaid', r.qr, r.checkedIn ? 'Checked in' : 'Pending']))
-    show('Registration list exported to Excel')
+    exportTableToPDF(
+      'ticket-registrations',
+      'Ticket Registrations & Attendance Report',
+      ['Event', 'Attendee', 'Type', 'Amount (ETB)', 'Payment', 'QR Code', 'Status'],
+      regs.map((r) => [activeEvent?.name || '-', r.name, r.type, r.amount, r.paid ? 'Paid' : 'Unpaid', r.qr, r.checkedIn ? 'Checked In' : 'Pending']),
+      { rightAlignCols: [3], subtitle: `Event: ${activeEvent?.name || 'All Events'}` }
+    )
+    show('Registration list exported to PDF')
   }
 
   const downloadQr = () => {
@@ -118,7 +123,7 @@ export default function Ticketing() {
         icon={Ticket}
         actions={
           <>
-            <button className="btn-outline" onClick={exportList}><Download size={15} /> Export List</button>
+            <button className="btn-outline" onClick={exportList}><FileText size={15} /> Export PDF</button>
             <button className="btn-primary" onClick={() => { setOpen(true); setErrors({}) }}><Plus size={15} /> Register Attendee</button>
           </>
         }
@@ -256,35 +261,16 @@ export default function Ticketing() {
         </div>
       )}
 
-      {/* Register modal */}
-      <Modal open={open} onClose={() => setOpen(false)} title="Register Attendee">
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Full Name *" className="col-span-2"><input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
-          <Field label="Email *" className="col-span-2"><input className="input" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} />{errors.email && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>}</Field>
-          <Field label="Phone *" className="col-span-2"><input className="input" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+251 9XX XXX XXX" />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</Field>
-          <Field label="Ticket Type"><select className="input" value={form.type || 'Standard'} onChange={(e) => setForm({ ...form, type: e.target.value })}>{ticketTypes.map((t) => <option key={t.id} value={t.name}>{t.name} - {fmt(t.price)}</option>)}<option value="Other">Other</option></select></Field>
-
-          {/* Payment section - manual collection for this demo */}
-          <div className="rounded-xl border border-brand-100 bg-brand-50/40 p-3">
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-xs font-bold uppercase tracking-wide text-brand-800">Payment</p>
-              <span className="text-sm font-black text-brand-950">{fmt(ticketTypes.find((t) => t.name === form.type)?.price || 6000)}</span>
-            </div>
-            <select className="input" value={form.paymentMethod || 'Cash'} onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}>
-              {['Cash', 'Card', 'Telebirr', 'CBE Birr', 'Bank Transfer', 'Amole', 'HelloCash', 'Cheque'].map((m) => <option key={m} value={m}>{m}</option>)}
-              <option value="Other">Other</option>
-            </select>
-            <p className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-brand-700">
-              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-brand-600 text-white text-[9px]"><CheckCircle2 size={9} /></span>
-              Collected manually at registration - QR ticket issued after payment
-            </p>
-          </div>
-        </div>
-        <div className="mt-5 flex justify-end gap-2">
-          <button className="btn-outline" onClick={() => setOpen(false)}>Cancel</button>
-          <button className="btn-primary" onClick={submit}>Collect Payment & Register</button>
-        </div>
-      </Modal>
+      {/* Multi-step Register Attendee Modal */}
+      <RegisterAttendeeModal
+        open={open}
+        onClose={() => setOpen(false)}
+        defaultEventId={activeEvent?.id}
+        onSuccess={(rec) => {
+          setQrView(rec)
+          show('Attendee registered successfully!')
+        }}
+      />
 
       {/* QR ticket view */}
       {qrView && typeof document !== 'undefined' && createPortal(

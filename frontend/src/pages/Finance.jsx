@@ -3,7 +3,7 @@ import { Wallet, Plus, FileText, TrendingUp, TrendingDown, PieChart, Download } 
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, Toast, EmptyState, Th, Td, Segmented, Modal, Field } from '../components/ui'
 import { fmt, fmtCompact } from '../store/data'
-import { downloadCSV, exportPDF } from '../store/exportUtils'
+import { exportTableToPDF } from '../store/exportUtils'
 import { numberPositive, textRequired, required, validate } from '../store/validation'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line, AreaChart, Area } from 'recharts'
 
@@ -23,13 +23,21 @@ export default function Finance() {
   const exportAll = () => {
     const cName = (id) => state.clients.find((c) => c.id === id)?.company || '-'
     const eName = (id) => state.events.find((e) => e.id === id)?.name || '-'
-    downloadCSV('finance-invoices.csv',
-      ['Ref', 'Client', 'Event', 'Amount', 'Paid', 'Outstanding', 'Status'],
-      state.invoices.map((i) => [i.ref, cName(i.clientId), eName(i.eventId), i.amount, i.paid, i.amount - i.paid, i.status]))
-    downloadCSV('finance-expenses.csv',
-      ['Event', 'Category', 'Date', 'Amount'],
-      state.expenses.map((e) => [eName(e.eventId), e.category, e.date, e.amount]))
-    show('Invoices & expenses exported to Excel')
+    exportTableToPDF(
+      'financial-invoices',
+      'Financial Report: Invoices',
+      ['Ref', 'Client', 'Event', 'Amount (ETB)', 'Paid (ETB)', 'Outstanding (ETB)', 'Status'],
+      state.invoices.map((i) => [i.ref, cName(i.clientId), eName(i.eventId), i.amount, i.paid, i.amount - i.paid, i.status]),
+      { rightAlignCols: [3, 4, 5], subtitle: `Total Invoices: ${state.invoices.length}` }
+    )
+    exportTableToPDF(
+      'financial-expenses',
+      'Financial Report: Expenses',
+      ['Event', 'Category', 'Date', 'Amount (ETB)'],
+      state.expenses.map((e) => [eName(e.eventId), e.category, e.date, e.amount]),
+      { rightAlignCols: [3], subtitle: `Total Expenses: ${state.expenses.length}` }
+    )
+    show('Invoices & expenses exported to PDF')
   }
 
   useEffect(() => {
@@ -110,7 +118,7 @@ export default function Finance() {
         icon={Wallet}
         actions={
           <>
-            <button className="btn-outline" onClick={exportAll}><Download size={15} /> Export</button>
+            <button className="btn-outline" onClick={exportAll}><FileText size={15} /> Export PDF</button>
             <button className="btn-primary" onClick={() => { setErrors({}); setOpen('expense') }}><Plus size={15} /> Record Expense</button>
           </>
         }

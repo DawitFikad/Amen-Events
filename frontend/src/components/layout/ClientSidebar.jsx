@@ -53,7 +53,15 @@ export default function ClientSidebar({ collapsed, mobileNav, setMobileNav }) {
   const navigate = useNavigate()
   const client = state.clients.find((c) => c.id === state.currentUserId)
   const myEvents = state.events.filter((e) => e.clientId === state.currentUserId)
-  const upcomingCount = myEvents.filter((e) => e.status === 'upcoming').length
+  const activeEventsCount = myEvents.filter((e) => e.status === 'upcoming' || e.status === 'ongoing').length
+  const unpaidInvoicesCount = state.invoices.filter((i) => i.clientId === state.currentUserId && i.status !== 'paid').length
+  const notifCount = state.notifications.length
+
+  const clientCounts = {
+    '/erp/portal/events': activeEventsCount,
+    '/erp/portal/invoices': unpaidInvoicesCount,
+    '/erp/portal/notifications': notifCount,
+  }
 
   const handleLogout = () => {
     logout()
@@ -94,7 +102,7 @@ export default function ClientSidebar({ collapsed, mobileNav, setMobileNav }) {
             </div>
             <div className="mt-2 flex items-center justify-between text-[11px] text-brand-200">
               <span>Active events</span>
-              <span className="font-bold text-white">{upcomingCount}</span>
+              <span className="font-bold text-white">{activeEventsCount}</span>
             </div>
           </div>
         </div>
@@ -108,25 +116,37 @@ export default function ClientSidebar({ collapsed, mobileNav, setMobileNav }) {
               <p className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-widest text-brand-300/70">{g.label}</p>
             )}
             <div className="space-y-0.5">
-              {g.items.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  end={item.end}
-                  title={item.label}
-                  onClick={() => setMobileNav && setMobileNav(false)}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-semibold transition ${
-                      isActive
-                        ? 'bg-white text-brand-700 shadow-sm'
-                        : 'text-brand-100 hover:bg-white/10 hover:text-white'
-                    }`
-                  }
-                >
-                  <item.icon size={17} className="shrink-0" />
-                  {!collapsed && <span className="truncate">{item.label}</span>}
-                </NavLink>
-              ))}
+              {g.items.map((item) => {
+                const badgeCount = clientCounts[item.to]
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.end}
+                    title={item.label}
+                    onClick={() => setMobileNav && setMobileNav(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-semibold transition ${
+                        isActive
+                          ? 'bg-white text-brand-700 shadow-sm'
+                          : 'text-brand-100 hover:bg-white/10 hover:text-white'
+                      }`
+                    }
+                  >
+                    <item.icon size={17} className="shrink-0" />
+                    {!collapsed && (
+                      <>
+                        <span className="flex-1 truncate">{item.label}</span>
+                        {badgeCount !== undefined && badgeCount > 0 && (
+                          <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-gold-400/25 px-1.5 text-[10px] font-bold text-gold-200 ring-1 ring-gold-400/30">
+                            {badgeCount}
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </NavLink>
+                )
+              })}
             </div>
           </div>
         ))}

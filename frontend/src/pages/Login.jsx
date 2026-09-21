@@ -64,9 +64,8 @@ export default function Login() {
   }
 
   const submit = async (e) => {
-    e.preventDefault()
-    if (!email.trim()) { show('Please enter your work email'); return }
-    if (!password) { show('Please enter your password'); return }
+    if (e && e.preventDefault) e.preventDefault()
+    if (!email.trim() || !password) { show('Please fill out this field'); return }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())) { show('Please enter a valid email address'); return }
     if (password.length < 6) { show('Password must be at least 6 characters'); return }
     setBusy(true)
@@ -79,19 +78,20 @@ export default function Login() {
     }
   }
 
-  // Native Enter-to-submit on the login form (works with autofill overlays).
+  // Enter-to-submit on the login form
   useEffect(() => {
     const onKey = (e) => {
       if (e.key !== 'Enter') return
-      const t = e.target
-      if (!t || t.tagName !== 'INPUT') return
       if (forgotOpen) return
+      const t = e.target
+      if (t && t.tagName === 'TEXTAREA') return
+      if (t && t.tagName === 'BUTTON' && t.type !== 'submit') return
       e.preventDefault()
       submit(e)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  })
+  }, [email, password, forgotOpen])
 
   const submitForgot = async () => {
     if (!forgotEmail.trim()) { show('Please enter your email', 'error'); return }
@@ -557,6 +557,7 @@ export default function Login() {
                     placeholder="you@amen.et"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(e) } }}
                     autoComplete="username"
                   />
                 </div>
@@ -572,6 +573,7 @@ export default function Login() {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(e) } }}
                     autoComplete="current-password"
                   />
                   <button type="button" onClick={() => setShowPw((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-ink/30 transition hover:bg-gray-50 hover:text-ink/60">

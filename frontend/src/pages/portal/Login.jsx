@@ -17,7 +17,7 @@ export default function PortalLogin() {
   const redirect = searchParams.get('redirect') || '/'
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    if (e && e.preventDefault) e.preventDefault()
     setError(null)
     if (!form.email || !form.password) { setError('Email and password are required'); return }
 
@@ -53,18 +53,19 @@ export default function PortalLogin() {
     setLoading(false)
   }
 
-  // Native Enter-to-submit on the login form (works with autofill overlays).
+  // Enter-to-submit on the login form
   useEffect(() => {
     const onKey = (e) => {
       if (e.key !== 'Enter') return
       const t = e.target
-      if (!t || t.tagName !== 'INPUT') return
+      if (t && t.tagName === 'TEXTAREA') return
+      if (t && t.tagName === 'BUTTON' && t.type !== 'submit') return
       e.preventDefault()
       handleSubmit(e)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  })
+  }, [form])
 
   return (
     <div className="mx-auto max-w-md px-4 py-12 sm:px-6">
@@ -77,11 +78,27 @@ export default function PortalLogin() {
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           <div>
             <label className="label">Email</label>
-            <input className="input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@example.com" required />
+            <input
+              className="input"
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSubmit(e) } }}
+              placeholder="you@example.com"
+              required
+            />
           </div>
           <div>
             <label className="label">Password</label>
-            <input className="input" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Your password" required />
+            <input
+              className="input"
+              type="password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSubmit(e) } }}
+              placeholder="Your password"
+              required
+            />
           </div>
           <button type="submit" disabled={loading} className="btn-primary w-full">
             {loading ? 'Logging in…' : 'Login'} <ArrowRight size={16} />

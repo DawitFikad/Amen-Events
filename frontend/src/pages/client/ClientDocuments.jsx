@@ -2,7 +2,7 @@ import React, { useMemo, useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { FileText, Download, File, Image, FileCheck, FileSpreadsheet, Search, Upload, Plus, X, CheckCircle2 } from 'lucide-react'
 import { useData } from '../../store/DataContext'
-import { downloadCSV } from '../../store/exportUtils'
+import { exportTableToPDF } from '../../store/exportUtils'
 import { Toast } from '../../components/ui'
 
 const DOC_CATEGORIES = [
@@ -179,10 +179,18 @@ export default function ClientDocuments() {
     } else if (doc.url) {
       window.open(doc.url, '_blank')
     } else {
-      downloadCSV(
-        `${doc.name.replace(/\.[^/.]+$/, '')}.csv`,
-        ['Document', 'Category', 'Event', 'Size', 'Date'],
-        [[doc.name, doc.category, evt?.name || '-', doc.size, doc.date]]
+      exportTableToPDF(
+        `${doc.name.replace(/\.[^/.]+$/, '')}`,
+        `Document Metadata: ${doc.name}`,
+        ['Field', 'Value'],
+        [
+          ['Document', doc.name],
+          ['Category', doc.category],
+          ['Event', evt?.name || '-'],
+          ['File Size', doc.size],
+          ['Date', doc.date],
+        ],
+        { orientation: 'portrait', subtitle: 'Client Document Registry — Amen Event Organizer' }
       )
     }
   }

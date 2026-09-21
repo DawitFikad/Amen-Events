@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Users, CheckCircle2, Clock, Crown, Download, ArrowRight } from 'lucide-react'
+import { Search, Users, CheckCircle2, Clock, Crown, Download, FileText, ArrowRight, Plus } from 'lucide-react'
 import { useData } from '../../store/DataContext'
 import { Badge, Th, Td } from '../../components/ui'
+import RegisterAttendeeModal from '../../components/RegisterAttendeeModal'
 import { fmt } from '../../store/data'
-import { downloadCSV } from '../../store/exportUtils'
+import { exportTableToPDF } from '../../store/exportUtils'
 
 export default function ClientAttendees() {
   const { state } = useData()
@@ -12,6 +13,7 @@ export default function ClientAttendees() {
   const clientId = state.currentUserId
   const [search, setSearch] = useState('')
   const [selectedEvent, setSelectedEvent] = useState('all')
+  const [regOpen, setRegOpen] = useState(false)
 
   const client = state.clients.find((c) => c.id === clientId)
   const myEvents = useMemo(() => {
@@ -46,9 +48,14 @@ export default function ClientAttendees() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-black text-brand-950">Attendees</h1>
-        <p className="text-sm text-ink/50">View and manage event attendees</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-black text-brand-950">Attendees</h1>
+          <p className="text-sm text-ink/50">View and manage event attendees</p>
+        </div>
+        <button className="btn-primary" onClick={() => setRegOpen(true)}>
+          <Plus size={15} /> Register Attendee
+        </button>
       </div>
 
       {/* Stats */}
@@ -82,8 +89,14 @@ export default function ClientAttendees() {
           {myEvents.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
         </select>
         <button className="btn-outline text-xs" onClick={() => {
-          downloadCSV('client-attendees.csv', ['Attendee', 'Email', 'Event', 'Type', 'Amount', 'Checked In'], allRegistrations.map((r) => [r.name, r.email, myEvents.find((e) => e.id === r.eventId)?.name, r.type, r.amount ?? r.price ?? 0, r.checkedIn ? 'Yes' : 'No']))
-        }}><Download size={14} /> Export</button>
+          exportTableToPDF(
+            'client-attendees-roster',
+            'Event Attendee Roster',
+            ['Attendee', 'Email', 'Event', 'Pass Type', 'Amount (ETB)', 'Checked In'],
+            allRegistrations.map((r) => [r.name, r.email, myEvents.find((e) => e.id === r.eventId)?.name || '-', r.type, r.amount ?? r.price ?? 0, r.checkedIn ? 'Yes' : 'No']),
+            { rightAlignCols: [4] }
+          )
+        }}><FileText size={14} /> Export PDF</button>
       </div>
 
       {/* Table */}
@@ -115,6 +128,12 @@ export default function ClientAttendees() {
           </div>
         )}
       </div>
+
+      <RegisterAttendeeModal
+        open={regOpen}
+        onClose={() => setRegOpen(false)}
+        defaultEventId={selectedEvent !== 'all' ? selectedEvent : myEvents[0]?.id}
+      />
     </div>
   )
 }

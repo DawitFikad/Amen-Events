@@ -82,7 +82,7 @@ export default function ClientShell() {
 
         {/* Content */}
         <main className="p-4 lg:p-6">
-          {/* KPI OFF */}
+          <LiveKpiBar scope="client" />
           <Outlet />
         </main>
       </div>

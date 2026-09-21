@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { Settings, ShieldCheck, Users, DatabaseBackup, Activity, Bell, Globe, Lock, KeyRound, Smartphone, Mail, Download, Plus, X } from 'lucide-react'
+import { Settings, ShieldCheck, Users, DatabaseBackup, Activity, Bell, Globe, Lock, KeyRound, Smartphone, Mail, Download, FileText, Plus, X, Ticket } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { ROLE_DEFINITIONS, MODULES, PERMISSIONS } from '../store/permissions'
 import { PageHeader, Badge, Toast, Th, Td, Avatar, Modal, Field } from '../components/ui'
-import { downloadCSV } from '../store/exportUtils'
+import RegisterAttendeeModal from '../components/RegisterAttendeeModal'
+import { exportTableToPDF } from '../store/exportUtils'
 import { nameOnly, emailValid, validate } from '../store/validation'
 
 const permLabels = {
@@ -26,12 +27,13 @@ const securityDefaults = {
 }
 
 export default function Admin() {
-  const { state, patch, patchBy, logActivity, addNotification, rbac, intent, clearIntent, setDemoFlag } = useData()
+  const { state, patch, patchBy, logActivity, addNotification, addStaffMember, rbac, intent, clearIntent, setDemoFlag } = useData()
   const [view, setView] = useState(rbac?.roleKey === 'admin' ? 'users' : 'settings')
   const [toast, setToast] = useState(null)
   const [twoStep, setTwoStep] = useState(state.twoStepVerification || false)
   const [method, setMethod] = useState(state.verificationMethod || 'SMS code to phone')
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [attendeeOpen, setAttendeeOpen] = useState(false)
   const [inviteForm, setInviteForm] = useState({ name: '', email: '', role: 'manager' })
   const [permRole, setPermRole] = useState(null)
   const [permDraft, setPermDraft] = useState(null)
@@ -79,14 +81,27 @@ export default function Admin() {
     inlineInvite(inviteForm.name.trim(), inviteForm.email.trim(), inviteForm.role)
   }
 
-  const inlineInvite = (name, email, role) => {
-    const uid = 'st' + (state.staff.length + 10)
-    patch('staff', (arr) => [...arr, {
-      id: uid, name, role: 'New Hire', dept: 'Operations',
-      phone: '', email, type: 'Employee', status: 'invited',
-      color: 'bg-brand-500', initials: name.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase(),
-      userRoles: [{ role: { key: role } }],
-    }])
+  const inlineInvite = async (name, email, role) => {
+    try {
+      await addStaffMember({
+        name,
+        email,
+        role: 'New Hire',
+        jobTitle: role,
+        dept: 'Operations',
+        type: 'Employee',
+        status: 'invited',
+        color: 'bg-brand-500',
+      })
+    } catch (err) {
+      const uid = 'st' + (state.staff.length + 10)
+      patch('staff', (arr) => [...arr, {
+        id: uid, name, role: 'New Hire', dept: 'Operations',
+        phone: '', email, type: 'Employee', status: 'invited',
+        color: 'bg-brand-500', initials: name.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase(),
+        userRoles: [{ role: { key: role } }],
+      }])
+    }
     logActivity(`Invitation sent to ${email} (${role})`, 'admin')
     addNotification(`Invitation sent to ${email}`)
     setInviteOpen(false); setInviteForm({ name: '', email: '', role: 'manager' })
@@ -124,7 +139,7 @@ export default function Admin() {
   }
 
   const changePassword = () => {
-    if (!pwdForm.current) { show('Enter your current password', 'warn'); return }
+    if (!pwdForm.current) { show('Please fill out this field', 'warn'); return }
     if (pwdForm.next.length < 6) { show('New password must be at least 6 characters', 'warn'); return }
     if (pwdForm.next !== pwdForm.confirm) { show('New passwords do not match', 'warn'); return }
     patch('currentUser', (u) => ({ ...u, passwordChanged: true }))
@@ -148,9 +163,15 @@ export default function Admin() {
       ['Venues', state.venues.length], ['Resources', state.resources.length], ['Vendors', state.vendors.length],
       ['Registrations', state.registrations.length], ['Expenses', state.expenses.length],
     ]
-    downloadCSV('amen-ems-backup.csv', ['Module', 'Records', 'Backup Time'], rows.map(([m, n]) => [m, n, new Date().toLocaleString()]))
+    exportTableToPDF(
+      'amen-ems-backup-summary',
+      'Amen EMS System Backup Summary',
+      ['Module', 'Records', 'Backup Timestamp'],
+      rows.map(([m, n]) => [m, n, new Date().toLocaleString()]),
+      { subtitle: `System backup generated on ${new Date().toLocaleString()}` }
+    )
     logActivity('Backup downloaded', 'admin')
-    show('Backup downloaded')
+    show('Backup downloaded as PDF')
   }
 
   return (
@@ -159,7 +180,18 @@ export default function Admin() {
         title="Administration"
         subtitle="Users, roles, permissions, security and system settings."
         icon={Settings}
-        actions={isAdmin ? <button className="btn-primary" onClick={() => setInviteOpen(true)}><Users size={15} /> Invite User</button> : undefined}
+        actions={
+          isAdmin ? (
+            <div className="flex items-center gap-2">
+              <button className="btn-outline" onClick={() => setAttendeeOpen(true)}>
+                <Ticket size={15} /> Register Attendee
+              </button>
+              <button className="btn-primary" onClick={() => setInviteOpen(true)}>
+                <Users size={15} /> Invite User
+              </button>
+            </div>
+          ) : undefined
+        }
       />
 
       {isAdmin && (
@@ -321,9 +353,15 @@ export default function Admin() {
             <div className="flex items-center gap-2">
               <span className="chip bg-brand-100 text-brand-800">{activityLog.length} entries</span>
               <button className="btn-outline !py-1.5 text-xs" onClick={() => {
-                downloadCSV('activity-log.csv', ['User', 'Action', 'Time'], activityLog.map((a) => [a.user, a.action, a.at]))
-                show('Activity log exported')
-              }}><Download size={13} /> Export</button>
+                exportTableToPDF(
+                  'audit-activity-log',
+                  'System Security & Audit Activity Log',
+                  ['User', 'Action', 'Timestamp'],
+                  activityLog.map((a) => [a.user, a.action, a.at]),
+                  { subtitle: `${activityLog.length} activity entries · Exported by Administrator` }
+                )
+                show('Activity log exported to PDF')
+              }}><FileText size={13} /> Export PDF</button>
             </div>
           </div>
           {activityLog.length === 0 ? (
@@ -435,6 +473,13 @@ export default function Admin() {
           <button className="btn-primary" onClick={changePassword}><KeyRound size={14} /> Update Password</button>
         </div>
       </Modal>
+
+      {/* Register Attendee Wizard Modal */}
+      <RegisterAttendeeModal
+        open={attendeeOpen}
+        onClose={() => setAttendeeOpen(false)}
+        onSuccess={() => show('Attendee registered successfully')}
+      />
 
       <Toast toast={toast} />
     </div>

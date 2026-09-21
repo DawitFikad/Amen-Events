@@ -11,13 +11,13 @@ const digs = (v) => String(v === undefined || v === null ? '' : v).replace(/\D/g
 export const required =
   (label) =>
   (v) =>
-    trim(v) === '' ? `${label} is required` : ''
+    trim(v) === '' ? 'Please fill out this field' : ''
 
 export const nameOnly =
   (label, { min = 2, max = 80 } = {}) =>
   (v) => {
     const s = trim(v)
-    if (s === '') return `${label} is required`
+    if (s === '') return 'Please fill out this field'
     if (!/[A-Za-zÀ-ÖØ-öø-ÿ]/.test(s)) return `${label} must contain letters`
     if (!NAME_RE.test(s)) return `${label} may only contain letters, spaces, hyphens and apostrophes`
     if (s.length < min) return `${label} must be at least ${min} characters`
@@ -29,7 +29,7 @@ export const emailValid =
   (label) =>
   (v) => {
     const s = trim(v)
-    if (s === '') return `${label} is required`
+    if (s === '') return 'Please fill out this field'
     if (!EMAIL_RE.test(s)) return `Enter a valid ${label.toLowerCase()} address`
     if (s.length > 120) return `${label} is too long`
     return ''
@@ -39,7 +39,7 @@ export const phoneValid =
   (label) =>
   (v) => {
     const s = trim(v)
-    if (s === '') return `${label} is required`
+    if (s === '') return 'Please fill out this field'
     const d = digs(s)
     if (d.length < 10) return `${label} must contain at least 10 digits`
     if (d.length > 15) return `${label} must contain at most 15 digits`
@@ -50,7 +50,7 @@ export const phoneValid =
 export const numberPositive =
   (label, { integer = false, min = 1, max = null } = {}) =>
   (v) => {
-    if (v === undefined || v === null || trim(v) === '') return `${label} is required`
+    if (v === undefined || v === null || trim(v) === '') return 'Please fill out this field'
     const n = Number(v)
     if (!Number.isFinite(n)) return `${label} must be a valid number`
     if (integer && !Number.isInteger(n)) return `${label} must be a whole number`
@@ -63,7 +63,7 @@ export const textRequired =
   (label, { min = 1, max = 200 } = {}) =>
   (v) => {
     const s = trim(v)
-    if (s === '') return `${label} is required`
+    if (s === '') return 'Please fill out this field'
     if (s.length < min) return `${label} must be at least ${min} characters`
     if (s.length > max) return `${label} must be at most ${max} characters`
     return ''
@@ -73,7 +73,7 @@ export const dateRequired =
   (label) =>
   (v) => {
     const s = trim(v)
-    if (s === '') return `${label} is required`
+    if (s === '') return 'Please fill out this field'
     if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return `${label} is not a valid date`
     return ''
   }

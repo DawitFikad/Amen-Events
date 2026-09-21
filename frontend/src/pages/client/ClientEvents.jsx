@@ -5,7 +5,7 @@ import {
   Search, ArrowRight, Ticket,
 } from 'lucide-react'
 import { useData } from '../../store/DataContext'
-import { Badge, Progress } from '../../components/ui'
+import { Badge, Progress, StatCard } from '../../components/ui'
 import { fmtCompact } from '../../store/data'
 
 export default function ClientEvents() {
@@ -16,27 +16,36 @@ export default function ClientEvents() {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
 
-  const myEvents = useMemo(() => {
-    let evts = state.events.filter((e) => {
+  const allMyEvents = useMemo(() => {
+    return state.events.filter((e) => {
       const isOwner = e.clientId === clientId
       const hasRegistration = state.registrations.some((r) =>
         r.eventId === e.id && (r.clientId === clientId || (client?.email && r.email?.toLowerCase() === client.email.toLowerCase()))
       )
       return isOwner || hasRegistration
     })
+  }, [state.events, state.registrations, clientId, client?.email])
+
+  const upcomingCount = allMyEvents.filter((e) => e.status === 'upcoming').length
+  const ongoingCount = allMyEvents.filter((e) => e.status === 'ongoing').length
+  const activeCount = upcomingCount + ongoingCount
+  const completedCount = allMyEvents.filter((e) => e.status === 'completed').length
+
+  const myEvents = useMemo(() => {
+    let evts = allMyEvents
     if (filter !== 'all') evts = evts.filter((e) => e.status === filter)
     if (search) {
       const q = search.toLowerCase()
       evts = evts.filter((e) => e.name.toLowerCase().includes(q) || e.category?.toLowerCase().includes(q))
     }
     return evts
-  }, [state.events, state.registrations, clientId, client?.email, search, filter])
+  }, [allMyEvents, search, filter])
 
   const filters = [
-    { key: 'all', label: 'All' },
-    { key: 'upcoming', label: 'Upcoming' },
-    { key: 'ongoing', label: 'Ongoing' },
-    { key: 'completed', label: 'Completed' },
+    { key: 'all', label: `All (${allMyEvents.length})` },
+    { key: 'upcoming', label: `Upcoming (${upcomingCount})` },
+    { key: 'ongoing', label: `Ongoing (${ongoingCount})` },
+    { key: 'completed', label: `Completed (${completedCount})` },
   ]
 
   return (
@@ -47,6 +56,14 @@ export default function ClientEvents() {
           <h1 className="text-xl font-black text-brand-950">My Events</h1>
           <p className="text-sm text-ink/50">Track and manage all your events</p>
         </div>
+      </div>
+
+      {/* Stat Cards */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard label="Total Events" value={allMyEvents.length} icon={CalendarDays} tone="brand" sub="assigned to you" />
+        <StatCard label="Active Events" value={activeCount} icon={Clock} tone="gold" sub={`${upcomingCount} upcoming · ${ongoingCount} ongoing`} />
+        <StatCard label="Upcoming" value={upcomingCount} icon={CalendarDays} tone="brand" sub="scheduled" />
+        <StatCard label="Completed" value={completedCount} icon={CheckCircle2} tone="brand" sub="finished events" />
       </div>
 
       {/* Search + filters */}
