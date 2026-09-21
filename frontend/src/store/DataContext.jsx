@@ -47,6 +47,10 @@ import {
   supabaseAddApprovalRequest,
   supabaseUpdateApprovalStatus,
   supabaseUploadDocument,
+  supabaseAddStaffMember,
+  supabaseUpdateStaffMember,
+  supabaseAddAllocation,
+  supabaseAddCalendarEvent,
   subscribeToSupabaseChanges,
 } from './supabase'
 
@@ -552,6 +556,11 @@ export function DataProvider({ children }) {
   }, [backendOnline, patchBy, logActivity, setDemoFlag, state.events, addNotification])
 
   const allocateResources = useCallback(async (eventId, items) => {
+    for (const it of items) {
+      try {
+        await supabaseAddAllocation(it.resourceId, eventId, it.qty)
+      } catch (e) {}
+    }
     if (backendOnline) {
       try { for (const it of items) await api.resources.allocate(it.resourceId, eventId, it.qty) } catch (e) { /* fall through */ }
     }
@@ -864,22 +873,34 @@ export function DataProvider({ children }) {
   }, [backendOnline, patch, logActivity, setDemoFlag])
 
   const addStaffMember = useCallback(async (data) => {
-    if (backendOnline) { try { const { user } = await api.users.create(data); setState((s) => ({ ...s, staff: [user, ...s.staff] })); setDemoFlag('staffAdded', true); return user } catch (e) {} }
-const name = data.name || 'New Member'
-  const rec = { id: 'st-' + Math.random().toString(36).slice(2, 8), name, role: data.role || data.jobTitle || 'Coordinator', dept: data.dept || 'Operations', phone: data.phone || '-', email: data.email || '', type: data.type || 'Employee', status: 'active', color: 'bg-brand-500', initials: name.split(' ').map((p) => p[0]).slice(0, 2).join(''), avatar: data.avatar || '', salary: Number(data.salary) || 0, joinedDate: data.joinedDate || '', contractEnd: data.contractEnd || '', address: data.address || '', bio: data.bio || '' }
-  patch('staff', (a) => [rec, ...a])
-  setDemoFlag('staffAdded', true)
-  logActivity(`Team member added: ${name}`, 'staff')
-  return rec
-}, [backendOnline, patch, logActivity, setDemoFlag])
+    try {
+      const user = await supabaseAddStaffMember(data)
+      setState((s) => ({ ...s, staff: [user, ...s.staff] }))
+      setDemoFlag('staffAdded', true)
+      logActivity(`Team member added: ${user.name}`, 'staff')
+      return user
+    } catch (e) {
+      if (backendOnline) { try { const { user } = await api.users.create(data); setState((s) => ({ ...s, staff: [user, ...s.staff] })); setDemoFlag('staffAdded', true); return user } catch (err) {} }
+      const name = data.name || 'New Member'
+      const rec = { id: 'st-' + Math.random().toString(36).slice(2, 8), name, role: data.role || data.jobTitle || 'Coordinator', dept: data.dept || 'Operations', phone: data.phone || '-', email: data.email || '', type: data.type || 'Employee', status: 'active', color: 'bg-brand-500', initials: name.split(' ').map((p) => p[0]).slice(0, 2).join(''), avatar: data.avatar || '', salary: Number(data.salary) || 0, joinedDate: data.joinedDate || '', contractEnd: data.contractEnd || '', address: data.address || '', bio: data.bio || '' }
+      patch('staff', (a) => [rec, ...a])
+      setDemoFlag('staffAdded', true)
+      logActivity(`Team member added: ${name}`, 'staff')
+      return rec
+    }
+  }, [backendOnline, patch, logActivity, setDemoFlag])
 
-const updateStaffMember = useCallback(async (id, data) => {
-  const payload = { ...data, role: data.role || data.jobTitle || data.role || '', initials: data.initials || (data.name || '').split(' ').map((p) => p[0]).slice(0, 2).join('') }
-  if (backendOnline && id && !String(id).startsWith('st-')) { try { await api.users.update(id, payload) } catch (e) { /* keep local */ } }
-  patchBy('staff', id, (m) => ({ ...m, ...payload }))
-  logActivity(`Team member updated: ${data.name}`, 'staff')
-  return payload
-}, [backendOnline, patchBy, logActivity])
+  const updateStaffMember = useCallback(async (id, data) => {
+    const payload = { ...data, role: data.role || data.jobTitle || data.role || '', initials: data.initials || (data.name || '').split(' ').map((p) => p[0]).slice(0, 2).join('') }
+    try {
+      await supabaseUpdateStaffMember(id, payload)
+    } catch (e) {
+      if (backendOnline && id && !String(id).startsWith('st-')) { try { await api.users.update(id, payload) } catch (err) { /* keep local */ } }
+    }
+    patchBy('staff', id, (m) => ({ ...m, ...payload }))
+    logActivity(`Team member updated: ${data.name}`, 'staff')
+    return payload
+  }, [backendOnline, patchBy, logActivity])
 
   const addSpeaker = useCallback(async (data) => {
     try {
@@ -1047,6 +1068,18 @@ const updateStaffMember = useCallback(async (id, data) => {
     patch('clientDocs', (a) => [rec, ...a])
     const clientName = state.clients.find((c) => c.id === clientId)?.company || 'client'
     logActivity(`Document attached to ${clientName}: ${name}`, 'crm')
+    try {
+      await supabaseUploadDocument({
+        name,
+        type: opts.type || 'company_doc',
+        module: 'clients',
+        entityId: clientId,
+        mimeType: opts.mimeType || '',
+        size: Number(opts.sizeBytes) || 0,
+        url: opts.url || '',
+        uploadedBy: state.currentUserId,
+      })
+    } catch (e) {}
     if (backendOnline && clientId && !String(clientId).startsWith('cl-')) {
       try {
         await documentsApi.upload({
@@ -1061,13 +1094,25 @@ const updateStaffMember = useCallback(async (id, data) => {
       } catch (e) { /* local record already added as fallback */ }
     }
     return rec
-  }, [backendOnline, patch, logActivity, state.clients])
+  }, [backendOnline, patch, logActivity, state.clients, state.currentUserId])
 
   const addEventDoc = useCallback(async (eventId, name, ext = 'PDF', size = '-', opts = {}) => {
     const rec = { id: 'ed-' + Math.random().toString(36).slice(2, 8), eventId, name, ext, size }
     patch('eventDocs', (a) => [rec, ...a])
     const eventName = state.events.find((e) => e.id === eventId)?.name || 'event'
     logActivity(`Document attached to "${eventName}": ${name}`, 'event')
+    try {
+      await supabaseUploadDocument({
+        name,
+        type: opts.type || 'file',
+        module: 'events',
+        entityId: eventId,
+        mimeType: opts.mimeType || '',
+        size: Number(opts.sizeBytes) || 0,
+        url: opts.url || '',
+        uploadedBy: state.currentUserId,
+      })
+    } catch (e) {}
     if (backendOnline && eventId && !String(eventId).startsWith('ev-')) {
       try {
         await documentsApi.upload({
@@ -1082,12 +1127,22 @@ const updateStaffMember = useCallback(async (id, data) => {
       } catch (e) { /* local record already added as fallback */ }
     }
     return rec
-  }, [backendOnline, patch, logActivity, state.events])
+  }, [backendOnline, patch, logActivity, state.events, state.currentUserId])
 
   // ─── FINANCE PURCHASE REQUESTS ─────────────────────────────
 
   const addPurchaseRequest = useCallback(async (data) => {
     const rec = { id: 'pr-' + Math.random().toString(36).slice(2, 8), date: todayISO(), status: 'pending', ...data, amount: Number(data.amount) || 0 }
+    try {
+      const appr = await supabaseAddApprovalRequest({
+        type: 'purchase_request',
+        entityId: rec.id,
+        entityName: data.item || 'Purchase Request',
+        amount: Number(data.amount) || 0,
+        note: `Purchase request for ${data.item} (${data.category || 'General'})`,
+      })
+      setState((s) => ({ ...s, approvals: [appr, ...s.approvals] }))
+    } catch (e) {}
     if (backendOnline) { try { const { pr } = await api.finance.createPurchaseRequest?.(data); return pr } catch (e) {} }
     patch('purchaseRequests', (a) => [rec, ...a])
     logActivity(`Purchase request submitted: ${data.item}`, 'finance')
@@ -1169,11 +1224,18 @@ const updateStaffMember = useCallback(async (id, data) => {
     }
   }, [])
 
-  const addCalendarEvent = useCallback((data) => {
+  const addCalendarEvent = useCallback(async (data) => {
     const rec = { id: 'ce-' + Math.random().toString(36).slice(2, 8), ...data }
-    patch('calendarEvents', (a) => [rec, ...a])
-    logActivity(`Calendar event created: ${rec.title}`, 'workflow')
-    return rec
+    try {
+      const saved = await supabaseAddCalendarEvent(data)
+      patch('calendarEvents', (a) => [saved, ...a])
+      logActivity(`Calendar event created: ${saved.title}`, 'workflow')
+      return saved
+    } catch (e) {
+      patch('calendarEvents', (a) => [rec, ...a])
+      logActivity(`Calendar event created: ${rec.title}`, 'workflow')
+      return rec
+    }
   }, [patch, logActivity])
 
   // ─── RBAC ────────────────────────────────────────────────────

@@ -39,7 +39,7 @@ export async function fetchAllSupabaseData() {
     vendorsRes, invoicesRes, expensesRes, registrationsRes,
     staffRes, speakersRes, exhibitorsRes, sponsorsRes,
     campaignsRes, couponsRes, activitiesRes, notificationsRes, documentsRes,
-    messagesRes, approvalsRes,
+    messagesRes, approvalsRes, allocationsRes, calendarEventsRes,
   ] = await Promise.all([
     supabase.from('Event').select('*, client:Client(*), venue:Venue(*)').order('createdAt', { ascending: false }),
     supabase.from('Client').select('*').order('createdAt', { ascending: false }),
@@ -61,6 +61,8 @@ export async function fetchAllSupabaseData() {
     supabase.from('Document').select('*').order('createdAt', { ascending: false }),
     supabase.from('Message').select('*').order('createdAt', { ascending: true }),
     supabase.from('ApprovalRequest').select('*').order('createdAt', { ascending: false }),
+    supabase.from('Allocation').select('*'),
+    supabase.from('CalendarEvent').select('*').order('date', { ascending: true }),
   ])
 
   return {
@@ -84,6 +86,8 @@ export async function fetchAllSupabaseData() {
     documents: documentsRes.data || [],
     messages: messagesRes.data || [],
     approvals: approvalsRes.data || [],
+    allocations: allocationsRes.data || [],
+    calendarEvents: calendarEventsRes.data || [],
   }
 }
 
@@ -727,6 +731,79 @@ export async function supabaseUploadDocument(data) {
   return inserted || record
 }
 
+// ─── STAFF / USERS ─────────────────────────────────────────────────
+export async function supabaseAddStaffMember(data) {
+  const id = generateId('st')
+  const now = new Date().toISOString()
+  const name = data.name || 'Team Member'
+  const initials = data.initials || name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase() || 'TM'
+  const record = {
+    id,
+    name,
+    email: data.email || `${id}@amenevents.com`,
+    passwordHash: '$2a$10$defaultHashForDemoUsersOnlyXXXXXXXXXXXXXX',
+    phone: data.phone || '',
+    dept: data.dept || 'Operations',
+    jobTitle: data.jobTitle || data.role || 'Coordinator',
+    type: data.type || 'Employee',
+    status: data.status || 'active',
+    color: data.color || 'bg-brand-600',
+    initials,
+    avatar: data.avatar || '',
+    bio: data.bio || '',
+    createdAt: now,
+    updatedAt: now,
+  }
+  const { data: inserted, error } = await supabase.from('User').insert([record]).select('id, name, initials, color, dept, jobTitle, email, phone, type, status, avatar').single()
+  if (error) throw error
+  await supabaseLogActivity(`Team member added: ${name}`, 'staff')
+  return inserted || record
+}
+
+export async function supabaseUpdateStaffMember(id, updates) {
+  const data = { ...updates, updatedAt: new Date().toISOString() }
+  const { data: updated, error } = await supabase.from('User').update(data).eq('id', id).select('id, name, initials, color, dept, jobTitle, email, phone, type, status, avatar').single()
+  if (error) throw error
+  return updated
+}
+
+// ─── ALLOCATIONS & CALENDAR ────────────────────────────────────────
+export async function supabaseAddAllocation(resourceId, eventId, qty = 1) {
+  const id = generateId('alc')
+  const record = {
+    id,
+    resourceId,
+    eventId,
+    qty: Number(qty) || 1,
+    createdAt: new Date().toISOString(),
+  }
+  const { data: inserted, error } = await supabase.from('Allocation').insert([record]).select('*').single()
+  if (error) throw error
+  return inserted || record
+}
+
+export async function supabaseAddCalendarEvent(data) {
+  const id = generateId('ce')
+  const record = {
+    id,
+    title: data.title,
+    type: data.type || 'event',
+    date: data.date || new Date().toISOString().split('T')[0],
+    endDate: data.endDate || null,
+    time: data.time || '',
+    endTime: data.endTime || '',
+    location: data.location || '',
+    entityId: data.entityId || null,
+    userId: data.userId || null,
+    color: data.color || 'bg-brand-600',
+    notes: data.notes || '',
+    createdAt: new Date().toISOString(),
+  }
+  const { data: inserted, error } = await supabase.from('CalendarEvent').insert([record]).select('*').single()
+  if (error) throw error
+  return inserted || record
+}
+
 // ─── REALTIME SUBSCRIPTION ─────────────────────────────────────────
 export function subscribeToSupabaseChanges(onChange) {
   const channel = supabase
@@ -734,13 +811,25 @@ export function subscribeToSupabaseChanges(onChange) {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'Event' }, () => onChange('Event'))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'Client' }, () => onChange('Client'))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'Task' }, () => onChange('Task'))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'Venue' }, () => onChange('Venue'))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'Resource' }, () => onChange('Resource'))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'Vendor' }, () => onChange('Vendor'))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'User' }, () => onChange('User'))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'Registration' }, () => onChange('Registration'))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'Invoice' }, () => onChange('Invoice'))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'Expense' }, () => onChange('Expense'))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'Speaker' }, () => onChange('Speaker'))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'Exhibitor' }, () => onChange('Exhibitor'))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'Sponsor' }, () => onChange('Sponsor'))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'Campaign' }, () => onChange('Campaign'))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'Coupon' }, () => onChange('Coupon'))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'Message' }, () => onChange('Message'))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'Notification' }, () => onChange('Notification'))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'ApprovalRequest' }, () => onChange('ApprovalRequest'))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'Document' }, () => onChange('Document'))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'Allocation' }, () => onChange('Allocation'))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'CalendarEvent' }, () => onChange('CalendarEvent'))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'ActivityLog' }, () => onChange('ActivityLog'))
     .subscribe()
 
   return () => {

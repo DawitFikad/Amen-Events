@@ -11,27 +11,16 @@ import { useData } from '../store/DataContext'
 const steps = [
   { title: 'Dashboard Overview', desc: 'Start here - KPIs, charts and team performance.', route: '/erp/dashboard', intent: null, icon: LayoutDashboard },
   { title: 'Create a New Client', desc: 'Add a company + contact to the CRM pipeline.', route: '/erp/crm', intent: 'new-client', icon: Users },
-  { title: 'Create a Quotation', desc: 'Draft a priced quotation for the client.', route: '/erp/crm', intent: 'new-quote', icon: FileText },
-  { title: 'Draft a Contract', desc: 'Record the deal scope, value and dates.', route: '/erp/crm', intent: 'new-contract', icon: ShieldCheck },
   { title: 'Create an Event', desc: 'Build the event, linked to your client.', route: '/erp/admin/events', intent: 'new-event', icon: CalendarDays },
   { title: 'Assign Team Members', desc: 'Pick the project manager and crew for the event.', route: '/erp/admin/events', intent: 'event-team', icon: UserPlus },
   { title: 'Allocate Venue & Resources', desc: 'Book the venue and allocate equipment.', route: '/erp/admin/events', intent: 'event-resources', icon: MapPin },
-  { title: 'Set the Budget', desc: 'Define the event budget and track spend.', route: '/erp/admin/events', intent: 'event-budget', icon: Wallet },
+  { title: 'Create Budget', desc: 'Define the event budget and track spend.', route: '/erp/admin/events', intent: 'event-budget', icon: Wallet },
   { title: 'Register Attendees', desc: 'Add attendees and ticket types.', route: '/erp/ticketing', intent: 'new-registration', icon: Ticket },
   { title: 'Generate QR Tickets', desc: 'Open the digital QR ticket for an attendee.', route: '/erp/ticketing', intent: 'view-qr', icon: QrCode },
   { title: 'Perform QR Check-in', desc: 'Scan the ticket at the entrance.', route: '/erp/checkin', intent: 'checkin', icon: ScanLine },
   { title: 'Track Expenses & Payments', desc: 'Record costs and client payments.', route: '/erp/finance', intent: 'finance', icon: TrendingUp },
-  { title: 'Plan Project Tasks', desc: 'Break the delivery into tasks and milestones.', route: '/erp/projects', intent: 'new-task', icon: KanbanSquare },
-  { title: 'Add Suppliers & Vendors', desc: 'Onboard caterers, decorators and more.', route: '/erp/vendors', intent: 'new-vendor', icon: Handshake },
-  { title: 'Grow the Team', desc: 'Add a staff member to the directory.', route: '/erp/staff', intent: 'new-staff', icon: UserCog },
-  { title: 'Book Speakers & Sessions', desc: 'Invite speakers and schedule sessions.', route: '/erp/speakers', intent: 'new-speaker', icon: Mic2 },
-  { title: 'Register Exhibitors', desc: 'Assign companies to booths on the floor.', route: '/erp/exhibition', intent: 'new-exhibitor', icon: Building2 },
-  { title: 'Sign Sponsors', desc: 'Add sponsors and their packages.', route: '/erp/sponsorship', intent: 'new-sponsor', icon: BadgeDollarSign },
-  { title: 'Create a Marketing Campaign', desc: 'Launch the campaign for this event.', route: '/erp/marketing', intent: 'new-campaign', icon: Megaphone },
-  { title: 'Generate Promo Coupons', desc: 'Create discount codes for promotion.', route: '/erp/marketing', intent: 'new-coupon', icon: Tag },
   { title: 'Generate Reports', desc: 'Export the event and financial reports.', route: '/erp/reports', intent: 'reports', icon: BarChart3 },
-  { title: 'Invite Users & Permissions', desc: 'Administer roles and invite teammates.', route: '/erp/admin', intent: 'invite-user', icon: Settings },
-  { title: 'Complete the Event', desc: 'Mark the event as completed.', route: '/erp/admin/events', intent: 'event-complete', icon: CheckCircle2 },
+  { title: 'Complete Event', desc: 'Mark the event as completed.', route: '/erp/admin/events', intent: 'event-complete', icon: CheckCircle2 },
 ]
 
 export default function DemoWizard() {
@@ -48,10 +37,7 @@ export default function DemoWizard() {
   const stepModuleMap = {
     '/erp/dashboard': 'dashboard', '/erp/crm': 'crm', '/erp/admin/events': 'events',
     '/erp/ticketing': 'ticketing', '/erp/checkin': 'checkin', '/erp/finance': 'finance',
-    '/erp/projects': 'projects', '/erp/vendors': 'vendors', '/erp/staff': 'staff',
-    '/erp/speakers': 'speakers', '/erp/exhibition': 'exhibition',
-    '/erp/sponsorship': 'sponsorship', '/erp/marketing': 'marketing',
-    '/erp/reports': 'reports', '/erp/admin': 'admin',
+    '/erp/reports': 'reports',
   }
   const visibleSteps = steps.filter((s) => {
     if (!rbac || rbac.roleKey === 'admin') return true
@@ -64,27 +50,16 @@ export default function DemoWizard() {
   // Auto-detect completion per step (idempotent)
   if (!done.includes(0) && location.pathname === '/erp/dashboard') done.push(0)
   if (demo.lastClientId) done.push(1)
-  if (demo.quoteCreated) done.push(2)
-  if (demo.contractCreated) done.push(3)
-  if (demo.lastEventId) done.push(4)
-  if (demo.teamAssigned) done.push(5)
-  if (demo.allocated) done.push(6)
-  if (demo.budgetSet || (lastEvent && lastEvent.budget > 0)) done.push(7)
-  if (demo.lastRegId) done.push(8)
-  if (demo.qrViewed) done.push(9)
-  if (demo.lastCheckinId) done.push(10)
-  if (demo.financeAction > 0) done.push(11)
-  if (demo.taskCreated) done.push(12)
-  if (demo.vendorAdded) done.push(13)
-  if (demo.staffAdded) done.push(14)
-  if (demo.speakerAdded) done.push(15)
-  if (demo.exhibitorAdded) done.push(16)
-  if (demo.sponsorAdded) done.push(17)
-  if (demo.campaignCreated) done.push(18)
-  if (demo.couponCreated) done.push(19)
-  if (demo.visitedReports || location.pathname === '/erp/reports') done.push(20)
-  if (demo.adminAction) done.push(21)
-  if (lastEvent && lastEvent.status === 'completed') done.push(22)
+  if (demo.lastEventId) done.push(2)
+  if (demo.teamAssigned) done.push(3)
+  if (demo.allocated) done.push(4)
+  if (demo.budgetSet || (lastEvent && lastEvent.budget > 0)) done.push(5)
+  if (demo.lastRegId) done.push(6)
+  if (demo.qrViewed) done.push(7)
+  if (demo.lastCheckinId) done.push(8)
+  if (demo.financeAction > 0) done.push(9)
+  if (demo.visitedReports || location.pathname === '/erp/reports') done.push(10)
+  if (lastEvent && lastEvent.status === 'completed') done.push(11)
 
   const uniqueDone = [...new Set(done)].sort((a, b) => a - b)
   const visibleIdx = steps.map((s, i) => (visibleSteps.includes(s) ? i : -1)).filter((i) => i >= 0)
@@ -102,7 +77,7 @@ export default function DemoWizard() {
   // Track report visits
   useEffect(() => {
     if (location.pathname === '/erp/reports' && !state.demo.visitedReports) {
-      markDone(20)
+      markDone(10)
       clearIntent()
     }
   }, [location.pathname])

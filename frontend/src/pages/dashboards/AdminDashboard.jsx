@@ -177,6 +177,61 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      {/* Event Calendar Widget */}
+      <div className="card mt-5 p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CalendarDays size={18} className="text-brand-600" />
+            <div>
+              <p className="font-bold text-brand-950">Event Calendar</p>
+              <p className="text-xs text-ink/45">Scheduled timeline & upcoming pipeline</p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate('/erp/calendar')}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-brand-700 hover:text-brand-900"
+          >
+            Open Enterprise Calendar <ArrowRight size={13} />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {events.slice(0, 4).map((e) => {
+            const client = state.clients.find((c) => c.id === e.clientId)
+            const venue = state.venues.find((v) => v.id === e.venueId)
+            const evDate = e.date ? new Date(e.date + 'T00:00') : new Date()
+            return (
+              <div
+                key={e.id}
+                onClick={() => navigate('/erp/admin/events')}
+                className="group cursor-pointer rounded-xl border border-brand-100 p-3.5 transition hover:border-brand-300 hover:bg-brand-50/40 hover:shadow-sm"
+              >
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="flex items-center gap-1 text-xs font-black text-brand-900">
+                    <span className="text-base font-black">{isNaN(evDate.getDate()) ? '15' : evDate.getDate()}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-ink/40">
+                      {isNaN(evDate.getMonth()) ? 'OCT' : evDate.toLocaleDateString('en', { month: 'short' })}
+                    </span>
+                  </span>
+                  <Badge status={e.status} label={e.status} />
+                </div>
+                <p className="truncate text-sm font-bold text-brand-950 group-hover:text-brand-700">{e.name}</p>
+                <p className="truncate text-xs text-ink/50 mt-0.5">{client?.company || 'General'}</p>
+                <div className="mt-2.5 flex items-center justify-between text-[11px] text-ink/40 border-t border-brand-50 pt-2">
+                  <span className="truncate">{venue?.name || 'Venue TBD'}</span>
+                  <span>{e.time || '09:00'}</span>
+                </div>
+              </div>
+            )
+          })}
+          {events.length === 0 && (
+            <div className="col-span-full py-6 text-center text-sm text-ink/40">
+              No events scheduled in the calendar yet.
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* System health + resource utilization */}
       <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-3">
         <div className="card p-5">
