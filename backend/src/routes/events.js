@@ -34,10 +34,13 @@ router.post('/', authRequired, requirePermission('events', 'create'), async (req
   if (!name) {
     return res.status(400).json({ error: 'Event name is required' })
   }
+  const assignedPmId = pmId || req.user.id
+  const assignedTeam = Array.from(new Set([assignedPmId, req.user.id, ...(Array.isArray(req.body.team) ? req.body.team : [])])).filter(Boolean)
+
   const event = await prisma.event.create({
     data: {
       name, clientId, venueId, category, date, time: time || '09:00',
-      budget: Number(budget) || 0, pmId, team: [pmId].filter(Boolean),
+      budget: Number(budget) || 0, pmId: assignedPmId, team: assignedTeam,
       status: status || 'upcoming', stage: 4, progress: 36,
       image: req.body.image || '',
       description: req.body.description || '',

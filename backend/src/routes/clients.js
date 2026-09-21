@@ -7,11 +7,7 @@ const router = Router()
 
 // GET /api/clients
 router.get('/', authRequired, requirePermission('crm', 'view'), async (req, res) => {
-  const isAdmin = req.user.userRoles?.some((ur) => ur.role.key === 'admin')
-  const where = isAdmin ? {} : {
-    events: { some: { OR: [{ pmId: req.user.id }, { team: { has: req.user.id } }] } },
-  }
-  const clients = await prisma.client.findMany({ where, orderBy: { createdAt: 'desc' } })
+  const clients = await prisma.client.findMany({ orderBy: { createdAt: 'desc' } })
   res.json({ clients })
 })
 

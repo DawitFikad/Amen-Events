@@ -33,9 +33,7 @@ router.get('/', authRequired, async (req, res) => {
   ] = await Promise.all([
     prisma.event.findMany({ where: eventFilter, include: { client: true, venue: true } }),
     prisma.task.findMany({ where: taskFilter }),
-    isAdmin ? prisma.client.findMany() : prisma.client.findMany({
-      where: { events: { some: { OR: [{ pmId: userId }, { team: { has: userId } }] } } },
-    }),
+    prisma.client.findMany({ orderBy: { createdAt: 'desc' } }),
     isAdmin ? prisma.invoice.findMany() : prisma.invoice.findMany({
       where: { event: { OR: [{ pmId: userId }, { team: { has: userId } }] } },
     }),
@@ -43,33 +41,19 @@ router.get('/', authRequired, async (req, res) => {
       where: { event: { OR: [{ pmId: userId }, { team: { has: userId } }] } },
     }),
     prisma.user.findMany({ select: { id: true, name: true, initials: true, color: true, dept: true, jobTitle: true, email: true, phone: true, type: true, status: true, avatar: true } }),
-    isAdmin ? prisma.venue.findMany() : prisma.venue.findMany({
-      where: { events: { some: { OR: [{ pmId: userId }, { team: { has: userId } }] } } },
-    }),
-    isAdmin ? prisma.resource.findMany() : prisma.resource.findMany({
-      where: { allocations: { some: { event: { OR: [{ pmId: userId }, { team: { has: userId } }] } } } },
-    }),
-    isAdmin ? prisma.vendor.findMany() : prisma.vendor.findMany({
-      where: { events: { some: { OR: [{ pmId: userId }, { team: { has: userId } }] } } },
-    }),
+    prisma.venue.findMany(),
+    prisma.resource.findMany(),
+    prisma.vendor.findMany(),
     isAdmin ? prisma.registration.findMany() : prisma.registration.findMany({
       where: { event: { OR: [{ pmId: userId }, { team: { has: userId } }] } },
     }),
     isAdmin ? prisma.speaker.findMany() : prisma.speaker.findMany({
       where: { event: { OR: [{ pmId: userId }, { team: { has: userId } }] } },
     }),
-    isAdmin ? prisma.exhibitor.findMany() : prisma.exhibitor.findMany({
-      where: { event: { OR: [{ pmId: userId }, { team: { has: userId } }] } },
-    }),
-    isAdmin ? prisma.sponsor.findMany() : prisma.sponsor.findMany({
-      where: { event: { OR: [{ pmId: userId }, { team: { has: userId } }] } },
-    }),
-    isAdmin ? prisma.campaign.findMany() : prisma.campaign.findMany({
-      where: { event: { OR: [{ pmId: userId }, { team: { has: userId } }] } },
-    }),
-    isAdmin ? prisma.coupon.findMany() : prisma.coupon.findMany({
-      where: { campaign: { event: { OR: [{ pmId: userId }, { team: { has: userId } }] } } },
-    }),
+    prisma.exhibitor.findMany(),
+    prisma.sponsor.findMany(),
+    prisma.campaign.findMany(),
+    prisma.coupon.findMany(),
     prisma.activityLog.findMany({ take: 20, orderBy: { createdAt: 'desc' } }),
     prisma.notification.findMany({ take: 10, orderBy: { createdAt: 'desc' } }),
   ])

@@ -1,54 +1,65 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
-// Token storage
-let accessToken = null
-let refreshToken = null
+// Token storage with localStorage persistence across refreshes
+let accessToken = typeof window !== 'undefined' ? localStorage.getItem('amen_access_token') : null
+let refreshToken = typeof window !== 'undefined' ? localStorage.getItem('amen_refresh_token') : null
 
 export function setTokens(access, refresh) {
   accessToken = access
   refreshToken = refresh
-  localStorage.setItem('amen_refresh_token', refresh)
+  if (access) localStorage.setItem('amen_access_token', access)
+  else localStorage.removeItem('amen_access_token')
+  if (refresh) localStorage.setItem('amen_refresh_token', refresh)
+  else localStorage.removeItem('amen_refresh_token')
 }
 
 export function clearTokens() {
   accessToken = null
   refreshToken = null
+  localStorage.removeItem('amen_access_token')
   localStorage.removeItem('amen_refresh_token')
 }
 
 export function getAccessToken() {
+  if (!accessToken && typeof window !== 'undefined') {
+    accessToken = localStorage.getItem('amen_access_token')
+  }
   return accessToken
 }
 
 export function loadRefreshToken() {
-  refreshToken = localStorage.getItem('amen_refresh_token')
+  if (!refreshToken && typeof window !== 'undefined') {
+    refreshToken = localStorage.getItem('amen_refresh_token')
+  }
   return refreshToken
 }
 
 // Core fetch wrapper with auto-refresh
 async function apiFetch(path, options = {}) {
+  const token = getAccessToken()
   const headers = {
     'Content-Type': 'application/json',
     ...options.headers,
   }
-  if (accessToken) {
-    headers.Authorization = `Bearer ${accessToken}`
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
   }
 
   let res = await fetch(`${API_URL}${path}`, { ...options, headers })
 
   // Auto-refresh on 401
-  if (res.status === 401 && refreshToken && !options._retried) {
+  const currentRefresh = loadRefreshToken()
+  if (res.status === 401 && currentRefresh && !options._retried) {
     const refreshRes = await fetch(`${API_URL}/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
+      body: JSON.stringify({ refreshToken: currentRefresh }),
     })
     if (refreshRes.ok) {
       const { accessToken: newToken } = await refreshRes.json()
-      accessToken = newToken
+      setTokens(newToken, currentRefresh)
       headers.Authorization = `Bearer ${newToken}`
-      res = await fetch(`${API_URL}${path}`, { ...options, headers })
+      res = await fetch(`${API_URL}${path}`, { ...options, headers, _retried: true })
     } else {
       clearTokens()
       throw new Error('Session expired')
