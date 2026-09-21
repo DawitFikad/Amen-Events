@@ -8,27 +8,29 @@ const router = Router()
 
 // Registrations
 router.get('/', authRequired, requirePermission('ticketing', 'view'), async (req, res) => {
-  const isAdmin = req.user.userRoles?.some((ur) => ur.role.key === 'admin')
-  const where = isAdmin ? {} : {
-    event: { OR: [{ pmId: req.user.id }, { team: { has: req.user.id } }] },
-  }
-  const registrations = await prisma.registration.findMany({ where, orderBy: { createdAt: 'desc' } })
+  const registrations = await prisma.registration.findMany({ include: { event: true }, orderBy: { createdAt: 'desc' } })
   res.json({ registrations })
 })
 
 router.post('/', authRequired, requirePermission('ticketing', 'create'), async (req, res) => {
   const { eventId, name, email, phone, type, amount, paid, paymentMethod } = req.body
-  if (!eventId || !name) {
-    return res.status(400).json({ error: 'Event ID and attendee name are required' })
+  if (!name) {
+    return res.status(400).json({ error: 'Attendee name is required' })
+  }
+  let validEventId = null
+  if (eventId && typeof eventId === 'string' && eventId.trim()) {
+    const existingEvent = await prisma.event.findUnique({ where: { id: eventId } }).catch(() => null)
+    if (existingEvent) validEventId = existingEvent.id
   }
   const qr = 'AE-REG-' + Math.random().toString(36).slice(2, 6).toUpperCase()
   const reg = await prisma.registration.create({
-    data: { eventId, name, email, phone, type, amount: Number(amount) || 0, paid: !!paid, paymentMethod: paymentMethod || 'Cash', qr },
+    data: { eventId: validEventId, name, email: email || '', phone: phone || '', type: type || 'Standard', amount: Number(amount) || 0, paid: !!paid, paymentMethod: paymentMethod || 'Cash', qr },
+    include: { event: true },
   })
   await prisma.activityLog.create({
-    data: { userId: req.user.id, text: `Registration added: ${name} (${type})`, type: 'registration', at: 'Just now' },
+    data: { userId: req.user.id, text: `Registration added: ${name} (${type || 'Standard'})`, type: 'registration', at: 'Just now' },
   })
-  if (eventId) await autoAdvance(eventId, req.user.id)
+  if (validEventId) await autoAdvance(validEventId, req.user.id)
   res.json({ registration: reg })
 })
 

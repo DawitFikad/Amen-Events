@@ -6,11 +6,9 @@ import { requirePermission } from '../middleware/rbac.js'
 const router = Router()
 
 router.get('/', authRequired, requirePermission('finance', 'view'), async (req, res) => {
-  const isAdmin = req.user.userRoles?.some((ur) => ur.role.key === 'admin')
-  const eventFilter = isAdmin ? {} : { OR: [{ pmId: req.user.id }, { team: { has: req.user.id } }] }
   const [invoices, expenses] = await Promise.all([
-    prisma.invoice.findMany({ where: { event: eventFilter }, include: { client: true, event: true }, orderBy: { createdAt: 'desc' } }),
-    prisma.expense.findMany({ where: { event: eventFilter }, include: { event: true, vendor: true }, orderBy: { createdAt: 'desc' } }),
+    prisma.invoice.findMany({ include: { client: true, event: true }, orderBy: { createdAt: 'desc' } }),
+    prisma.expense.findMany({ include: { event: true, vendor: true }, orderBy: { createdAt: 'desc' } }),
   ])
   res.json({ invoices, expenses })
 })

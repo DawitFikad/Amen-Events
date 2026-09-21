@@ -14,15 +14,7 @@ const EVENT_FIELDS = [
 ]
 
 router.get('/', authRequired, requirePermission('events', 'view'), async (req, res) => {
-  const isAdmin = req.user.userRoles?.some((ur) => ur.role.key === 'admin')
-  const where = isAdmin ? {} : {
-    OR: [
-      { pmId: req.user.id },
-      { team: { has: req.user.id } },
-    ],
-  }
   const events = await prisma.event.findMany({
-    where,
     include: { client: true, venue: true },
     orderBy: { createdAt: 'desc' },
   })
@@ -37,9 +29,22 @@ router.post('/', authRequired, requirePermission('events', 'create'), async (req
   const assignedPmId = pmId || req.user.id
   const assignedTeam = Array.from(new Set([assignedPmId, req.user.id, ...(Array.isArray(req.body.team) ? req.body.team : [])])).filter(Boolean)
 
+  // Safely resolve foreign keys: never pass empty strings to Prisma relations
+  let validClientId = null
+  if (clientId && typeof clientId === 'string' && clientId.trim()) {
+    const existingClient = await prisma.client.findUnique({ where: { id: clientId } }).catch(() => null)
+    if (existingClient) validClientId = existingClient.id
+  }
+
+  let validVenueId = null
+  if (venueId && typeof venueId === 'string' && venueId.trim()) {
+    const existingVenue = await prisma.venue.findUnique({ where: { id: venueId } }).catch(() => null)
+    if (existingVenue) validVenueId = existingVenue.id
+  }
+
   const event = await prisma.event.create({
     data: {
-      name, clientId, venueId, category, date, time: time || '09:00',
+      name, clientId: validClientId, venueId: validVenueId, category: category || 'General', date: date || '', time: time || '09:00',
       budget: Number(budget) || 0, pmId: assignedPmId, team: assignedTeam,
       status: status || 'upcoming', stage: 4, progress: 36,
       image: req.body.image || '',
@@ -49,11 +54,12 @@ router.post('/', authRequired, requirePermission('events', 'create'), async (req
       deadline: req.body.deadline || '',
       capacity: Number(req.body.capacity) || 0,
       price: Number(req.body.price) || 0,
-      published: !!req.body.published,
+      published: req.body.published !== undefined ? !!req.body.published : true,
       tags: Array.isArray(tags) ? tags.map((t) => String(t).trim()).filter(Boolean) : [],
       contactName: req.body.contactName || '',
       contactPhone: req.body.contactPhone || '',
     },
+    include: { client: true, venue: true },
   })
   // Attach any documents handed in with the registration form
   if (Array.isArray(documents) && documents.length) {

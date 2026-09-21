@@ -301,7 +301,10 @@ export function DataProvider({ children }) {
         setState((s) => ({ ...s, clients: [client, ...s.clients] }))
         setDemoFlag('lastClientId', client.id)
         return client
-      } catch (e) { /* fall through */ }
+      } catch (e) {
+        console.error('Failed to save client to database:', e)
+        throw e
+      }
     }
     const id = 'cl-' + Math.random().toString(36).slice(2, 8)
     const rec = {
@@ -321,7 +324,7 @@ export function DataProvider({ children }) {
 
   const updateClient = useCallback(async (id, data) => {
     if (backendOnline && id && !String(id).startsWith('cl-')) {
-      try { await api.clients.update(id, data) } catch (e) { /* keep local fallback */ }
+      try { await api.clients.update(id, data) } catch (e) { console.error('Failed to update client in database:', e); throw e }
     }
     patchBy('clients', id, (c) => ({ ...c, ...data, totalValue: c.totalValue }))
     logActivity(`Client profile updated: ${data.company || 'contact details'}`, 'crm')
@@ -335,7 +338,10 @@ export function DataProvider({ children }) {
         setState((s) => ({ ...s, events: [event, ...s.events] }))
         setDemoFlag('lastEventId', event.id)
         return event
-      } catch (e) { /* fall through */ }
+      } catch (e) {
+        console.error('Failed to save event to database:', e)
+        throw e
+      }
     }
     const id = 'ev-' + Math.random().toString(36).slice(2, 8)
     const rec = {
@@ -420,7 +426,15 @@ export function DataProvider({ children }) {
   const registerAttendee = useCallback(async (data) => {
     const payload = { ...data, phone: data.phone || '', paymentMethod: data.paymentMethod || 'Cash', paid: !!data.paid }
     if (backendOnline) {
-      try { const { registration } = await api.registrations.create(payload); setState((s) => ({ ...s, registrations: [registration, ...s.registrations] })); setDemoFlag('lastRegId', registration.id); return registration } catch (e) {}
+      try {
+        const { registration } = await api.registrations.create(payload)
+        setState((s) => ({ ...s, registrations: [registration, ...s.registrations] }))
+        setDemoFlag('lastRegId', registration.id)
+        return registration
+      } catch (e) {
+        console.error('Failed to save registration to database:', e)
+        throw e
+      }
     }
     // Unique, event-scoped attendee id: AE-{EVENT}-{SEQ} per event so the same
     // person registering for another event gets a fresh, distinct ticket.

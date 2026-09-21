@@ -8,15 +8,7 @@ const router = Router()
 
 // Tasks
 router.get('/', authRequired, requirePermission('projects', 'view'), async (req, res) => {
-  const isAdmin = req.user.userRoles?.some((ur) => ur.role.key === 'admin')
-  const where = isAdmin ? {} : {
-    OR: [
-      { assigneeId: req.user.id },
-      { event: { pmId: req.user.id } },
-      { event: { team: { has: req.user.id } } },
-    ],
-  }
-  const tasks = await prisma.task.findMany({ where, orderBy: { createdAt: 'desc' } })
+  const tasks = await prisma.task.findMany({ include: { event: true }, orderBy: { createdAt: 'desc' } })
   res.json({ tasks })
 })
 
@@ -26,7 +18,15 @@ router.post('/', authRequired, requirePermission('projects', 'create'), async (r
   for (const k of fields) if (req.body[k] !== undefined) out[k] = req.body[k]
   if (!out.priority) out.priority = 'medium'
   if (!out.status) out.status = 'todo'
-  const task = await prisma.task.create({ data: out })
+
+  let validEventId = null
+  if (out.eventId && typeof out.eventId === 'string' && out.eventId.trim()) {
+    const existingEvent = await prisma.event.findUnique({ where: { id: out.eventId } }).catch(() => null)
+    if (existingEvent) validEventId = existingEvent.id
+  }
+  out.eventId = validEventId
+
+  const task = await prisma.task.create({ data: out, include: { event: true } })
   await prisma.activityLog.create({
     data: { userId: req.user.id, text: `Task created: ${out.title}`, type: 'task', at: 'Just now' },
   })
