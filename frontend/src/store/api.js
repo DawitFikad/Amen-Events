@@ -308,5 +308,6 @@ export const publicApi = {
 export default {
   auth, dashboard, clients, events, tasks, venues, resources,
   vendors, users, finance, registrations, modules, search, portal,
+  workflow, notifications, approvals, documents, calendar, publicApi,
   setTokens, clearTokens, getAccessToken, loadRefreshToken,
 }

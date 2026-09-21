@@ -41,8 +41,10 @@ export default function Approvals() {
 
   const loadApprovals = async () => {
     try {
-      const { approvals: a } = await api.approvals.list()
-      setApprovals(a)
+      if (api?.approvals?.list) {
+        const { approvals: a } = await api.approvals.list()
+        setApprovals(a || [])
+      }
     } catch (err) {
       show(err.message || 'Failed to load approvals', 'error')
     }

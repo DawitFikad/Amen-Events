@@ -38,8 +38,10 @@ export default function CalendarPage() {
 
   const loadCalendar = async () => {
     try {
-      const { events: evts } = await api.calendar.list(cursor.month, cursor.year)
-      setEvents(evts)
+      if (api?.calendar?.list) {
+        const { events: evts } = await api.calendar.list(cursor.month, cursor.year)
+        setEvents(evts || [])
+      }
     } catch (err) {
       show(err.message || 'Failed to load calendar', 'error')
     }

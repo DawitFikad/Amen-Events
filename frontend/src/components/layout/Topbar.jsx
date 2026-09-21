@@ -16,10 +16,10 @@ export default function Topbar({ onMenuClick }) {
   const q = state.clients.length
 
   useEffect(() => {
-    if (backendOnline) {
-      api.notifications.list().then(({ notifications }) => setApiNotifs(notifications)).catch(() => {})
+    if (backendOnline && api?.notifications?.list) {
+      api.notifications.list().then((res) => setApiNotifs(res?.notifications || [])).catch(() => {})
       const interval = setInterval(() => {
-        api.notifications.list().then(({ notifications }) => setApiNotifs(notifications)).catch(() => {})
+        api.notifications.list().then((res) => setApiNotifs(res?.notifications || [])).catch(() => {})
       }, 15000)
       return () => clearInterval(interval)
     }
@@ -30,8 +30,8 @@ export default function Topbar({ onMenuClick }) {
   const unread = backendOnline ? allNotifs.filter((n) => !n.read).length : allNotifs.length
 
   const markAllRead = async () => {
-    if (backendOnline) {
-      await api.notifications.markAllRead()
+    if (backendOnline && api?.notifications?.markAllRead) {
+      await api.notifications.markAllRead().catch(() => {})
       setApiNotifs((prev) => prev.map((n) => ({ ...n, read: true })))
     }
   }
