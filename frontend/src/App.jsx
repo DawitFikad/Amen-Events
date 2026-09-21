@@ -2,7 +2,6 @@ import React, { useState, useEffect, lazy, Suspense } from 'react'
 import { Routes, Route, Outlet, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import Sidebar from './components/layout/Sidebar'
 import Topbar from './components/layout/Topbar'
-import DemoWizard from './components/DemoWizard'
 import LiveKpiBar from './components/LiveKpiBar'
 import { DataProvider, useData } from './store/DataContext'
 
@@ -134,7 +133,6 @@ function Shell() {
           <Outlet />
           <PoweredFooter />
         </main>
-        <DemoWizard />
       </div>
     </div>
   )
