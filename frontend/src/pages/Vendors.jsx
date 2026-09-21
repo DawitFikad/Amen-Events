@@ -163,8 +163,8 @@ export default function Vendors() {
 
       {/* Add vendor modal */}
       <Modal open={open} onClose={() => setOpen(false)} title="Add Vendor">
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Vendor Name *" className="col-span-2"><input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Addis Flower Co." />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Vendor Name *" className="col-span-1 sm:col-span-2"><input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Addis Flower Co." />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
           <Field label="Type"><select className="input" value={form.type || 'Caterer'} onChange={(e) => setForm({ ...form, type: e.target.value })}>{Object.keys(typeIcon).map((t) => <option key={t}>{t}</option>)}</select></Field>
           <Field label="Contact Person *"><input className="input" value={form.contact || ''} onChange={(e) => setForm({ ...form, contact: e.target.value })} />{errors.contact && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.contact}</p>}</Field>
           <Field label="Phone *"><input className="input" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} />{errors.phone && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.phone}</p>}</Field>

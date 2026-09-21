@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Calendar, MapPin, Users, Mic, ArrowLeft, Ticket, CheckCircle2, QrCode, AlertCircle } from 'lucide-react'
+import {
+  Calendar, MapPin, Users, Mic, ArrowLeft, Ticket, CheckCircle2,
+  QrCode, AlertCircle, Upload, Paperclip, Trash2, Clock, ShieldCheck
+} from 'lucide-react'
 import { publicApi } from '../store/api'
+import { useData } from '../store/DataContext'
 import { Spinner, EmptyState } from '../components/ui'
 import { nameOnly, emailValid, phoneValid, validate } from '../store/validation'
 
@@ -13,11 +17,13 @@ const TICKET_TYPES = [
 
 export default function PublicEventDetail() {
   const { id } = useParams()
+  const { registerAttendee } = useData()
   const [event, setEvent] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [selectedTicket, setSelectedTicket] = useState(TICKET_TYPES[0])
   const [form, setForm] = useState({ name: '', email: '', phone: '' })
+  const [attachment, setAttachment] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState(null)
   const [formError, setFormError] = useState(null)
@@ -36,6 +42,28 @@ export default function PublicEventDetail() {
     })
   }, [id])
 
+  const onFileSelect = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+      setFormError('Attached file must be under 5MB')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      setAttachment({
+        name: file.name,
+        size: file.size > 1024 * 1024 ? (file.size / (1024 * 1024)).toFixed(1) + ' MB' : Math.round(file.size / 1024) + ' KB',
+        sizeBytes: file.size,
+        type: file.type,
+        data: reader.result,
+      })
+      setFormError(null)
+    }
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setFormError(null)
@@ -48,23 +76,31 @@ export default function PublicEventDetail() {
       setFormError(res.first)
       return
     }
+    if (!attachment) {
+      setFormError('Please attach a verification document or payment proof (*)')
+      return
+    }
+
     setSubmitting(true)
     try {
-      const res = await publicApi.register({
+      const reg = await registerAttendee({
         eventId: id,
+        eventName: event?.name || 'Event',
         name: form.name.trim(),
         email: form.email.trim(),
         phone: form.phone.trim(),
         type: selectedTicket.type,
         amount: selectedTicket.price,
+        paid: false,
+        documentName: attachment.name,
+        documentUrl: attachment.data,
+        documentSize: attachment.sizeBytes,
+        documentMime: attachment.type,
+        requireApproval: true,
       })
-      if (res.error) {
-        setFormError(res.error)
-      } else {
-        setResult(res.registration)
-      }
+      setResult({ ...reg, attachmentName: attachment.name })
     } catch {
-      setFormError('Registration failed. Please try again.')
+      setFormError('Registration submission failed. Please try again.')
     }
     setSubmitting(false)
   }
@@ -168,44 +204,43 @@ export default function PublicEventDetail() {
       {/* Registration / Result */}
       <section className="mx-auto max-w-4xl px-5 py-8">
         {result ? (
-          /* Success state with QR */
+          /* Success state with approval notice */
           <div className="card mx-auto max-w-md p-8 text-center animate-page-enter">
-            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-100 text-brand-700">
-              <CheckCircle2 size={28} />
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+              <CheckCircle2 size={32} />
             </span>
-            <h2 className="mt-4 text-xl font-bold text-brand-950">Registration Confirmed!</h2>
-            <p className="mt-1 text-sm text-ink/55">Your ticket has been reserved. Save your QR code for check-in.</p>
-
-            <div className="mt-6 rounded-xl border-2 border-brand-200 bg-white p-6">
-              <div className="flex items-center justify-center gap-2 text-brand-800">
-                <QrCode size={48} />
-              </div>
-              <p className="mt-3 text-2xl font-bold tracking-wider text-brand-950">{result.qr}</p>
-              <p className="mt-1 text-xs text-ink/45">Present this code at the event entrance</p>
+            <h2 className="mt-4 text-xl font-bold text-brand-950">Registration Submitted!</h2>
+            <div className="mt-2">
+              <span className="chip bg-gold-100 text-gold-800 text-xs inline-flex items-center gap-1 font-bold">
+                <Clock size={12} /> Pending Admin Approval
+              </span>
             </div>
+            <p className="mt-3 text-xs text-ink/60 leading-relaxed">
+              Your registration for <strong className="text-brand-950">{event.name}</strong> and attached verification document have been sent to the Admin team in real time.
+            </p>
 
-            <div className="mt-6 space-y-1 text-left text-sm">
-              <div className="flex justify-between border-b border-brand-50 py-2">
-                <span className="text-ink/50">Name</span>
+            <div className="mt-6 space-y-1 text-left text-xs bg-brand-50/50 rounded-xl p-4 border border-brand-100">
+              <div className="flex justify-between border-b border-brand-100/50 py-1.5">
+                <span className="text-ink/50">Attendee</span>
                 <span className="font-semibold text-brand-950">{result.name}</span>
               </div>
-              <div className="flex justify-between border-b border-brand-50 py-2">
+              <div className="flex justify-between border-b border-brand-100/50 py-1.5">
                 <span className="text-ink/50">Ticket Type</span>
                 <span className="font-semibold text-brand-950">{result.type}</span>
               </div>
-              <div className="flex justify-between border-b border-brand-50 py-2">
+              <div className="flex justify-between border-b border-brand-100/50 py-1.5">
                 <span className="text-ink/50">Amount</span>
-                <span className="font-semibold text-brand-950">ETB {result.amount.toLocaleString()}</span>
+                <span className="font-semibold text-brand-950">ETB {Number(result.amount || selectedTicket.price).toLocaleString()}</span>
               </div>
-              <div className="flex justify-between py-2">
-                <span className="text-ink/50">Payment</span>
-                <span className="chip bg-gold-100 text-gold-700">Pay at venue</span>
+              <div className="flex justify-between py-1.5">
+                <span className="text-ink/50">Attached Document</span>
+                <span className="font-semibold text-brand-700 truncate max-w-[170px]">{result.attachmentName || 'Verification File'}</span>
               </div>
             </div>
 
             <div className="mt-6 flex gap-2">
               <Link to="/events" className="btn-outline flex-1">Browse more events</Link>
-              <button onClick={() => window.print()} className="btn-primary flex-1">Print ticket</button>
+              <button onClick={() => setResult(null)} className="btn-primary flex-1">Register another</button>
             </div>
           </div>
         ) : (
@@ -246,9 +281,9 @@ export default function PublicEventDetail() {
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="mt-5 space-y-3">
+            <form onSubmit={handleSubmit} className="mt-5 space-y-3.5">
               {formError && (
-                <div className="rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+                <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs font-semibold text-red-700">
                   {formError}
                 </div>
               )}
@@ -284,6 +319,32 @@ export default function PublicEventDetail() {
                 />
               </div>
 
+              {/* File attachment */}
+              <div>
+                <label className="label">Attach Document / Proof *</label>
+                <p className="text-[11px] text-ink/50 mb-1.5">
+                  Payment receipt, ID card, or company letter (PDF, JPG, PNG - max 5MB)
+                </p>
+                <div className="flex items-center gap-2">
+                  <label className="btn-outline !py-2 text-xs cursor-pointer flex-1 justify-center">
+                    <Upload size={14} /> {attachment ? 'Change Document' : 'Upload Verification File'}
+                    <input type="file" accept="image/*,.pdf" className="hidden" onChange={onFileSelect} />
+                  </label>
+                  {attachment && (
+                    <button type="button" onClick={() => setAttachment(null)} className="btn-ghost !py-2 text-xs !text-red-600">
+                      <Trash2 size={14} /> Remove
+                    </button>
+                  )}
+                </div>
+                {attachment && (
+                  <div className="mt-2 flex items-center gap-2 rounded-lg bg-brand-50 p-2 text-xs font-semibold text-brand-900 border border-brand-100">
+                    <Paperclip size={13} className="text-brand-600 shrink-0" />
+                    <span className="truncate flex-1">{attachment.name}</span>
+                    <span className="text-ink/40 text-[10px] shrink-0">({attachment.size})</span>
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center justify-between border-t border-brand-50 pt-4">
                 <div>
                   <p className="text-xs text-ink/45">Total</p>
@@ -295,10 +356,10 @@ export default function PublicEventDetail() {
                   className="btn-primary"
                 >
                   {submitting ? <Spinner size={16} /> : <Ticket size={16} />}
-                  {submitting ? 'Registering…' : 'Register Now'}
+                  {submitting ? 'Submitting…' : 'Register & Send for Approval'}
                 </button>
               </div>
-              <p className="text-center text-xs text-ink/40">Payment at venue · QR code delivered instantly</p>
+              <p className="text-center text-[11px] text-ink/40">Realtime admin review · Instant status updates</p>
             </form>
           </div>
         )}

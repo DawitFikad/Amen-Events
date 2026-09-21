@@ -39,6 +39,7 @@ export async function fetchAllSupabaseData() {
     vendorsRes, invoicesRes, expensesRes, registrationsRes,
     staffRes, speakersRes, exhibitorsRes, sponsorsRes,
     campaignsRes, couponsRes, activitiesRes, notificationsRes, documentsRes,
+    messagesRes, approvalsRes,
   ] = await Promise.all([
     supabase.from('Event').select('*, client:Client(*), venue:Venue(*)').order('createdAt', { ascending: false }),
     supabase.from('Client').select('*').order('createdAt', { ascending: false }),
@@ -56,8 +57,10 @@ export async function fetchAllSupabaseData() {
     supabase.from('Campaign').select('*').order('createdAt', { ascending: false }),
     supabase.from('Coupon').select('*'),
     supabase.from('ActivityLog').select('*').order('createdAt', { ascending: false }).limit(30),
-    supabase.from('Notification').select('*').order('createdAt', { ascending: false }).limit(20),
+    supabase.from('Notification').select('*').order('createdAt', { ascending: false }).limit(50),
     supabase.from('Document').select('*').order('createdAt', { ascending: false }),
+    supabase.from('Message').select('*').order('createdAt', { ascending: true }),
+    supabase.from('ApprovalRequest').select('*').order('createdAt', { ascending: false }),
   ])
 
   return {
@@ -79,6 +82,8 @@ export async function fetchAllSupabaseData() {
     activities: activitiesRes.data || [],
     notifications: notificationsRes.data || [],
     documents: documentsRes.data || [],
+    messages: messagesRes.data || [],
+    approvals: approvalsRes.data || [],
   }
 }
 
@@ -602,6 +607,126 @@ export async function supabaseAddCoupon(data) {
   return inserted || record
 }
 
+// ─── MESSAGES ──────────────────────────────────────────────────────
+export async function supabaseFetchMessages(filter = {}) {
+  let query = supabase.from('Message').select('*').order('createdAt', { ascending: true })
+  if (filter.recipientRole && filter.recipientRole !== 'all') {
+    query = query.or(`recipientRole.eq.${filter.recipientRole},recipientRole.eq.all,senderRole.eq.${filter.recipientRole}`)
+  }
+  if (filter.eventId) {
+    query = query.eq('eventId', filter.eventId)
+  }
+  const { data, error } = await query
+  if (error) throw error
+  return data || []
+}
+
+export async function supabaseSendMessage(data) {
+  const id = generateId('msg')
+  const now = new Date().toISOString()
+  const record = {
+    id,
+    senderId: data.senderId || null,
+    senderName: data.senderName || 'Anonymous',
+    senderRole: data.senderRole || 'client',
+    recipientRole: data.recipientRole || 'all',
+    recipientId: data.recipientId || null,
+    eventId: data.eventId || null,
+    text: data.text,
+    attachmentUrl: data.attachmentUrl || '',
+    attachmentName: data.attachmentName || '',
+    createdAt: now,
+  }
+
+  const { data: inserted, error } = await supabase.from('Message').insert([record]).select('*').single()
+  if (error) throw error
+
+  // Notify the recipient role in real time
+  await supabaseAddNotification(
+    `New message from ${record.senderName} (${record.senderRole}): "${record.text.slice(0, 45)}${record.text.length > 45 ? '...' : ''}"`,
+    'message',
+    record.recipientId
+  )
+
+  return inserted || record
+}
+
+// ─── APPROVALS ─────────────────────────────────────────────────────
+export async function supabaseFetchApprovals() {
+  const { data, error } = await supabase.from('ApprovalRequest').select('*').order('createdAt', { ascending: false })
+  if (error) throw error
+  return data || []
+}
+
+export async function supabaseAddApprovalRequest(data) {
+  const id = generateId('appr')
+  const now = new Date().toISOString()
+  const record = {
+    id,
+    type: data.type || 'registration',
+    entityId: data.entityId || generateId('ent'),
+    entityName: data.entityName || 'General Request',
+    amount: Number(data.amount) || 0,
+    status: 'pending',
+    submittedBy: data.submittedBy || null,
+    note: data.note || '',
+    reviewNote: '',
+    createdAt: now,
+    updatedAt: now,
+  }
+
+  const { data: inserted, error } = await supabase.from('ApprovalRequest').insert([record]).select('*').single()
+  if (error) throw error
+
+  await supabaseAddNotification(
+    `Approval requested: ${record.entityName} (${record.type.replace(/_/g, ' ')})`,
+    'approval'
+  )
+
+  return inserted || record
+}
+
+export async function supabaseUpdateApprovalStatus(id, status, reviewNote = '', reviewedBy = null) {
+  const updates = {
+    status,
+    reviewNote: reviewNote || '',
+    reviewedBy: reviewedBy || null,
+    updatedAt: new Date().toISOString(),
+  }
+
+  const { data: updated, error } = await supabase.from('ApprovalRequest').update(updates).eq('id', id).select('*').single()
+  if (error) throw error
+
+  await supabaseAddNotification(
+    `Approval request for ${updated?.entityName || id} marked ${status}`,
+    'approval'
+  )
+
+  return updated
+}
+
+// ─── DOCUMENTS ─────────────────────────────────────────────────────
+export async function supabaseUploadDocument(data) {
+  const id = generateId('doc')
+  const now = new Date().toISOString()
+  const record = {
+    id,
+    name: data.name || 'Document',
+    type: data.type || 'file',
+    module: data.module || 'general',
+    entityId: data.entityId || null,
+    mimeType: data.mimeType || 'application/pdf',
+    size: Number(data.size) || 0,
+    url: data.url || '',
+    uploadedBy: data.uploadedBy || null,
+    createdAt: now,
+  }
+
+  const { data: inserted, error } = await supabase.from('Document').insert([record]).select('*').single()
+  if (error) throw error
+  return inserted || record
+}
+
 // ─── REALTIME SUBSCRIPTION ─────────────────────────────────────────
 export function subscribeToSupabaseChanges(onChange) {
   const channel = supabase
@@ -612,6 +737,10 @@ export function subscribeToSupabaseChanges(onChange) {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'Registration' }, () => onChange('Registration'))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'Invoice' }, () => onChange('Invoice'))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'Expense' }, () => onChange('Expense'))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'Message' }, () => onChange('Message'))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'Notification' }, () => onChange('Notification'))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'ApprovalRequest' }, () => onChange('ApprovalRequest'))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'Document' }, () => onChange('Document'))
     .subscribe()
 
   return () => {

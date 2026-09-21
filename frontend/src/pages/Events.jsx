@@ -164,10 +164,19 @@ export default function Events() {
   const venue = (id) => state.venues.find((v) => v.id === id)
 
   const submit = async () => {
-    const res = validate(form, { name: [textRequired('Event name', { max: 120 })], date: [dateRequired('Date')], clientId: [required('Client')], budget: [optional(numberPositive('Budget'))] })
-    if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
+    const res = validate(form, {
+      name: [textRequired('Event name', { max: 120 })],
+      clientId: [required('Client')],
+      category: [textRequired('Category')],
+      date: [dateRequired('Start date')],
+      time: [textRequired('Start time')],
+      budget: [numberPositive('Budget (ETB)')],
+    })
+    if (!res.ok) { setErrors(res.errors); show(res.first || 'Please fill all mandatory fields', 'warn'); return }
     const payload = {
       ...form,
+      category: form.category || 'Conference',
+      time: form.time || '09:00',
       tags: typeof form.tags === 'string' ? form.tags.split(',').map((t) => t.trim()).filter(Boolean) : Array.isArray(form.tags) ? form.tags : [],
       capacity: Number(form.capacity) || 0,
       price: Number(form.price) || 0,
@@ -410,12 +419,34 @@ export default function Events() {
           </div>
         </div>
 
+        {Object.keys(errors).length > 0 && (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
+            ⚠️ Please fill all mandatory fields marked with an asterisk (*) to create this event.
+          </div>
+        )}
+
         {/* Details */}
         <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><InfoIcon size={13} /> Event Details</p>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Event Name *" className="col-span-2"><input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Annual Innovation Summit 2026" />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
-          <Field label="Client *"><select className="input" value={form.clientId || ''} onChange={(e) => { setForm({ ...form, clientId: e.target.value }); if (errors.clientId) setErrors({ ...errors, clientId: undefined }) }}><option value="">Select client…</option>{state.clients.map((c) => <option key={c.id} value={c.id}>{c.company}</option>)}</select>{errors.clientId && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.clientId}</p>}</Field>
-          <Field label="Category"><select className="input" value={form.category || ''} onChange={(e) => setForm({ ...form, category: e.target.value })}>{eventTypes.map((t) => <option key={t}>{t}</option>)}<option>Other</option></select></Field>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Event Name *" className="sm:col-span-2">
+            <input className={`input ${errors.name ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.name || ''} onChange={(e) => { setForm({ ...form, name: e.target.value }); if (errors.name) setErrors({ ...errors, name: undefined }) }} placeholder="e.g. Annual Innovation Summit 2026" />
+            {errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}
+          </Field>
+          <Field label="Client *">
+            <select className={`input ${errors.clientId ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.clientId || ''} onChange={(e) => { setForm({ ...form, clientId: e.target.value }); if (errors.clientId) setErrors({ ...errors, clientId: undefined }) }}>
+              <option value="">Select client…</option>
+              {state.clients.map((c) => <option key={c.id} value={c.id}>{c.company}</option>)}
+            </select>
+            {errors.clientId && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.clientId}</p>}
+          </Field>
+          <Field label="Category *">
+            <select className={`input ${errors.category ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.category || ''} onChange={(e) => { setForm({ ...form, category: e.target.value }); if (errors.category) setErrors({ ...errors, category: undefined }) }}>
+              <option value="">Select category…</option>
+              {eventTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+              <option value="Other">Other</option>
+            </select>
+            {errors.category && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.category}</p>}
+          </Field>
           <Field label="Status"><select className="input" value={form.status || 'upcoming'} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="upcoming">Upcoming</option><option value="ongoing">Ongoing</option><option value="completed">Completed</option><option value="Other">Other</option></select></Field>
           <Field label="Project Manager"><select className="input" value={form.pmId || 'st2'} onChange={(e) => setForm({ ...form, pmId: e.target.value })}>{state.staff.filter((m) => m.type === 'Employee').map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select></Field>
         </div>
@@ -423,19 +454,31 @@ export default function Events() {
         {/* Schedule */}
         <p className="mt-5 mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><CalendarDays size={13} /> Schedule</p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Field label="Start Date *"><input type="date" className="input" value={form.date || ''} onChange={(e) => { setForm({ ...form, date: e.target.value }); if (errors.date) setErrors({ ...errors, date: undefined }) }} />{errors.date && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.date}</p>}</Field>
-          <Field label="Start Time"><input type="time" className="input" value={form.time || '09:00'} onChange={(e) => setForm({ ...form, time: e.target.value })} /></Field>
+          <Field label="Start Date *">
+            <input type="date" className={`input ${errors.date ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.date || ''} onChange={(e) => { setForm({ ...form, date: e.target.value }); if (errors.date) setErrors({ ...errors, date: undefined }) }} />
+            {errors.date && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.date}</p>}
+          </Field>
+          <Field label="Start Time *">
+            <input type="time" className={`input ${errors.time ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.time || '09:00'} onChange={(e) => { setForm({ ...form, time: e.target.value }); if (errors.time) setErrors({ ...errors, time: undefined }) }} />
+            {errors.time && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.time}</p>}
+          </Field>
           <Field label="End Date"><input type="date" className="input" value={form.endDate || ''} onChange={(e) => setForm({ ...form, endDate: e.target.value })} /></Field>
           <Field label="End Time"><input type="time" className="input" value={form.endTime || ''} onChange={(e) => setForm({ ...form, endTime: e.target.value })} /></Field>
         </div>
 
         {/* Planning */}
         <p className="mt-5 mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><ClipboardCheck size={13} /> Planning</p>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Venue"><select className="input" value={form.venueId || ''} onChange={(e) => setForm({ ...form, venueId: e.target.value })}><option value="">Select venue…</option>{state.venues.filter((v) => v.status === 'available').map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></Field>
           <Field label="Expected Attendees"><div className="relative"><Users size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" /><input type="number" className="input pl-9" value={form.capacity || ''} onChange={(e) => setForm({ ...form, capacity: e.target.value })} placeholder="e.g. 800" /></div></Field>
           <Field label="Registration Deadline"><input type="date" className="input" value={form.deadline || ''} onChange={(e) => setForm({ ...form, deadline: e.target.value })} /></Field>
-          <Field label="Budget (ETB)"><div className="relative"><Wallet size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" /><input type="number" className="input pl-9" value={form.budget || ''} onChange={(e) => setForm({ ...form, budget: e.target.value })} placeholder="850000" /></div>{errors.budget && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.budget}</p>}</Field>
+          <Field label="Budget (ETB) *">
+            <div className="relative">
+              <Wallet size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" />
+              <input type="number" className={`input pl-9 ${errors.budget ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.budget || ''} onChange={(e) => { setForm({ ...form, budget: e.target.value }); if (errors.budget) setErrors({ ...errors, budget: undefined }) }} placeholder="850000" />
+            </div>
+            {errors.budget && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.budget}</p>}
+          </Field>
         </div>
 
         {/* Public & ticketing */}

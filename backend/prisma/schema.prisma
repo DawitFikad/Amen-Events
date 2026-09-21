@@ -453,6 +453,20 @@ model CalendarEvent {
   createdAt DateTime @default(now())
 }
 
+model Message {
+  id             String   @id @default(cuid())
+  senderId       String?
+  senderName     String
+  senderRole     String   @default("client")
+  recipientRole  String   @default("all")
+  recipientId    String?
+  eventId        String?
+  text           String
+  attachmentUrl  String   @default("")
+  attachmentName String   @default("")
+  createdAt      DateTime @default(now())
+}
+
 // ─── PUBLIC PORTAL MODELS ─────────────────────────────────────
 
 model Attendee {

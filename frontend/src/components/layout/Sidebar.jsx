@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, CalendarDays, KanbanSquare, MapPin, Package, Handshake,
   UserCog, Wallet, Ticket, QrCode, Mic2, Building2, BadgeDollarSign, Megaphone,
   BarChart3, Settings, ChevronDown, CalendarCheck2, UserCircle, Workflow,
-  FileCheck, CalendarRange, FileText, MessageSquare, Bell, ClipboardList,
+  FileCheck, CalendarRange, FileText, MessageSquare, Bell, ClipboardList, X,
 } from 'lucide-react'
 import { useData } from '../../store/DataContext'
 import logo from '../../logo.jpg'
@@ -115,15 +115,26 @@ export default function Sidebar({ collapsed, setCollapsed, mobileNav, setMobileN
       }`}
     >
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 h-16 border-b border-white/10 shrink-0">
-        <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-white/10 ring-1 ring-white/15">
-          <img src={logo} alt="Amen Events" className="h-full w-full object-cover" />
-        </span>
-        {!collapsed && (
-          <div className="min-w-0">
-            <p className="text-[15px] font-bold leading-tight text-white">Amen Events</p>
-            <p className="text-[10px] font-medium uppercase tracking-widest text-brand-300">Event OS</p>
-          </div>
+      <div className="flex items-center justify-between px-4 h-16 border-b border-white/10 shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/10 ring-1 ring-white/15">
+            <img src={logo} alt="Amen Events" className="h-full w-full object-cover" />
+          </span>
+          {!collapsed && (
+            <div className="min-w-0">
+              <p className="text-[15px] font-bold leading-tight text-white">Amen Events</p>
+              <p className="text-[10px] font-medium uppercase tracking-widest text-brand-300">Event OS</p>
+            </div>
+          )}
+        </div>
+        {mobileNav && (
+          <button
+            onClick={() => setMobileNav(false)}
+            aria-label="Close sidebar"
+            className="lg:hidden p-1.5 rounded-lg text-brand-200 hover:text-white hover:bg-white/10 transition"
+          >
+            <X size={20} />
+          </button>
         )}
       </div>
 

@@ -82,9 +82,14 @@ export default function Finance() {
   ]
 
   const submitExpense = () => {
-    const res = validate(form, { amount: [numberPositive('Amount')] })
-    if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
-    recordExpense({ eventId: form.eventId || 'ev1', category: form.category || 'General', amount: Number(form.amount), date: new Date().toISOString().slice(0, 10), vendorId: form.vendorId })
+    const res = validate(form, {
+      amount: [numberPositive('Amount')],
+      eventId: [required('Event')],
+      category: [required('Category')],
+      date: [dateRequired('Date')],
+    })
+    if (!res.ok) { setErrors(res.errors); show(res.first || 'Please fill all mandatory fields', 'warn'); return }
+    recordExpense({ eventId: form.eventId, category: form.category || 'General', amount: Number(form.amount), date: form.date || new Date().toISOString().slice(0, 10), vendorId: form.vendorId })
     show('Expense recorded')
     setOpen(null); setForm({}); setErrors({})
   }
@@ -265,11 +270,39 @@ export default function Finance() {
 
       {/* Expense modal */}
       <Modal open={open === 'expense'} onClose={() => setOpen(null)} title="Record Expense">
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Event"><select className="input" value={form.eventId || ''} onChange={(e) => setForm({ ...form, eventId: e.target.value })}><option value="">Select…</option>{state.events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}</select></Field>
-          <Field label="Category"><select className="input" value={form.category || 'General'} onChange={(e) => setForm({ ...form, category: e.target.value })}><option>Venue Rental</option><option>Catering</option><option>Technical</option><option>Decoration</option><option>Transport</option><option>Marketing</option><option>Security</option><option>Staffing</option><option>Printing & Signage</option><option>Entertainment</option><option>Insurance</option><option>Accommodation</option><option>General</option><option>Other</option></select></Field>
-          <Field label="Amount (ETB) *"><input type="number" className="input" value={form.amount || ''} onChange={(e) => setForm({ ...form, amount: e.target.value })} />{errors.amount && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.amount}</p>}</Field>
-          <Field label="Vendor"><select className="input" value={form.vendorId || ''} onChange={(e) => setForm({ ...form, vendorId: e.target.value })}><option value="">-</option>{state.vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></Field>
+        {Object.keys(errors).length > 0 && (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
+            ⚠️ Please fill all mandatory fields marked with an asterisk (*).
+          </div>
+        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Event *">
+            <select className={`input ${errors.eventId ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.eventId || ''} onChange={(e) => { setForm({ ...form, eventId: e.target.value }); if (errors.eventId) setErrors({ ...errors, eventId: undefined }) }}>
+              <option value="">Select event…</option>
+              {state.events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
+            </select>
+            {errors.eventId && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.eventId}</p>}
+          </Field>
+          <Field label="Category *">
+            <select className={`input ${errors.category ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.category || 'General'} onChange={(e) => { setForm({ ...form, category: e.target.value }); if (errors.category) setErrors({ ...errors, category: undefined }) }}>
+              <option>Venue Rental</option><option>Catering</option><option>Technical</option><option>Decoration</option><option>Transport</option><option>Marketing</option><option>Security</option><option>Staffing</option><option>Printing & Signage</option><option>Entertainment</option><option>Insurance</option><option>Accommodation</option><option>General</option><option>Other</option>
+            </select>
+            {errors.category && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.category}</p>}
+          </Field>
+          <Field label="Amount (ETB) *">
+            <input type="number" className={`input ${errors.amount ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.amount || ''} onChange={(e) => { setForm({ ...form, amount: e.target.value }); if (errors.amount) setErrors({ ...errors, amount: undefined }) }} placeholder="e.g. 50000" />
+            {errors.amount && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.amount}</p>}
+          </Field>
+          <Field label="Date *">
+            <input type="date" className={`input ${errors.date ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.date || ''} onChange={(e) => { setForm({ ...form, date: e.target.value }); if (errors.date) setErrors({ ...errors, date: undefined }) }} />
+            {errors.date && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.date}</p>}
+          </Field>
+          <Field label="Vendor" className="sm:col-span-2">
+            <select className="input" value={form.vendorId || ''} onChange={(e) => setForm({ ...form, vendorId: e.target.value })}>
+              <option value="">Select vendor (optional)…</option>
+              {state.vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+            </select>
+          </Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button className="btn-outline" onClick={() => setOpen(null)}>Cancel</button>
@@ -279,9 +312,14 @@ export default function Finance() {
 
       {/* Payment modal */}
       <Modal open={open === 'payment'} onClose={() => setOpen(null)} title="Record Payment">
+        {Object.keys(errors).length > 0 && (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
+            ⚠️ Please fill all mandatory fields marked with an asterisk (*).
+          </div>
+        )}
         <div className="space-y-3">
           <Field label="Invoice *">
-            <select className="input" value={form.invoiceId || ''} onChange={(e) => setForm({ ...form, invoiceId: e.target.value })}>
+            <select className={`input ${errors.invoiceId ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.invoiceId || ''} onChange={(e) => { setForm({ ...form, invoiceId: e.target.value }); if (errors.invoiceId) setErrors({ ...errors, invoiceId: undefined }) }}>
               <option value="">Select invoice…</option>
               {state.invoices.filter((i) => i.status !== 'paid').map((inv) => (
                 <option key={inv.id} value={inv.id}>{inv.ref} - {fmt(inv.amount - inv.paid)} due</option>
@@ -289,7 +327,10 @@ export default function Finance() {
             </select>
             {errors.invoiceId && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.invoiceId}</p>}
           </Field>
-          <Field label="Amount (ETB) *"><input type="number" className="input" value={form.amount || ''} onChange={(e) => setForm({ ...form, amount: e.target.value })} />{errors.amount && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.amount}</p>}</Field>
+          <Field label="Amount (ETB) *">
+            <input type="number" className={`input ${errors.amount ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.amount || ''} onChange={(e) => { setForm({ ...form, amount: e.target.value }); if (errors.amount) setErrors({ ...errors, amount: undefined }) }} placeholder="Payment amount" />
+            {errors.amount && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.amount}</p>}
+          </Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button className="btn-outline" onClick={() => setOpen(null)}>Cancel</button>
@@ -299,17 +340,45 @@ export default function Finance() {
 
       {/* Invoice modal */}
       <Modal open={open === 'invoice'} onClose={() => setOpen(null)} title="Issue Invoice">
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Client *"><select className="input" value={form.clientId || ''} onChange={(e) => setForm({ ...form, clientId: e.target.value })}><option value="">Select…</option>{state.clients.map((c) => <option key={c.id} value={c.id}>{c.company}</option>)}</select>{errors.clientId && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.clientId}</p>}</Field>
-          <Field label="Event"><select className="input" value={form.eventId || ''} onChange={(e) => setForm({ ...form, eventId: e.target.value })}><option value="">Select…</option>{state.events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}</select></Field>
-          <Field label="Amount (ETB) *"><input type="number" className="input" value={form.amount || ''} onChange={(e) => setForm({ ...form, amount: e.target.value })} />{errors.amount && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.amount}</p>}</Field>
-          <Field label="Due Date"><input type="date" className="input" value={form.dueDate || ''} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></Field>
+        {Object.keys(errors).length > 0 && (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
+            ⚠️ Please fill all mandatory fields marked with an asterisk (*).
+          </div>
+        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Client *">
+            <select className={`input ${errors.clientId ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.clientId || ''} onChange={(e) => { setForm({ ...form, clientId: e.target.value }); if (errors.clientId) setErrors({ ...errors, clientId: undefined }) }}>
+              <option value="">Select client…</option>
+              {state.clients.map((c) => <option key={c.id} value={c.id}>{c.company}</option>)}
+            </select>
+            {errors.clientId && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.clientId}</p>}
+          </Field>
+          <Field label="Event *">
+            <select className={`input ${errors.eventId ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.eventId || ''} onChange={(e) => { setForm({ ...form, eventId: e.target.value }); if (errors.eventId) setErrors({ ...errors, eventId: undefined }) }}>
+              <option value="">Select event…</option>
+              {state.events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
+            </select>
+            {errors.eventId && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.eventId}</p>}
+          </Field>
+          <Field label="Amount (ETB) *">
+            <input type="number" className={`input ${errors.amount ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.amount || ''} onChange={(e) => { setForm({ ...form, amount: e.target.value }); if (errors.amount) setErrors({ ...errors, amount: undefined }) }} placeholder="Invoice total" />
+            {errors.amount && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.amount}</p>}
+          </Field>
+          <Field label="Due Date *">
+            <input type="date" className={`input ${errors.dueDate ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.dueDate || ''} onChange={(e) => { setForm({ ...form, dueDate: e.target.value }); if (errors.dueDate) setErrors({ ...errors, dueDate: undefined }) }} />
+            {errors.dueDate && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.dueDate}</p>}
+          </Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button className="btn-outline" onClick={() => setOpen(null)}>Cancel</button>
           <button className="btn-primary" onClick={() => {
-            const res = validate(form, { amount: [numberPositive('Amount')], clientId: [required('Client')] })
-            if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
+            const res = validate(form, {
+              amount: [numberPositive('Amount')],
+              clientId: [required('Client')],
+              eventId: [required('Event')],
+              dueDate: [dateRequired('Due date')],
+            })
+            if (!res.ok) { setErrors(res.errors); show(res.first || 'Please fill all mandatory fields', 'warn'); return }
             addInvoice({ ...form, ref: 'INV-2026-' + String(Math.floor(1000 + Math.random() * 9000)), paid: 0 })
             show('Invoice issued')
             setOpen(null); setForm({}); setErrors({})
@@ -319,21 +388,51 @@ export default function Finance() {
 
       {/* Purchase request modal */}
       <Modal open={open === 'purchase'} onClose={() => setOpen(null)} title="New Purchase Request">
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Item / Description *" className="col-span-2"><input className="input" value={prForm.item || ''} onChange={(e) => setPrForm({ ...prForm, item: e.target.value })} placeholder="e.g. Extra moving head lights (12)" />{errors.item && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.item}</p>}</Field>
-          <Field label="Category"><select className="input" value={prForm.category || 'Technical'} onChange={(e) => setPrForm({ ...prForm, category: e.target.value })}><option>Technical</option><option>Catering</option><option>Decoration</option><option>Logistics</option><option>Marketing</option><option>Branding</option><option>Security</option><option>Staffing</option><option>Printing & Signage</option><option>Entertainment</option><option>Insurance</option><option>Equipment Rental</option><option>General</option><option>Other</option></select></Field>
-          <Field label="Amount (ETB) *"><input type="number" className="input" value={prForm.amount || ''} onChange={(e) => setPrForm({ ...prForm, amount: e.target.value })} />{errors.prAmount && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.prAmount}</p>}</Field>
-          <Field label="Event"><select className="input" value={prForm.eventId || ''} onChange={(e) => setPrForm({ ...prForm, eventId: e.target.value })}><option value="">-</option>{state.events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}</select></Field>
-          <Field label="Requested By"><select className="input" value={prForm.requestedBy || state.currentUserId || 'st2'} onChange={(e) => setPrForm({ ...prForm, requestedBy: e.target.value })}>{state.staff.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select></Field>
+        {Object.keys(errors).length > 0 && (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
+            ⚠️ Please fill all mandatory fields marked with an asterisk (*).
+          </div>
+        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Item / Description *" className="sm:col-span-2">
+            <input className={`input ${errors.item ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={prForm.item || ''} onChange={(e) => { setPrForm({ ...prForm, item: e.target.value }); if (errors.item) setErrors({ ...errors, item: undefined }) }} placeholder="e.g. Extra moving head lights (12)" />
+            {errors.item && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.item}</p>}
+          </Field>
+          <Field label="Category *">
+            <select className="input" value={prForm.category || 'Technical'} onChange={(e) => setPrForm({ ...prForm, category: e.target.value })}>
+              <option>Technical</option><option>Catering</option><option>Decoration</option><option>Logistics</option><option>Marketing</option><option>Branding</option><option>Security</option><option>Staffing</option><option>Printing & Signage</option><option>Entertainment</option><option>Insurance</option><option>Equipment Rental</option><option>General</option><option>Other</option>
+            </select>
+          </Field>
+          <Field label="Amount (ETB) *">
+            <input type="number" className={`input ${errors.prAmount ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={prForm.amount || ''} onChange={(e) => { setPrForm({ ...prForm, amount: e.target.value }); if (errors.prAmount) setErrors({ ...errors, prAmount: undefined }) }} placeholder="Request amount" />
+            {errors.prAmount && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.prAmount}</p>}
+          </Field>
+          <Field label="Event *">
+            <select className={`input ${errors.prEventId ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={prForm.eventId || ''} onChange={(e) => { setPrForm({ ...prForm, eventId: e.target.value }); if (errors.prEventId) setErrors({ ...errors, prEventId: undefined }) }}>
+              <option value="">Select event…</option>
+              {state.events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
+            </select>
+            {errors.prEventId && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.prEventId}</p>}
+          </Field>
+          <Field label="Requested By">
+            <select className="input" value={prForm.requestedBy || state.currentUserId || 'st2'} onChange={(e) => setPrForm({ ...prForm, requestedBy: e.target.value })}>
+              {state.staff.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
+          </Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button className="btn-outline" onClick={() => setOpen(null)}>Cancel</button>
           <button className="btn-primary" onClick={() => {
-            const res = validate(prForm, { item: [textRequired('Item / description')], amount: [numberPositive('Amount')] })
+            const res = validate(prForm, {
+              item: [textRequired('Item / description')],
+              amount: [numberPositive('Amount')],
+              eventId: [required('Event')],
+            })
             if (!res.ok) {
               const mapped = { ...res.errors }
               if (mapped.amount) { mapped.prAmount = mapped.amount; delete mapped.amount }
-              setErrors(mapped); show(res.first, 'warn'); return
+              if (mapped.eventId) { mapped.prEventId = mapped.eventId; delete mapped.eventId }
+              setErrors(mapped); show(res.first || 'Please fill all mandatory fields', 'warn'); return
             }
             addPurchaseRequest(prForm)
             show('Purchase request submitted for approval')

@@ -49,8 +49,8 @@ export default function Topbar({ onMenuClick }) {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-brand-100 bg-white/85 px-5 backdrop-blur">
-      <div className="flex items-center gap-3 flex-1 min-w-0">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-2 sm:gap-4 border-b border-brand-100 bg-white/85 px-3 sm:px-5 backdrop-blur">
+      <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
         <BackButton fallback="/erp/dashboard" className="hidden sm:inline-flex" />
         <button
           onClick={onMenuClick}
@@ -63,7 +63,7 @@ export default function Topbar({ onMenuClick }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2">
         <span
           title={backendOnline ? 'Connected to Supabase PostgreSQL Database' : 'Offline mode: Backend unreachable. Check backend URL.'}
           className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 transition ${
@@ -97,7 +97,7 @@ export default function Topbar({ onMenuClick }) {
           {showBell && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setShowBell(false)} />
-              <div className="absolute right-0 top-11 z-20 w-80 rounded-xl border border-brand-100 bg-white p-2 shadow-pop">
+              <div className="absolute right-0 top-11 z-20 w-80 max-w-[calc(100vw-1.5rem)] rounded-xl border border-brand-100 bg-white p-2 shadow-pop">
                 <div className="flex items-center justify-between px-2 py-1.5">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-ink/40">Notifications</p>
                   <div className="flex items-center gap-2">
@@ -145,7 +145,7 @@ export default function Topbar({ onMenuClick }) {
           {showUser && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setShowUser(false)} />
-              <div className="absolute right-0 top-12 z-20 w-64 rounded-xl border border-brand-100 bg-white p-2 shadow-pop">
+              <div className="absolute right-0 top-12 z-20 w-64 max-w-[calc(100vw-1.5rem)] rounded-xl border border-brand-100 bg-white p-2 shadow-pop">
                 <div className="border-b border-brand-50 px-3 py-2.5">
                   <div className="flex items-center gap-2.5">
                     <Avatar name={me?.name} initials={me?.initials} color={me?.color} img={me?.avatar} />

@@ -64,10 +64,16 @@ export default function Projects() {
     }
   }
 
-const submit = () => {
-    const res = validate(form, { title: [textRequired('Task title', { min: 3, max: 120 })], due: [optional(dateRequired('Due date'))], progress: [optional((v) => { const n = Number(v); if (v === '' || v === null || v === undefined) return ''; if (isNaN(n) || n < 0 || n > 100) return 'Progress must be 0-100'; return '' })] })
-    if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
-    addTask({ ...form, assigneeId: form.assigneeId || 'st2', priority: form.priority || 'medium', status: form.status || 'todo', eventId: form.eventId || 'ev1', progress: Number(form.progress) || 0, description: form.description || '' })
+  const submit = () => {
+    const res = validate(form, {
+      title: [textRequired('Task title', { min: 3, max: 120 })],
+      eventId: [required('Event')],
+      assigneeId: [required('Assignee')],
+      due: [dateRequired('Due date')],
+      progress: [optional((v) => { const n = Number(v); if (v === '' || v === null || v === undefined) return ''; if (isNaN(n) || n < 0 || n > 100) return 'Progress must be 0-100'; return '' })]
+    })
+    if (!res.ok) { setErrors(res.errors); show(res.first || 'Please fill all mandatory fields', 'warn'); return }
+    addTask({ ...form, assigneeId: form.assigneeId, priority: form.priority || 'medium', status: form.status || 'todo', eventId: form.eventId, progress: Number(form.progress) || 0, description: form.description || '' })
     show(`${form.title} added to board`)
     setOpen(false); setForm({}); setErrors({})
   }
@@ -264,15 +270,38 @@ const submit = () => {
 
       {/* New task modal */}
       <Modal open={open} onClose={() => setOpen(false)} title="Create Task" width="max-w-xl">
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Title *" className="col-span-2"><input className="input" value={form.title || ''} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Arrange VIP transport" />{errors.title && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.title}</p>}</Field>
-          <Field label="Event"><select className="input" value={form.eventId || 'ev1'} onChange={(e) => setForm({ ...form, eventId: e.target.value })}>{state.events.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}</select></Field>
-          <Field label="Assignee"><select className="input" value={form.assigneeId || 'st2'} onChange={(e) => setForm({ ...form, assigneeId: e.target.value })}>{state.staff.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select></Field>
+        {Object.keys(errors).length > 0 && (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
+            ⚠️ Please fill all mandatory fields marked with an asterisk (*).
+          </div>
+        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Task Title *" className="sm:col-span-2">
+            <input className={`input ${errors.title ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.title || ''} onChange={(e) => { setForm({ ...form, title: e.target.value }); if (errors.title) setErrors({ ...errors, title: undefined }) }} placeholder="e.g. Arrange VIP transport" />
+            {errors.title && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.title}</p>}
+          </Field>
+          <Field label="Event *">
+            <select className={`input ${errors.eventId ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.eventId || ''} onChange={(e) => { setForm({ ...form, eventId: e.target.value }); if (errors.eventId) setErrors({ ...errors, eventId: undefined }) }}>
+              <option value="">Select event…</option>
+              {state.events.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+            </select>
+            {errors.eventId && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.eventId}</p>}
+          </Field>
+          <Field label="Assignee *">
+            <select className={`input ${errors.assigneeId ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.assigneeId || ''} onChange={(e) => { setForm({ ...form, assigneeId: e.target.value }); if (errors.assigneeId) setErrors({ ...errors, assigneeId: undefined }) }}>
+              <option value="">Select team member…</option>
+              {state.staff.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
+            {errors.assigneeId && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.assigneeId}</p>}
+          </Field>
           <Field label="Priority"><select className="input" value={form.priority || 'medium'} onChange={(e) => setForm({ ...form, priority: e.target.value })}><option value="urgent">Urgent</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option><option value="Other">Other</option></select></Field>
           <Field label="Status"><select className="input" value={form.status || 'todo'} onChange={(e) => setForm({ ...form, status: e.target.value })}>{columns.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}</select></Field>
-          <Field label="Due Date"><input type="date" className="input" value={form.due || ''} onChange={(e) => setForm({ ...form, due: e.target.value })} />{errors.due && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.due}</p>}</Field>
+          <Field label="Due Date *">
+            <input type="date" className={`input ${errors.due ? 'border-red-500 ring-1 ring-red-500' : ''}`} value={form.due || ''} onChange={(e) => { setForm({ ...form, due: e.target.value }); if (errors.due) setErrors({ ...errors, due: undefined }) }} />
+            {errors.due && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.due}</p>}
+          </Field>
           <Field label="Progress (%)"><input type="number" className="input" value={form.progress ?? ''} onChange={(e) => setForm({ ...form, progress: e.target.value })} placeholder="0" />{errors.progress && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.progress}</p>}</Field>
-          <Field label="Description" className="col-span-2"><textarea className="input min-h-[70px] resize-y" value={form.description || ''} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Scope, dependencies, acceptance criteria…" /></Field>
+          <Field label="Description" className="sm:col-span-2"><textarea className="input min-h-[70px] resize-y" value={form.description || ''} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Scope, dependencies, acceptance criteria…" /></Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button className="btn-outline" onClick={() => setOpen(false)}>Cancel</button>

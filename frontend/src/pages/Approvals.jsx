@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import {
   CheckCircle2, XCircle, RotateCcw, FileText, DollarSign, Handshake,
-  ShoppingBag, Wallet, Clock, Sparkles, ArrowRight, ShieldCheck,
+  ShoppingBag, Wallet, Clock, Sparkles, ArrowRight, ShieldCheck, Paperclip, ExternalLink
 } from 'lucide-react'
 import api from '../store/api'
 import { useData } from '../store/DataContext'
@@ -15,6 +15,7 @@ const TYPE_ICONS = {
   vendor_payment: DollarSign,
   purchase_request: ShoppingBag,
   operational: ShieldCheck,
+  registration: CheckCircle2,
 }
 
 const STATUS_TONES = {
@@ -25,7 +26,7 @@ const STATUS_TONES = {
 }
 
 export default function Approvals() {
-  const { backendOnline, state, patch, setApprovalStatus, addApprovalRequest, logActivity } = useData()
+  const { backendOnline, state, patchBy, setApprovalStatus, addApprovalRequest, logActivity } = useData()
   const [approvals, setApprovals] = useState([])
   const [filter, setFilter] = useState('all')
   const [toast, setToast] = useState(null)
@@ -43,14 +44,14 @@ export default function Approvals() {
     try {
       if (api?.approvals?.list) {
         const { approvals: a } = await api.approvals.list()
-        setApprovals(a || [])
+        if (a && a.length) setApprovals(a)
       }
     } catch (err) {
-      show(err.message || 'Failed to load approvals', 'error')
+      // Keep store approvals
     }
   }
 
-  // Offline mode: enrich store approvals with staff names for the cards
+  // Combine store approvals with staff names
   const enrich = (a) => {
     const sb = state.staff.find((s) => s.id === a.submittedBy) || (a.submittedByUser && state.staff.find((s) => s.id === a.submittedByUser.id))
     const rb = state.staff.find((s) => s.id === a.reviewedBy) || (a.reviewedByUser && state.staff.find((s) => s.id === a.reviewedByUser.id))
@@ -62,26 +63,25 @@ export default function Approvals() {
     }
   }
 
-  const offlineApprovals = state.approvals.map(enrich)
-  const list = backendOnline ? approvals : offlineApprovals
+  // Store approvals are updated in real-time by Supabase channel
+  const list = (state.approvals && state.approvals.length ? state.approvals : approvals).map(enrich)
 
   const handleAction = async (id, action) => {
     setBusy(true)
     const note = reviewNote[id] || ''
-    if (backendOnline) {
-      try {
-        if (action === 'approve') await api.approvals.approve(id, note)
-        else if (action === 'reject') await api.approvals.reject(id, note)
-        else if (action === 'revision') await api.approvals.revision(id, note)
-        show(`Request ${action}d`)
-        await loadApprovals()
-      } catch (err) {
-        show(err.message || 'Action failed', 'error')
+    const target = list.find((a) => a.id === id)
+    const status = action === 'revision' ? 'revision_requested' : action === 'approve' ? 'approved' : 'rejected'
+
+    try {
+      await setApprovalStatus(id, status, note)
+      if (action === 'approve' && target?.type === 'registration' && target?.entityId) {
+        patchBy('registrations', target.entityId, { paid: true })
       }
-    } else {
-      setApprovalStatus(id, action === 'revision' ? 'revision_requested' : action === 'approve' ? 'approved' : 'rejected', note)
       show(`Request ${action}d`)
+    } catch (err) {
+      show(err.message || 'Action failed', 'error')
     }
+
     setShowNote((s) => ({ ...s, [id]: false }))
     setReviewNote((s) => ({ ...s, [id]: '' }))
     setBusy(false)
@@ -156,6 +156,24 @@ export default function Approvals() {
                       {a.type.replace(/_/g, ' ')} · ETB {fmtCompact(a.amount)}
                     </p>
                     {a.note && <p className="text-xs text-ink/55 mt-1.5 italic">"{a.note}"</p>}
+                    {(() => {
+                      const relatedDoc = (state.documents || []).find((d) => d.entityId === a.entityId || d.entityId === a.id)
+                      if (!relatedDoc) return null
+                      return (
+                        <div className="mt-2 flex items-center gap-2">
+                          <a
+                            href={relatedDoc.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-brand-50 hover:bg-brand-100 text-brand-700 text-xs font-medium transition-colors border border-brand-200"
+                          >
+                            <Paperclip size={13} />
+                            <span>Attached Document: {relatedDoc.name}</span>
+                            <ExternalLink size={11} className="opacity-60" />
+                          </a>
+                        </div>
+                      )
+                    })()}
                     {a.reviewNote && <p className="text-xs text-ink/55 mt-1">Review: "{a.reviewNote}"</p>}
                     <div className="flex items-center gap-2 mt-2 text-[11px] text-ink/40">
                       {a.submittedByUser && (

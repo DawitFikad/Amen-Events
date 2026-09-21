@@ -42,6 +42,11 @@ import {
   supabaseAddCoupon,
   supabaseLogActivity,
   supabaseAddNotification,
+  supabaseSendMessage,
+  supabaseFetchMessages,
+  supabaseAddApprovalRequest,
+  supabaseUpdateApprovalStatus,
+  supabaseUploadDocument,
   subscribeToSupabaseChanges,
 } from './supabase'
 
@@ -56,7 +61,7 @@ const emptyState = {
   eventSuppliers: [], eventChecklists: [],
   sessions: [], sessionAttendance: [], certificateHolders: [],
   exhibitionBooths: [], visitors: [], brandingLocations: [], sponsorDeliverables: [],
-  approvals: [], calendarEvents: [],
+  approvals: [], calendarEvents: [], messages: [], documents: [],
   currentUserId: null, currentUser: null,
   lastLogin: null, intent: null,
   demo: {
@@ -620,6 +625,39 @@ export function DataProvider({ children }) {
       setState((s) => ({ ...s, registrations: [registration, ...s.registrations] }))
       setDemoFlag('lastRegId', registration.id)
       logActivity(`Registration added: ${data.name} (${data.type})`, 'registration')
+
+      // If document attached, upload to Document table
+      let docUrl = data.documentUrl || ''
+      if (data.documentUrl || data.documentName) {
+        try {
+          const doc = await supabaseUploadDocument({
+            name: data.documentName || `Proof-${data.name}`,
+            type: 'receipt',
+            module: 'events',
+            entityId: registration.id,
+            url: data.documentUrl || '',
+            size: data.documentSize || 0,
+            mimeType: data.documentMime || '',
+          })
+          docUrl = doc.url || docUrl
+        } catch (docErr) {}
+      }
+
+      // If submitted from public portal or flagged for approval
+      if (data.requireApproval || data.documentUrl || data.documentName) {
+        try {
+          const appr = await supabaseAddApprovalRequest({
+            type: 'registration',
+            entityId: registration.id,
+            entityName: `${data.name} - ${data.eventName || 'Event Registration'}`,
+            amount: Number(data.amount) || 0,
+            note: `Registration submission with attached proof: ${data.documentName || 'Document'}`,
+            submittedBy: null,
+          })
+          setState((s) => ({ ...s, approvals: [appr, ...s.approvals] }))
+        } catch (apprErr) {}
+      }
+
       return registration
     } catch (sbErr) {
       if (backendOnline) {
@@ -1080,20 +1118,56 @@ const updateStaffMember = useCallback(async (id, data) => {
 
   const unreadNotifications = useMemo(() => state.notifications.length, [state.notifications])
 
-  // ─── APPROVALS & CALENDAR (offline workflows) ────────────────
+  // ─── APPROVALS, MESSAGING & DOCUMENTS ────────────────────────
 
-  const setApprovalStatus = useCallback((id, status, note = '') => {
+  const setApprovalStatus = useCallback(async (id, status, note = '') => {
+    try {
+      await supabaseUpdateApprovalStatus(id, status, note, state.currentUserId || 'st1')
+      patchBy('approvals', id, (a) => ({ ...a, status, reviewNote: note || a.reviewNote, reviewedBy: state.currentUserId || 'st1' }))
+    } catch (e) {
+      patchBy('approvals', id, (a) => ({ ...a, status, reviewNote: note || a.reviewNote, reviewedBy: state.currentUserId || 'st1' }))
+    }
     const existing = state.approvals.find((a) => a.id === id)
-    patchBy('approvals', id, (a) => ({ ...a, status, reviewNote: note || a.reviewNote, reviewedBy: state.currentUserId || 'st1' }))
     logActivity(`Approval "${existing?.entityName || 'request'}" ${status}`, 'approvals')
   }, [patchBy, logActivity, state.approvals, state.currentUserId])
 
-  const addApprovalRequest = useCallback((data) => {
-    const rec = { id: 'ap-' + Math.random().toString(36).slice(2, 8), status: 'pending', createdAt: todayISO(), ...data, amount: Number(data.amount) || 0, submittedBy: state.currentUserId || 'st1' }
-    patch('approvals', (a) => [rec, ...a])
-    logActivity(`Approval request submitted: ${rec.entityName}`, 'approvals')
-    return rec
+  const addApprovalRequest = useCallback(async (data) => {
+    try {
+      const rec = await supabaseAddApprovalRequest({ ...data, submittedBy: state.currentUserId || 'st1' })
+      setState((s) => ({ ...s, approvals: [rec, ...s.approvals.filter((a) => a.id !== rec.id)] }))
+      logActivity(`Approval request submitted: ${rec.entityName}`, 'approvals')
+      return rec
+    } catch (e) {
+      const rec = { id: 'ap-' + Math.random().toString(36).slice(2, 8), status: 'pending', createdAt: todayISO(), ...data, amount: Number(data.amount) || 0, submittedBy: state.currentUserId || 'st1' }
+      patch('approvals', (a) => [rec, ...a])
+      logActivity(`Approval request submitted: ${rec.entityName}`, 'approvals')
+      return rec
+    }
   }, [patch, logActivity, state.currentUserId])
+
+  const sendMessage = useCallback(async (data) => {
+    try {
+      const msg = await supabaseSendMessage(data)
+      setState((s) => ({ ...s, messages: [...s.messages.filter((m) => m.id !== msg.id), msg] }))
+      return msg
+    } catch (e) {
+      const local = { id: 'msg_' + Date.now(), ...data, createdAt: new Date().toISOString() }
+      setState((s) => ({ ...s, messages: [...s.messages, local] }))
+      return local
+    }
+  }, [])
+
+  const uploadDocument = useCallback(async (data) => {
+    try {
+      const doc = await supabaseUploadDocument(data)
+      setState((s) => ({ ...s, documents: [doc, ...s.documents.filter((d) => d.id !== doc.id)] }))
+      return doc
+    } catch (e) {
+      const local = { id: 'doc_' + Date.now(), ...data, createdAt: new Date().toISOString() }
+      setState((s) => ({ ...s, documents: [local, ...s.documents] }))
+      return local
+    }
+  }, [])
 
   const addCalendarEvent = useCallback((data) => {
     const rec = { id: 'ce-' + Math.random().toString(36).slice(2, 8), ...data }
@@ -1149,6 +1223,7 @@ const updateStaffMember = useCallback(async (id, data) => {
     addPurchaseRequest, setPurchaseRequestStatus,
     scheduleMaintenance, completeMaintenance,
     setApprovalStatus, addApprovalRequest, addCalendarEvent,
+    sendMessage, uploadDocument,
     markDone, setIntent, clearIntent, setDemoOpen, markVisitedReports,
     intent: state.intent,
     login, loginClient, logout, refreshData,

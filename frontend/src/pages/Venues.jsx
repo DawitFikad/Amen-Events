@@ -112,7 +112,7 @@ export default function Venues() {
 
   const renderFields = (f, setFn) => (
     <>
-      <div className="mb-4 flex items-center gap-4">
+      <div className="mb-4 flex flex-col sm:flex-row items-center gap-4">
         <div className="flex h-24 w-40 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-brand-50 ring-1 ring-brand-100">
           {f.image
             ? <img src={f.image} alt="Venue" className="h-full w-full object-cover" />
@@ -131,7 +131,7 @@ export default function Venues() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="Venue Name *" className="col-span-2"><input className="input" value={f.name || ''} onChange={(e) => setFn({ ...f, name: e.target.value })} placeholder="e.g. Intercontinental Ballroom" />{errors.name && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.name}</p>}</Field>
         <Field label="City *"><input className="input" value={f.city || 'Addis Ababa'} onChange={(e) => setFn({ ...f, city: e.target.value })} />{errors.city && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.city}</p>}</Field>
         <Field label="Street Address"><input className="input" value={f.address || ''} onChange={(e) => setFn({ ...f, address: e.target.value })} placeholder="Street, building, landmark" /></Field>
