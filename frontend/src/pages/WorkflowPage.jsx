@@ -70,16 +70,6 @@ export default function WorkflowPage() {
 
   const eventList = backendOnline ? events : offlineEvents
 
-  useEffect(() => {
-    if (backendOnline) {
-      loadWorkflow()
-    } else {
-      setLoading(false)
-      if (!selected && offlineEvents.length) setSelected(offlineEvents[0])
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [backendOnline])
-
   const loadWorkflow = async () => {
     try {
       const { events: evts, stages: sts } = await api.workflow.getAll()
@@ -91,6 +81,16 @@ export default function WorkflowPage() {
     }
     setLoading(false)
   }
+
+  useEffect(() => {
+    if (backendOnline) {
+      loadWorkflow()
+    } else {
+      setLoading(false)
+      if (!selected && offlineEvents.length) setSelected(offlineEvents[0])
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [backendOnline])
 
   const applyStage = (id, stage) => {
     const progress = Math.round((stage / 13) * 100)

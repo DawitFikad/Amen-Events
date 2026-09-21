@@ -32,6 +32,9 @@ export default function Resources() {
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
 
+  const openAssetWizard = () => { setOpen(true); setAssetStep(1); setForm({}); setErrors({}) }
+  const closeAssetWizard = () => { setOpen(false); setAssetStep(1); setForm({}); setErrors({}) }
+
   useEffect(() => {
     if (intent === 'new-resource') {
       if (state.demo.autoplay) {
@@ -71,9 +74,6 @@ export default function Resources() {
     show(`Asset "${form.name}" added to inventory`)
     setOpen(false); setAssetStep(1); setForm({}); setErrors({})
   }
-
-  const openAssetWizard = () => { setOpen(true); setAssetStep(1); setForm({}); setErrors({}) }
-  const closeAssetWizard = () => { setOpen(false); setAssetStep(1); setForm({}); setErrors({}) }
 
   const handleAssetNext = () => {
     if (assetStep === 1) {

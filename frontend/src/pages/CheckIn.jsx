@@ -64,8 +64,23 @@ export default function CheckIn() {
   const checkedIn = regs.filter((r) => r.checkedIn)
   const pct = regs.length ? Math.round((checkedIn.length / regs.length) * 100) : 0
 
+  const [scanning, setScanning] = useState(false)
+  const [cameraOn, setCameraOn] = useState(false)
+  const scanningRef = useRef(false)
+  const checkInRef = useRef(checkIn)
+  const regsRef = useRef(regs)
+  const videoRef = useRef(null)
+  const streamRef = useRef(null)
+  const rafRef = useRef(null)
+  const lastScanRef = useRef('')
+  const cameraOnRef = useRef(false)
   const offlineRef = useRef(false)
   const queueRef = useRef([])
+
+  scanningRef.current = scanning
+  checkInRef.current = checkIn
+  regsRef.current = regs
+  cameraOnRef.current = cameraOn
   offlineRef.current = offline
 
   const flushQueue = async () => {
@@ -193,9 +208,9 @@ export default function CheckIn() {
       return
     }
 
-    const res = await checkInRef.current(reg.qr || reg.id, effectiveEvent.id)
-    if (res.ok) {
-      const full = res.reg || reg
+    const checkRes = await checkInRef.current(reg.qr || reg.id, effectiveEvent.id)
+    if (checkRes.ok) {
+      const full = checkRes.reg || reg
       setResult({
         ok: true,
         full,
@@ -219,22 +234,35 @@ export default function CheckIn() {
     }
   }
 
-  // Simulated scanner - one guest per scan. Entering scan mode does NOT bulk
-  // check everyone in; each scan validates exactly one ticket.
-  const [scanning, setScanning] = useState(false)
-  const scanningRef = useRef(false)
-  const checkInRef = useRef(checkIn)
-  const regsRef = useRef(regs)
-  const videoRef = useRef(null)
-  const streamRef = useRef(null)
-  const rafRef = useRef(null)
-  const lastScanRef = useRef('')
-  const [cameraOn, setCameraOn] = useState(false)
-  const cameraOnRef = useRef(false)
-  scanningRef.current = scanning
-  checkInRef.current = checkIn
-  regsRef.current = regs
-  cameraOnRef.current = cameraOn
+  // Continuously decode QR codes from the live camera feed
+  const scanLoop = () => {
+    const video = videoRef.current
+    if (!video || !cameraOnRef.current) return
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      const canvas = document.createElement('canvas')
+      canvas.width = video.videoWidth || 320
+      canvas.height = video.videoHeight || 240
+      const ctx = canvas.getContext('2d', { willReadFrequently: true })
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+
+      // Look for jsQR globally
+      if (typeof window !== 'undefined' && window.jsQR) {
+        const code = window.jsQR(imgData.data, imgData.width, imgData.height, {
+          inversionAttempts: 'dontInvert',
+        })
+        if (code && code.data && code.data !== lastScanRef.current) {
+          lastScanRef.current = code.data
+          doCheck(code.data)
+          // Brief throttle so we don't scan the same frame 60 times a second
+          setTimeout(() => { lastScanRef.current = '' }, 2500)
+        }
+      }
+    }
+    if (cameraOnRef.current) {
+      rafRef.current = requestAnimationFrame(scanLoop)
+    }
+  }
 
   const stopCamera = () => {
     cameraOnRef.current = false
@@ -263,27 +291,6 @@ export default function CheckIn() {
       setScanning(true)
       show('Camera unavailable - using simulated scanner', 'warn')
     }
-  }
-
-  // Continuously decode QR codes from the live camera feed
-  const scanLoop = () => {
-    const video = videoRef.current
-    if (!video || !cameraOnRef.current) return
-    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-      const canvas = document.createElement('canvas')
-      canvas.width = video.videoWidth || 320
-      canvas.height = video.videoHeight || 240
-      const ctx = canvas.getContext('2d', { willReadFrequently: true })
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-      const data = ctx.getImageData(0, 0, canvas.width, canvas.height)
-      const code = jsQR(data.data, data.width, data.height, { inversionAttempts: 'dontInvert' })
-      if (code && code.data && code.data !== lastScanRef.current) {
-        lastScanRef.current = code.data
-        doCheck(code.data)
-        setTimeout(() => { lastScanRef.current = '' }, 1600)
-      }
-    }
-    rafRef.current = requestAnimationFrame(scanLoop)
   }
 
   const simulateScan = () => {

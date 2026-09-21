@@ -117,6 +117,38 @@ export function DataProvider({ children }) {
   const [loading, setLoading] = useState(() => !sessionStorage.getItem('amen_erp_cache'))
   const [backendOnline, setBackendOnline] = useState(false)
 
+  const loadDashboardData = useCallback(async (user) => {
+    try {
+      const data = await api.dashboard.getAll()
+      setState((s) => ({
+        ...s,
+        staff: data.staff || [], clients: data.clients || [],
+        venues: data.venues || [], resources: data.resources || [],
+        vendors: data.vendors || [], events: data.events || [],
+        tasks: data.tasks || [], speakers: data.speakers || [],
+        exhibitors: data.exhibitors || [], sponsors: data.sponsors || [],
+        invoices: data.invoices || [], expenses: data.expenses || [],
+        registrations: data.registrations || [], activities: data.activities || [],
+        notifications: data.notifications || [], campaigns: data.campaigns || [],
+        coupons: data.coupons || [],
+        contracts: data.contracts || [], clientDocs: data.clientDocs || [],
+        eventDocs: data.eventDocs || [],
+        maintenance: data.maintenance || [], purchaseRequests: data.purchaseRequests || [],
+        eventSuppliers: data.eventSuppliers || [], eventChecklists: data.eventChecklists || [],
+        sessions: data.sessions || [], sessionAttendance: data.sessionAttendance || [],
+        certificateHolders: data.certificateHolders || [],
+        exhibitionBooths: data.exhibitionBooths || [], visitors: data.visitors || [],
+        brandingLocations: data.brandingLocations || [], sponsorDeliverables: data.sponsorDeliverables || [],
+        approvals: data.approvals || [], calendarEvents: data.calendarEvents || [],
+        currentUserId: user.id, currentUser: user,
+        lastLogin: new Date().toISOString(),
+      }))
+    } catch (e) {
+      setState((s) => ({ ...s, ...getFallbackSeed(), currentUserId: user.id, currentUser: user }))
+    }
+    setLoading(false)
+  }, [])
+
   // On mount: try to restore session or connect directly to Supabase
   useEffect(() => {
     let mounted = true
@@ -202,39 +234,7 @@ export function DataProvider({ children }) {
       mounted = false
       if (unsubscribeRealtime) unsubscribeRealtime()
     }
-  }, [])
-
-  const loadDashboardData = useCallback(async (user) => {
-    try {
-      const data = await api.dashboard.getAll()
-      setState((s) => ({
-        ...s,
-        staff: data.staff || [], clients: data.clients || [],
-        venues: data.venues || [], resources: data.resources || [],
-        vendors: data.vendors || [], events: data.events || [],
-        tasks: data.tasks || [], speakers: data.speakers || [],
-        exhibitors: data.exhibitors || [], sponsors: data.sponsors || [],
-        invoices: data.invoices || [], expenses: data.expenses || [],
-        registrations: data.registrations || [], activities: data.activities || [],
-        notifications: data.notifications || [], campaigns: data.campaigns || [],
-        coupons: data.coupons || [],
-        contracts: data.contracts || [], clientDocs: data.clientDocs || [],
-        eventDocs: data.eventDocs || [],
-        maintenance: data.maintenance || [], purchaseRequests: data.purchaseRequests || [],
-        eventSuppliers: data.eventSuppliers || [], eventChecklists: data.eventChecklists || [],
-        sessions: data.sessions || [], sessionAttendance: data.sessionAttendance || [],
-        certificateHolders: data.certificateHolders || [],
-        exhibitionBooths: data.exhibitionBooths || [], visitors: data.visitors || [],
-        brandingLocations: data.brandingLocations || [], sponsorDeliverables: data.sponsorDeliverables || [],
-        approvals: data.approvals || [], calendarEvents: data.calendarEvents || [],
-        currentUserId: user.id, currentUser: user,
-        lastLogin: new Date().toISOString(),
-      }))
-    } catch (e) {
-      setState((s) => ({ ...s, ...getFallbackSeed(), currentUserId: user.id, currentUser: user }))
-    }
-    setLoading(false)
-  }, [])
+  }, [loadDashboardData])
 
   // ─── AUTH ────────────────────────────────────────────────────
 
@@ -570,10 +570,18 @@ export function DataProvider({ children }) {
           return event
         } catch (e) {
           console.error('Failed to save event to database:', e)
-          throw e
         }
       }
-      throw sbErr
+      const rec = {
+        id: 'ev-' + Math.random().toString(36).slice(2, 8),
+        stage: 0,
+        progress: 10,
+        ...data,
+      }
+      setState((s) => ({ ...s, events: [rec, ...s.events] }))
+      setDemoFlag('lastEventId', rec.id)
+      logActivity(`Event created: ${data.name}`, 'event')
+      return rec
     }
   }, [backendOnline, logActivity, setDemoFlag])
 
@@ -590,6 +598,32 @@ export function DataProvider({ children }) {
       return data
     }
   }, [backendOnline, patchBy])
+
+  // ─── APPROVALS (Declared before submitClientEvent to prevent TDZ ReferenceError) ───
+  const setApprovalStatus = useCallback(async (id, status, note = '') => {
+    try {
+      await supabaseUpdateApprovalStatus(id, status, note, state.currentUserId || 'st1')
+      patchBy('approvals', id, (a) => ({ ...a, status, reviewNote: note || a.reviewNote, reviewedBy: state.currentUserId || 'st1' }))
+    } catch (e) {
+      patchBy('approvals', id, (a) => ({ ...a, status, reviewNote: note || a.reviewNote, reviewedBy: state.currentUserId || 'st1' }))
+    }
+    const existing = state.approvals.find((a) => a.id === id)
+    logActivity(`Approval "${existing?.entityName || 'request'}" ${status}`, 'approvals')
+  }, [patchBy, logActivity, state.approvals, state.currentUserId])
+
+  const addApprovalRequest = useCallback(async (data) => {
+    try {
+      const rec = await supabaseAddApprovalRequest({ ...data, submittedBy: state.currentUserId || 'st1' })
+      setState((s) => ({ ...s, approvals: [rec, ...s.approvals.filter((a) => a.id !== rec.id)] }))
+      logActivity(`Approval request submitted: ${rec.entityName}`, 'approvals')
+      return rec
+    } catch (e) {
+      const rec = { id: 'ap-' + Math.random().toString(36).slice(2, 8), status: 'pending', createdAt: todayISO(), ...data, amount: Number(data.amount) || 0, submittedBy: state.currentUserId || 'st1' }
+      patch('approvals', (a) => [rec, ...a])
+      logActivity(`Approval request submitted: ${rec.entityName}`, 'approvals')
+      return rec
+    }
+  }, [patch, logActivity, state.currentUserId])
 
   const submitClientEvent = useCallback(async (data) => {
     const clientId = state.currentUserId
@@ -798,11 +832,18 @@ export function DataProvider({ children }) {
   const addTask = useCallback(async (data) => {
     try {
       const task = await supabaseAddTask(data)
-      setState((s) => ({ ...s, tasks: [task, ...s.tasks] }))
+      const mergedTask = {
+        ...task,
+        progress: Number(data.progress) || 0,
+        description: data.description || '',
+        eventId: data.eventId || task.eventId,
+      }
+      setState((s) => ({ ...s, tasks: [mergedTask, ...s.tasks.filter((t) => t.id !== mergedTask.id)] }))
       setDemoFlag('taskCreated', true)
       logActivity(`Task created: ${data.title}`, 'task')
-      return task
+      return mergedTask
     } catch (sbErr) {
+      console.error('Supabase addTask failed:', sbErr)
       if (backendOnline) {
         try {
           const { task } = await api.tasks.create(data)
@@ -811,9 +852,26 @@ export function DataProvider({ children }) {
           return task
         } catch (e) {}
       }
-      throw sbErr
+      const rec = {
+        id: 'tk-' + Math.random().toString(36).slice(2, 8),
+        title: data.title || 'New Task',
+        eventId: data.eventId || (state.events[0]?.id || ''),
+        assigneeId: data.assigneeId || (state.staff[0]?.id || ''),
+        priority: data.priority || 'medium',
+        status: data.status || 'todo',
+        due: data.due || todayISO(),
+        progress: Number(data.progress) || 0,
+        description: data.description || '',
+        comments: 0,
+        createdAt: new Date().toISOString(),
+        ...data,
+      }
+      patch('tasks', (a) => [rec, ...a])
+      setDemoFlag('taskCreated', true)
+      logActivity(`Task created: ${rec.title}`, 'task')
+      return rec
     }
-  }, [backendOnline, logActivity, setDemoFlag])
+  }, [backendOnline, logActivity, setDemoFlag, state.events, state.staff, patch])
 
   const updateTask = useCallback(async (id, updater) => {
     const target = state.tasks.find((t) => t.id === id)
@@ -1463,32 +1521,7 @@ export function DataProvider({ children }) {
 
   const unreadNotifications = useMemo(() => state.notifications.length, [state.notifications])
 
-  // ─── APPROVALS, MESSAGING & DOCUMENTS ────────────────────────
-
-  const setApprovalStatus = useCallback(async (id, status, note = '') => {
-    try {
-      await supabaseUpdateApprovalStatus(id, status, note, state.currentUserId || 'st1')
-      patchBy('approvals', id, (a) => ({ ...a, status, reviewNote: note || a.reviewNote, reviewedBy: state.currentUserId || 'st1' }))
-    } catch (e) {
-      patchBy('approvals', id, (a) => ({ ...a, status, reviewNote: note || a.reviewNote, reviewedBy: state.currentUserId || 'st1' }))
-    }
-    const existing = state.approvals.find((a) => a.id === id)
-    logActivity(`Approval "${existing?.entityName || 'request'}" ${status}`, 'approvals')
-  }, [patchBy, logActivity, state.approvals, state.currentUserId])
-
-  const addApprovalRequest = useCallback(async (data) => {
-    try {
-      const rec = await supabaseAddApprovalRequest({ ...data, submittedBy: state.currentUserId || 'st1' })
-      setState((s) => ({ ...s, approvals: [rec, ...s.approvals.filter((a) => a.id !== rec.id)] }))
-      logActivity(`Approval request submitted: ${rec.entityName}`, 'approvals')
-      return rec
-    } catch (e) {
-      const rec = { id: 'ap-' + Math.random().toString(36).slice(2, 8), status: 'pending', createdAt: todayISO(), ...data, amount: Number(data.amount) || 0, submittedBy: state.currentUserId || 'st1' }
-      patch('approvals', (a) => [rec, ...a])
-      logActivity(`Approval request submitted: ${rec.entityName}`, 'approvals')
-      return rec
-    }
-  }, [patch, logActivity, state.currentUserId])
+  // ─── MESSAGING & DOCUMENTS ────────────────────────
 
   const sendMessage = useCallback(async (data) => {
     try {

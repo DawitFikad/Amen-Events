@@ -21,6 +21,7 @@ export function generateId(prefix = '') {
   return prefix ? `${prefix}_${ts}${rand}` : `c${ts}${rand}`
 }
 
+
 // Quick health check against Supabase PostgreSQL
 export async function checkSupabaseHealth() {
   try {
@@ -101,11 +102,22 @@ export async function supabaseAddEvent(data) {
     ? data.tags
     : String(data.tags || '').split(',').map((t) => t.trim()).filter(Boolean)
 
+  let venueId = data.venueId && String(data.venueId).trim() ? String(data.venueId).trim() : null
+  if (venueId) {
+    const { data: vCheck } = await supabase.from('Venue').select('id').eq('id', venueId).maybeSingle()
+    if (!vCheck) venueId = null
+  }
+  let clientId = data.clientId && String(data.clientId).trim() ? String(data.clientId).trim() : null
+  if (clientId) {
+    const { data: cCheck } = await supabase.from('Client').select('id').eq('id', clientId).maybeSingle()
+    if (!cCheck) clientId = null
+  }
+
   const record = {
     id,
     name: data.name,
-    clientId: data.clientId && data.clientId.trim() ? data.clientId.trim() : null,
-    venueId: data.venueId && data.venueId.trim() ? data.venueId.trim() : null,
+    clientId,
+    venueId,
     category: data.category || 'General',
     date: data.date || '',
     time: data.time || '09:00',
@@ -137,25 +149,56 @@ export async function supabaseAddEvent(data) {
     .select('*, client:Client(*), venue:Venue(*)')
     .single()
 
-  if (error) throw error
+  if (error) {
+    console.error('Supabase Event insert failed:', error)
+    throw error
+  }
   await supabaseLogActivity(`Event created: ${record.name}`, 'event')
   return inserted || record
 }
 
 export async function supabaseUpdateEvent(id, updates) {
-  const data = { ...updates, updatedAt: new Date().toISOString() }
-  if (data.budget !== undefined) data.budget = Number(data.budget) || 0
-  if (data.tags !== undefined && !Array.isArray(data.tags)) {
-    data.tags = String(data.tags).split(',').map((t) => t.trim()).filter(Boolean)
+  const allowed = [
+    'name', 'clientId', 'venueId', 'category', 'date', 'time', 'status', 'pmId',
+    'budget', 'spent', 'stage', 'attendees', 'progress', 'team', 'image',
+    'description', 'endDate', 'endTime', 'deadline', 'capacity', 'price',
+    'published', 'tags', 'contactName', 'contactPhone'
+  ]
+  const cleanData = { updatedAt: new Date().toISOString() }
+  for (const k of allowed) {
+    if (updates[k] !== undefined) {
+      cleanData[k] = updates[k]
+    }
   }
+  if (cleanData.budget !== undefined) cleanData.budget = Number(cleanData.budget) || 0
+  if (cleanData.spent !== undefined) cleanData.spent = Number(cleanData.spent) || 0
+  if (cleanData.capacity !== undefined) cleanData.capacity = Number(cleanData.capacity) || 0
+  if (cleanData.price !== undefined) cleanData.price = Number(cleanData.price) || 0
+  if (cleanData.progress !== undefined) cleanData.progress = Number(cleanData.progress) || 0
+  if (cleanData.stage !== undefined) cleanData.stage = Number(cleanData.stage) || 0
+  if (cleanData.tags !== undefined && !Array.isArray(cleanData.tags)) {
+    cleanData.tags = String(cleanData.tags).split(',').map((t) => t.trim()).filter(Boolean)
+  }
+  if (cleanData.venueId) {
+    const { data: vCheck } = await supabase.from('Venue').select('id').eq('id', cleanData.venueId).maybeSingle()
+    if (!vCheck) cleanData.venueId = null
+  }
+  if (cleanData.clientId) {
+    const { data: cCheck } = await supabase.from('Client').select('id').eq('id', cleanData.clientId).maybeSingle()
+    if (!cCheck) cleanData.clientId = null
+  }
+
   const { data: updated, error } = await supabase
     .from('Event')
-    .update(data)
+    .update(cleanData)
     .eq('id', id)
     .select('*, client:Client(*), venue:Venue(*)')
     .single()
 
-  if (error) throw error
+  if (error) {
+    console.error('Supabase Event update failed:', error)
+    throw error
+  }
   return updated
 }
 
@@ -228,11 +271,21 @@ export async function supabaseDeleteClient(id) {
 export async function supabaseAddTask(data) {
   const id = generateId('tk')
   const now = new Date().toISOString()
+  
+  let eventId = data.eventId && String(data.eventId).trim() ? String(data.eventId).trim() : null
+  if (eventId) {
+    const { data: evCheck } = await supabase.from('Event').select('id').eq('id', eventId).maybeSingle()
+    if (!evCheck) {
+      console.warn(`Supabase Task: eventId "${eventId}" not in Postgres Event table. Nullifying eventId to satisfy FK constraint.`)
+      eventId = null
+    }
+  }
+
   const record = {
     id,
     title: data.title,
-    eventId: data.eventId && data.eventId.trim() ? data.eventId.trim() : null,
-    assigneeId: data.assigneeId && data.assigneeId.trim() ? data.assigneeId.trim() : null,
+    eventId,
+    assigneeId: data.assigneeId && String(data.assigneeId).trim() ? String(data.assigneeId).trim() : null,
     priority: data.priority || 'medium',
     status: data.status || 'todo',
     due: data.due || '',
@@ -247,27 +300,51 @@ export async function supabaseAddTask(data) {
     .select('*')
     .single()
 
-  if (error) throw error
+  if (error) {
+    console.error('Supabase Task insert error:', error)
+    throw error
+  }
   await supabaseLogActivity(`Task created: ${record.title}`, 'task')
-  return inserted || record
+  return { ...record, ...inserted, eventId: data.eventId || inserted.eventId }
 }
 
 export async function supabaseUpdateTask(id, updates) {
-  const data = { ...updates, updatedAt: new Date().toISOString() }
+  const allowed = ['title', 'eventId', 'assigneeId', 'priority', 'status', 'due', 'comments']
+  const cleanData = { updatedAt: new Date().toISOString() }
+
+  for (const key of allowed) {
+    if (updates[key] !== undefined) {
+      cleanData[key] = updates[key]
+    }
+  }
+
+  if (cleanData.eventId) {
+    const { data: evCheck } = await supabase.from('Event').select('id').eq('id', cleanData.eventId).maybeSingle()
+    if (!evCheck) {
+      cleanData.eventId = null
+    }
+  }
+
   const { data: updated, error } = await supabase
     .from('Task')
-    .update(data)
+    .update(cleanData)
     .eq('id', id)
     .select('*')
     .single()
 
-  if (error) throw error
+  if (error) {
+    console.error('Supabase Task update error:', error)
+    throw error
+  }
   return updated
 }
 
 export async function supabaseDeleteTask(id) {
   const { error } = await supabase.from('Task').delete().eq('id', id)
-  if (error) throw error
+  if (error) {
+    console.error('Supabase Task delete error:', error)
+    throw error
+  }
 }
 
 // ─── REGISTRATIONS ─────────────────────────────────────────────────

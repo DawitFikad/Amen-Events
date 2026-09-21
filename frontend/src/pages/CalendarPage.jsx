@@ -33,10 +33,6 @@ export default function CalendarPage() {
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 3000) }
 
-  useEffect(() => {
-    if (backendOnline) loadCalendar()
-  }, [backendOnline, cursor])
-
   const loadCalendar = async () => {
     try {
       if (api?.calendar?.list) {
@@ -47,6 +43,10 @@ export default function CalendarPage() {
       // Non-blocking: Supabase state holds calendar events
     }
   }
+
+  useEffect(() => {
+    if (backendOnline) loadCalendar()
+  }, [backendOnline, cursor])
 
   // Combine events, tasks, and meetings from store and API
   const sourceEvents = useMemo(() => {

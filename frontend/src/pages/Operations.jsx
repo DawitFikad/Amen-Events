@@ -136,12 +136,16 @@ export default function Operations() {
 
   // ── Tasks ────────────────────────────────────────────────────
   const taskSchema = { title: [textRequired('Task title', { min: 3, max: 120 })], due: [optional(dateRequired('Due date'))] }
-  const submitTask = () => {
+  const submitTask = async () => {
     const res = validate(taskForm, taskSchema)
     if (!res.ok) { setErrors(res.errors); show(res.first, 'warn'); return }
-    addTask({ ...taskForm, eventId: currentId, assigneeId: taskForm.assigneeId || 'st5', priority: taskForm.priority || 'medium', status: taskForm.status || 'todo', progress: Number(taskForm.progress) || 0, description: taskForm.description || '' })
-    show('Task added to board')
-    setTaskOpen(false); setTaskForm({}); setErrors({})
+    try {
+      await addTask({ ...taskForm, eventId: currentId, assigneeId: taskForm.assigneeId || 'st5', priority: taskForm.priority || 'medium', status: taskForm.status || 'todo', progress: Number(taskForm.progress) || 0, description: taskForm.description || '' })
+      show('Task added to board')
+      setTaskOpen(false); setTaskForm({}); setErrors({})
+    } catch (err) {
+      show(err.message || 'Failed to add task', 'error')
+    }
   }
   const moveTask = (t, dir) => {
     const next = taskOrder[taskOrder.indexOf(t.status) + dir]

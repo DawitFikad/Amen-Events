@@ -149,7 +149,8 @@ export default function CRM() {
 
   const handleClientBack = () => setClientStep((s) => Math.max(s - 1, 1))
 
-
+  const detail = view && state.clients.find((c) => c.id === view.id)
+  const detailEvents = state.events.filter((e) => e.clientId === view?.id)
   const onPhoto = (e) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -281,9 +282,6 @@ export default function CRM() {
     show(`Document "${docForm.name}" attached`)
     setDocOpen(false); setDocForm({}); setErrors({})
   }
-
-  const detail = view && state.clients.find((c) => c.id === view.id)
-  const detailEvents = state.events.filter((e) => e.clientId === view?.id)
 
   useEffect(() => {
     if (detail) {

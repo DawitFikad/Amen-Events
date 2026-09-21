@@ -87,6 +87,21 @@ export default function DemoWizard() {
   // automatically trigger the next one. Runs hands-free for client demos.
   const autoplay = !!demo.autoplay
 
+  const go = (step, i, opts = {}) => {
+    if (i > current && !opts.force) return
+    if (step.intent) setIntent(step.intent)
+    markDone(0)
+    setDemoOpen(false)
+    navigate(step.route)
+  }
+
+  const goAdjacent = (dir) => {
+    const next = current + dir
+    if (next < 0 || next >= steps.length) return
+    if (dir > 0 && next > current) return
+    go(steps[next], next, { force: true })
+  }
+
   useEffect(() => {
     if (!autoplay) return
     if (allDone) { setDemoFlag('autoplay', false); return }
@@ -107,20 +122,6 @@ export default function DemoWizard() {
     }
   }, [demo.open])
 
-  const go = (step, i, opts = {}) => {
-    if (i > current && !opts.force) return
-    if (step.intent) setIntent(step.intent)
-    markDone(0)
-    setDemoOpen(false)
-    navigate(step.route)
-  }
-
-  const goAdjacent = (dir) => {
-    const next = current + dir
-    if (next < 0 || next >= steps.length) return
-    if (dir > 0 && next > current) return
-    go(steps[next], next, { force: true })
-  }
 
   const chip = (on) => (on ? 'bg-brand-600 text-white' : 'bg-brand-100 text-brand-800')
 

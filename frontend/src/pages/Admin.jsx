@@ -75,12 +75,6 @@ export default function Admin() {
   ]
   const tabs = isAdmin ? allTabs : allTabs.filter(([v]) => v === 'settings')
 
-  const sendInvite = () => {
-    const res = validate(inviteForm, { name: [nameOnly('Full name')], email: [emailValid('Work email')] })
-    if (!res.ok) { show(res.first, 'warn'); return }
-    inlineInvite(inviteForm.name.trim(), inviteForm.email.trim(), inviteForm.role)
-  }
-
   const inlineInvite = async (name, email, role) => {
     try {
       await addStaffMember({
@@ -107,6 +101,12 @@ export default function Admin() {
     setInviteOpen(false); setInviteForm({ name: '', email: '', role: 'manager' })
     setDemoFlag('adminAction', true)
     show(`Invitation sent to ${email}`)
+  }
+
+  const sendInvite = () => {
+    const res = validate(inviteForm, { name: [nameOnly('Full name')], email: [emailValid('Work email')] })
+    if (!res.ok) { show(res.first, 'warn'); return }
+    inlineInvite(inviteForm.name.trim(), inviteForm.email.trim(), inviteForm.role)
   }
 
   useEffect(() => {

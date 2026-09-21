@@ -37,10 +37,6 @@ export default function Approvals() {
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 3000) }
 
-  useEffect(() => {
-    if (backendOnline) loadApprovals()
-  }, [backendOnline])
-
   const loadApprovals = async () => {
     try {
       if (api?.approvals?.list) {
@@ -51,6 +47,10 @@ export default function Approvals() {
       // Keep store approvals
     }
   }
+
+  useEffect(() => {
+    if (backendOnline) loadApprovals()
+  }, [backendOnline])
 
   // Combine store approvals with staff names
   const enrich = (a) => {

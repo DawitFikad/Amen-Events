@@ -43,6 +43,10 @@ export default function Ticketing() {
     }
   }, [qrView])
 
+  const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
+  const activeEvent = state.events.find((e) => e.status === 'ongoing') || state.events[0]
+  const regs = state.registrations.filter((r) => r.eventId === activeEvent?.id)
+
   const exportList = () => {
     exportTableToPDF(
       'ticket-registrations',
@@ -68,8 +72,6 @@ export default function Ticketing() {
     show(`QR ticket saved as ${fname}`)
   }
 
-  const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
-
   useEffect(() => {
     if (intent === 'new-registration') {
       if (state.demo.autoplay) {
@@ -91,9 +93,6 @@ export default function Ticketing() {
       clearIntent()
     }
   }, [intent])
-
-  const activeEvent = state.events.find((e) => e.status === 'ongoing') || state.events[0]
-  const regs = state.registrations.filter((r) => r.eventId === activeEvent?.id)
   const filtered = regs.filter((r) => (r.name + r.email + r.type).toLowerCase().includes(q.toLowerCase()))
   const totalSold = ticketTypes.reduce((a, t) => a + t.sold, 0)
   const capacity = ticketTypes.reduce((a, t) => a + t.qty, 0)
