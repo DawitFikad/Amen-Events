@@ -3,6 +3,8 @@ import { LifeBuoy, Phone, Mail, Send, ChevronDown, ChevronUp, MessageSquare, Bui
 import { Toast } from '../../components/ui'
 import { textRequired, validate, clearError } from '../../store/validation'
 
+import { useData } from '../../store/DataContext'
+
 const FAQS = [
   { q: 'How do I track the progress of my event?', a: 'You can track your event progress from the Dashboard or by visiting the My Events page. Each event card shows real-time progress, timeline stages, and upcoming deadlines.' },
   { q: 'How can I download invoices and contracts?', a: 'Navigate to the Documents section to download all your contracts, quotations, invoices, floor plans, and reports. You can also download individual invoices from the Invoices & Payments page.' },
@@ -13,6 +15,9 @@ const FAQS = [
 ]
 
 export default function ClientSupport() {
+  const { state, sendMessage, logActivity } = useData()
+  const clientId = state.currentUserId
+  const client = state.clients.find((c) => c.id === clientId)
   const [openFaq, setOpenFaq] = useState(0)
   const [toast, setToast] = useState(null)
   const [ticket, setTicket] = useState({ subject: '', message: '', priority: 'normal' })
@@ -21,7 +26,7 @@ export default function ClientSupport() {
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
 
-  const submitTicket = () => {
+  const submitTicket = async () => {
     const res = validate(ticket, {
       subject: [textRequired('Subject', { min: 3, max: 120 })],
       message: [textRequired('Message', { min: 10, max: 2000 })],
@@ -29,11 +34,22 @@ export default function ClientSupport() {
     if (!res.ok) { setErrors(res.errors); show(res.first, 'error'); return }
     setErrors({})
     setSending(true)
-    setTimeout(() => {
-      setSending(false)
-      show('Support ticket submitted! We will get back to you within 24 hours.')
+    try {
+      await sendMessage({
+        senderId: clientId || null,
+        senderName: client?.company || client?.contactPerson || 'Client',
+        senderRole: 'client',
+        recipientRole: 'admin',
+        text: `[Support Ticket: ${ticket.priority.toUpperCase()}] ${ticket.subject}\n\n${ticket.message}`,
+      })
+      logActivity(`Support ticket submitted: ${ticket.subject}`, 'crm')
+      show('Support ticket submitted to team! We will respond shortly.')
       setTicket({ subject: '', message: '', priority: 'normal' })
-    }, 800)
+    } catch (err) {
+      show(`Submission failed: ${err.message}`, 'error')
+    } finally {
+      setSending(false)
+    }
   }
 
   return (

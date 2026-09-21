@@ -20,7 +20,7 @@ export default function ClientTickets() {
   }, [state.registrations, myEventIds, selectedEvent, clientId])
 
   const ticketTypes = ['VVIP', 'VIP', 'Standard', 'Group']
-  const totalRevenue = allRegs.reduce((a, r) => a + (r.amount || 0), 0)
+  const totalRevenue = allRegs.reduce((a, r) => a + (r.amount ?? r.price ?? 0), 0)
   const totalCapacity = myEvents.reduce((a, e) => {
     const v = state.venues.find((v) => v.id === e.venueId)
     return a + (v?.capacity || 0)
@@ -65,14 +65,14 @@ export default function ClientTickets() {
           <p className="font-bold text-brand-950">Ticket Types Breakdown</p>
           <button className="btn-outline text-xs" onClick={() => exportPDF('Ticket Sales Report', [
             { title: 'Overview', text: `${allRegs.length} tickets · ETB ${fmtCompact(totalRevenue)} revenue` },
-            { title: 'By Type', rows: { headers: ['Type', 'Sold', 'Revenue'], rows: ticketTypes.map((t) => { const regs = allRegs.filter((r) => r.type === t); return [t, regs.length, fmt(regs.reduce((a, r) => a + (r.amount || 0), 0))] }) } },
+            { title: 'By Type', rows: { headers: ['Type', 'Sold', 'Revenue'], rows: ticketTypes.map((t) => { const regs = allRegs.filter((r) => r.type === t); return [t, regs.length, fmt(regs.reduce((a, r) => a + (r.amount ?? r.price ?? 0), 0))] }) } },
           ])}><Download size={14} /> Download Report</button>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {ticketTypes.map((type) => {
             const typeRegs = allRegs.filter((r) => r.type === type)
             const count = typeRegs.length
-            const revenue = typeRegs.reduce((a, r) => a + (r.amount || 0), 0)
+            const revenue = typeRegs.reduce((a, r) => a + (r.amount ?? r.price ?? 0), 0)
             const pct = allRegs.length > 0 ? (count / allRegs.length) * 100 : 0
             return (
               <div key={type} className="rounded-xl border border-brand-100 p-4">
@@ -122,7 +122,7 @@ export default function ClientTickets() {
                     </button>
                   </div>
                   <div className="mt-3 flex items-center justify-between border-t border-brand-50 pt-2 text-xs">
-                    <span className="text-ink/50">Qty: {r.qty || 1} · ETB {fmtCompact(r.amount || 0)}</span>
+                    <span className="text-ink/50">Qty: {r.qty || 1} · ETB {fmtCompact(r.amount ?? r.price ?? 0)}</span>
                     {r.checkedIn ? (
                       <span className="flex items-center gap-1 font-bold text-brand-700"><CheckCircle2 size={12} /> Checked In</span>
                     ) : (

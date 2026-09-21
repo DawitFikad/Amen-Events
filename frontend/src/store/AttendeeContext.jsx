@@ -2,11 +2,19 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 const TOKEN_KEY = 'amen_attendee_token'
+const ATTENDEE_KEY = 'amen_attendee_data'
 
 const AttendeeContext = createContext(null)
 
 export function AttendeeProvider({ children }) {
-  const [attendee, setAttendee] = useState(null)
+  const [attendee, setAttendee] = useState(() => {
+    try {
+      const stored = localStorage.getItem(ATTENDEE_KEY)
+      return stored ? JSON.parse(stored) : null
+    } catch {
+      return null
+    }
+  })
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY))
   const [loading, setLoading] = useState(true)
 
@@ -18,10 +26,19 @@ export function AttendeeProvider({ children }) {
       if (res.ok) {
         const data = await res.json()
         setAttendee(data.attendee)
+        localStorage.setItem(ATTENDEE_KEY, JSON.stringify(data.attendee))
         return true
       }
       return false
     } catch {
+      // Backend offline: keep existing localStorage attendee session
+      const stored = localStorage.getItem(ATTENDEE_KEY)
+      if (stored) {
+        try {
+          setAttendee(JSON.parse(stored))
+          return true
+        } catch {}
+      }
       return false
     }
   }, [])
@@ -29,7 +46,7 @@ export function AttendeeProvider({ children }) {
   useEffect(() => {
     if (token) {
       fetchMe(token).then((ok) => {
-        if (!ok) {
+        if (!ok && !localStorage.getItem(ATTENDEE_KEY)) {
           localStorage.removeItem(TOKEN_KEY)
           setToken(null)
         }
@@ -42,12 +59,14 @@ export function AttendeeProvider({ children }) {
 
   const login = (tk, att) => {
     localStorage.setItem(TOKEN_KEY, tk)
+    localStorage.setItem(ATTENDEE_KEY, JSON.stringify(att))
     setToken(tk)
     setAttendee(att)
   }
 
   const logout = () => {
     localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(ATTENDEE_KEY)
     setToken(null)
     setAttendee(null)
   }
@@ -56,8 +75,12 @@ export function AttendeeProvider({ children }) {
     const headers = { ...options.headers }
     if (token) headers.Authorization = `Bearer ${token}`
     if (options.body && !headers['Content-Type']) headers['Content-Type'] = 'application/json'
-    const res = await fetch(`${API_URL}${path}`, { ...options, headers })
-    return res.json()
+    try {
+      const res = await fetch(`${API_URL}${path}`, { ...options, headers })
+      return await res.json()
+    } catch (e) {
+      return { error: 'Network unavailable' }
+    }
   }
 
   const value = {

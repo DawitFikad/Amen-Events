@@ -6,7 +6,7 @@ import { fmt, fmtCompact } from '../../store/data'
 import { exportPDF } from '../../store/exportUtils'
 
 export default function ClientInvoices() {
-  const { state, patchBy } = useData()
+  const { state, patchBy, recordPayment } = useData()
   const clientId = state.currentUserId
   const [filter, setFilter] = useState('all')
   const [payInvoice, setPayInvoice] = useState(null)
@@ -34,18 +34,19 @@ export default function ClientInvoices() {
     { key: 'partial', label: 'Partial' },
   ]
 
-  const handlePay = () => {
+  const handlePay = async () => {
     if (!payInvoice) return
     setBusy(true)
-    setTimeout(() => {
-      const newPaid = (payInvoice.paid || 0) + payAmount
-      const newStatus = newPaid >= payInvoice.amount ? 'paid' : 'partial'
-      patchBy('invoices', payInvoice.id, (inv) => ({ ...inv, paid: newPaid, status: newStatus }))
-      setBusy(false)
-      show(`Payment of ETB ${fmtCompact(payAmount)} successful for ${payInvoice.ref}`)
+    try {
+      await recordPayment(payInvoice.id, payAmount)
+      show(`Payment of ETB ${fmtCompact(payAmount)} successful for ${payInvoice.ref || payInvoice.number || 'invoice'}`)
       setPayInvoice(null)
       setPayAmount(0)
-    }, 1500)
+    } catch (err) {
+      show(`Payment failed: ${err.message}`, 'error')
+    } finally {
+      setBusy(false)
+    }
   }
 
   const openPayModal = (inv) => {
@@ -113,7 +114,7 @@ export default function ClientInvoices() {
                 const remaining = inv.amount - (inv.paid || 0)
                 return (
                   <tr key={inv.id} className="hover:bg-brand-50/40">
-                    <Td><span className="font-mono text-sm font-bold text-brand-950">{inv.ref}</span></Td>
+                    <Td><span className="font-mono text-sm font-bold text-brand-950">{inv.ref || inv.number}</span></Td>
                     <Td className="text-ink/60">{evt?.name || '-'}</Td>
                     <Td className="font-semibold text-brand-950">{fmt(inv.amount)}</Td>
                     <Td className="text-brand-700">{fmt(inv.paid || 0)}</Td>
@@ -130,8 +131,8 @@ export default function ClientInvoices() {
                             <CreditCard size={12} className="inline" /> Pay Now
                           </button>
                         )}
-                        <button className="flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-900" onClick={() => exportPDF(`Invoice ${inv.ref}`, [
-                          { title: 'Invoice', text: `${inv.ref} - ${evt?.name || 'Event'}` },
+                        <button className="flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-900" onClick={() => exportPDF(`Invoice ${inv.ref || inv.number}`, [
+                          { title: 'Invoice', text: `${inv.ref || inv.number} - ${evt?.name || 'Event'}` },
                           { title: 'Amounts', rows: { headers: ['Description', 'Amount (ETB)'], rows: [['Total invoiced', inv.amount], ['Paid', inv.paid || 0], ['Outstanding', remaining]] } },
                         ])}>
                           <Download size={13} /> PDF
@@ -157,7 +158,7 @@ export default function ClientInvoices() {
               <div key={inv.id} className="flex items-center gap-3 rounded-lg border border-brand-50 p-3">
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-700"><CheckCircle2 size={15} /></span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-brand-950">Payment for {inv.ref}</p>
+                  <p className="text-sm font-semibold text-brand-950">Payment for {inv.ref || inv.number}</p>
                   <p className="text-[11px] text-ink/45">{evt?.name || '-'} · {inv.dueDate}</p>
                 </div>
                 <span className="font-bold text-brand-700">{fmt(inv.paid || 0)}</span>
@@ -180,7 +181,7 @@ export default function ClientInvoices() {
             </div>
 
             <div className="mb-4 rounded-xl bg-brand-50 p-4">
-              <div className="flex justify-between text-sm"><span className="text-ink/60">Invoice</span><span className="font-mono font-bold text-brand-950">{payInvoice.ref}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-ink/60">Invoice</span><span className="font-mono font-bold text-brand-950">{payInvoice.ref || payInvoice.number}</span></div>
               <div className="mt-1 flex justify-between text-sm"><span className="text-ink/60">Total Amount</span><span className="font-bold text-brand-950">{fmt(payInvoice.amount)}</span></div>
               <div className="mt-1 flex justify-between text-sm"><span className="text-ink/60">Already Paid</span><span className="font-bold text-brand-700">{fmt(payInvoice.paid || 0)}</span></div>
               <div className="mt-2 flex justify-between border-t border-brand-100 pt-2 text-sm"><span className="font-bold text-ink/70">Outstanding</span><span className="font-bold text-gold-700">{fmt(payInvoice.amount - (payInvoice.paid || 0))}</span></div>

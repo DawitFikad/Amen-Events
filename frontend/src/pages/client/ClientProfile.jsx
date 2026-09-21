@@ -5,7 +5,7 @@ import { Toast } from '../../components/ui'
 import { textRequired, nameOnly, phoneValid, emailValid, optional, validate, clearError } from '../../store/validation'
 
 export default function ClientProfile() {
-  const { state, patch, patchBy, logActivity } = useData()
+  const { state, patch, patchBy, logActivity, updateClient } = useData()
   const clientId = state.currentUserId
   const client = state.clients.find((c) => c.id === clientId)
   const [tab, setTab] = useState('company')
@@ -29,7 +29,7 @@ export default function ClientProfile() {
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
 
-  const saveCompany = () => {
+  const saveCompany = async () => {
     const res = validate(form, {
       company: [textRequired('Company name', { max: 120 })],
       contactPerson: [nameOnly('Contact person')],
@@ -48,11 +48,23 @@ export default function ClientProfile() {
     if (!res.ok) { setErrors(res.errors); show(res.first, 'error'); return }
     setErrors({})
     setSaving(true)
-    setTimeout(() => {
-      patchBy('clients', clientId, { company: form.company, contactPerson: form.contactPerson, phone: form.phone, email: form.email, city: form.address, industry: form.industry, website: form.website, taxId: form.taxId })
-      logActivity('Client updated company profile', 'crm')
-      setSaving(false); show('Company profile updated successfully')
-    }, 800)
+    try {
+      await updateClient(clientId, {
+        company: form.company,
+        contactPerson: form.contactPerson,
+        phone: form.phone,
+        email: form.email,
+        city: form.address,
+        industry: form.industry,
+        website: form.website,
+        taxId: form.taxId,
+      })
+      show('Company profile updated successfully')
+    } catch (err) {
+      show(`Update failed: ${err.message}`, 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const tabs = [

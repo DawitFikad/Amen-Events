@@ -4,6 +4,7 @@ import { QrCode, Calendar, MapPin, Ticket, Download, Share2, CheckCircle2, Clock
 import { QRCodeCanvas } from 'qrcode.react'
 import { useAttendee } from '../../store/AttendeeContext'
 import { ticketPayload, encodeTicket } from '../../store/ticket'
+import { supabaseFetchAttendeeTickets } from '../../store/supabase'
 
 export default function MyTickets() {
   const { authFetch, isAuthenticated, attendee } = useAttendee()
@@ -25,11 +26,27 @@ export default function MyTickets() {
 
   useEffect(() => {
     if (!isAuthenticated) { setLoading(false); return }
-    authFetch('/portal/my-tickets').then((data) => {
-      setTickets(data.tickets || [])
-      setLoading(false)
-    })
-  }, [isAuthenticated])
+    async function loadTickets() {
+      try {
+        const sbTickets = await supabaseFetchAttendeeTickets(attendee?.email)
+        if (sbTickets && sbTickets.length > 0) {
+          setTickets(sbTickets)
+          setLoading(false)
+          return
+        }
+      } catch (e) {
+        console.warn('Supabase tickets fetch error:', e)
+      }
+
+      authFetch('/portal/my-tickets').then((data) => {
+        setTickets(data.tickets || [])
+        setLoading(false)
+      }).catch(() => {
+        setLoading(false)
+      })
+    }
+    loadTickets()
+  }, [isAuthenticated, attendee?.email])
 
   const qrValue = selected
     ? encodeTicket(ticketPayload(

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Calendar, MapPin, Users, ArrowRight, Sparkles, Ticket, Shield, Zap, Heart, ChevronDown, Star, Building2, Search, Mic, Award, Clock } from 'lucide-react'
 import { portalEventsFallback } from '../../store/portalFallback'
+import { supabaseFetchPublicEvents } from '../../store/supabase'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
@@ -38,16 +39,30 @@ export default function Landing() {
   const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
-    fetch(`${API_URL}/portal/events?sort=popular`)
-      .then((r) => r.json())
-      .then((data) => {
-        setEvents(data.events?.slice(0, 6) || portalEventsFallback({ sort: 'popular', limit: 6 }))
-        setLoading(false)
-      })
-      .catch(() => {
-        setEvents(portalEventsFallback({ sort: 'popular', limit: 6 }))
-        setLoading(false)
-      })
+    async function loadEvents() {
+      try {
+        const sbEvents = await supabaseFetchPublicEvents({ sort: 'popular', limit: 6 })
+        if (sbEvents && sbEvents.length > 0) {
+          setEvents(sbEvents)
+          setLoading(false)
+          return
+        }
+      } catch (e) {
+        console.warn('Supabase fetch failed, falling back:', e)
+      }
+
+      fetch(`${API_URL}/portal/events?sort=popular`)
+        .then((r) => r.json())
+        .then((data) => {
+          setEvents(data.events?.slice(0, 6) || portalEventsFallback({ sort: 'popular', limit: 6 }))
+          setLoading(false)
+        })
+        .catch(() => {
+          setEvents(portalEventsFallback({ sort: 'popular', limit: 6 }))
+          setLoading(false)
+        })
+    }
+    loadEvents()
   }, [])
 
   const featured = events[0]

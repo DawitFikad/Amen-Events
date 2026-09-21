@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom'
 import { Calendar, MapPin, Users, Mic, ArrowLeft, Ticket, CheckCircle2, Star, Heart, Share2, Clock, Map } from 'lucide-react'
 import { useAttendee } from '../../store/AttendeeContext'
 import { portalEventFallback } from '../../store/portalFallback'
+import { supabaseFetchEventById, supabaseSubmitReview } from '../../store/supabase'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
@@ -37,19 +38,34 @@ export default function PortalEventDetail() {
   const [reviewErr, setReviewErr] = useState('')
 
   useEffect(() => {
-    fetch(`${API_URL}/portal/events/${id}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.error) { const fb = portalEventFallback(id); if (fb) { setEvent(fb); setReviews(fb.reviews || []) } else setError(data.error) }
-        else { setEvent(data.event); setReviews(data.event.reviews || []) }
-        setLoading(false)
-      })
-      .catch(() => {
-        const fb = portalEventFallback(id)
-        if (fb) { setEvent(fb); setReviews(fb.reviews || []) }
-        else setError('Failed to load')
-        setLoading(false)
-      })
+    async function loadEvent() {
+      try {
+        const sbEvent = await supabaseFetchEventById(id)
+        if (sbEvent) {
+          setEvent(sbEvent)
+          setReviews(sbEvent.reviews || [])
+          setLoading(false)
+          return
+        }
+      } catch (e) {
+        console.warn('Supabase event fetch error:', e)
+      }
+
+      fetch(`${API_URL}/portal/events/${id}`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.error) { const fb = portalEventFallback(id); if (fb) { setEvent(fb); setReviews(fb.reviews || []) } else setError(data.error) }
+          else { setEvent(data.event); setReviews(data.event.reviews || []) }
+          setLoading(false)
+        })
+        .catch(() => {
+          const fb = portalEventFallback(id)
+          if (fb) { setEvent(fb); setReviews(fb.reviews || []) }
+          else setError('Failed to load')
+          setLoading(false)
+        })
+    }
+    loadEvent()
   }, [id])
 
   const handleBuy = () => {
@@ -85,11 +101,24 @@ export default function PortalEventDetail() {
     const comment = (reviewData.comment || '').trim()
     if (comment.length < 3) { setReviewErr('Please write a few words about your experience'); return }
     setReviewErr('')
+    try {
+      const rev = await supabaseSubmitReview({
+        eventId: id,
+        rating: reviewData.rating,
+        comment,
+      })
+      setReviews([rev, ...reviews])
+      setShowReviewForm(false)
+      setReviewData({ rating: 5, comment: '' })
+      return
+    } catch (e) {
+      // Fall back to API
+    }
     const data = await authFetch(`/portal/events/${id}/reviews`, {
       method: 'POST',
       body: JSON.stringify({ ...reviewData, comment }),
     })
-    if (data.review) {
+    if (data?.review) {
       setReviews([data.review, ...reviews])
       setShowReviewForm(false)
       setReviewData({ rating: 5, comment: '' })

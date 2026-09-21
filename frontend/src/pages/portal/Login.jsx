@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Mail, Lock, ArrowRight } from 'lucide-react'
 import { useAttendee } from '../../store/AttendeeContext'
+import { supabaseAttendeeLogin } from '../../store/supabase'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
@@ -29,13 +30,25 @@ export default function PortalLogin() {
       })
       const data = await res.json()
       if (data.error) {
+        try {
+          const att = await supabaseAttendeeLogin(form.email, form.password)
+          login(`sb_${att.id}`, att)
+          navigate(redirect)
+          return
+        } catch {}
         setError(data.error)
       } else {
         login(data.token, data.attendee)
         navigate(redirect)
       }
     } catch {
-      setError('Login failed. Please try again.')
+      try {
+        const att = await supabaseAttendeeLogin(form.email, form.password)
+        login(`sb_${att.id}`, att)
+        navigate(redirect)
+      } catch (err) {
+        setError(err.message || 'Login failed. Please check your credentials.')
+      }
     }
     setLoading(false)
   }

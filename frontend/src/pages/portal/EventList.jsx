@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Calendar, MapPin, Users, ArrowRight, Search, SlidersHorizontal, X, Star } from 'lucide-react'
 import { portalCategoriesFallback, portalEventsFallback } from '../../store/portalFallback'
+import { supabaseFetchPublicEvents } from '../../store/supabase'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
@@ -32,20 +33,38 @@ export default function PortalEventList() {
 
   useEffect(() => {
     setLoading(true)
-    const params = new URLSearchParams()
-    if (filters.search) params.set('search', filters.search)
-    if (filters.category !== 'all') params.set('category', filters.category)
-    if (filters.sort) params.set('sort', filters.sort)
-    fetch(`${API_URL}/portal/events?${params}`)
-      .then((r) => r.json())
-      .then((data) => {
-        setEvents(data.events || portalEventsFallback({ search: filters.search, category: filters.category, sort: filters.sort }))
-        setLoading(false)
-      })
-      .catch(() => {
-        setEvents(portalEventsFallback({ search: filters.search, category: filters.category, sort: filters.sort }))
-        setLoading(false)
-      })
+    async function loadEvents() {
+      try {
+        const sbEvents = await supabaseFetchPublicEvents({
+          search: filters.search,
+          category: filters.category,
+          sort: filters.sort,
+        })
+        if (sbEvents && sbEvents.length > 0) {
+          setEvents(sbEvents)
+          setLoading(false)
+          return
+        }
+      } catch (e) {
+        console.warn('Supabase events fetch error:', e)
+      }
+
+      const params = new URLSearchParams()
+      if (filters.search) params.set('search', filters.search)
+      if (filters.category !== 'all') params.set('category', filters.category)
+      if (filters.sort) params.set('sort', filters.sort)
+      fetch(`${API_URL}/portal/events?${params}`)
+        .then((r) => r.json())
+        .then((data) => {
+          setEvents(data.events || portalEventsFallback({ search: filters.search, category: filters.category, sort: filters.sort }))
+          setLoading(false)
+        })
+        .catch(() => {
+          setEvents(portalEventsFallback({ search: filters.search, category: filters.category, sort: filters.sort }))
+          setLoading(false)
+        })
+    }
+    loadEvents()
   }, [filters.search, filters.category, filters.sort])
 
   const cities = useMemo(() => {

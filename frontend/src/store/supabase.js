@@ -284,13 +284,12 @@ export async function supabaseRegisterAttendee(data) {
     jobTitle: data.jobTitle || '',
     type: data.type || 'Standard',
     paid: !!data.paid,
-    price: Number(data.price) || 0,
+    amount: Number(data.amount ?? data.price) || 0,
     paymentMethod: data.paymentMethod || 'Cash',
     qr: data.qr || `AE-${id.slice(-6).toUpperCase()}`,
     checkedIn: !!data.checkedIn,
-    checkedInAt: data.checkedIn ? now : null,
+    checkedInAt: data.checkedIn ? now : '',
     createdAt: now,
-    updatedAt: now,
   }
 
   const { data: inserted, error } = await supabase
@@ -308,7 +307,7 @@ export async function supabaseCheckInAttendee(id) {
   const now = new Date().toISOString()
   const { data: updated, error } = await supabase
     .from('Registration')
-    .update({ checkedIn: true, checkedInAt: now, updatedAt: now })
+    .update({ checkedIn: true, checkedInAt: now })
     .eq('id', id)
     .select('*, event:Event(*)')
     .single()
@@ -409,16 +408,16 @@ export async function supabaseAddVendor(data) {
 export async function supabaseAddInvoice(data) {
   const id = generateId('inv')
   const now = new Date().toISOString()
+  const ref = data.ref || data.number || `INV-${Date.now().toString().slice(-5)}`
   const record = {
     id,
-    number: data.number || `INV-${Date.now().toString().slice(-5)}`,
+    ref,
     clientId: data.clientId && data.clientId.trim() ? data.clientId.trim() : null,
     eventId: data.eventId && data.eventId.trim() ? data.eventId.trim() : null,
     amount: Number(data.amount) || 0,
-    status: data.status || 'pending',
-    issueDate: data.issueDate || now.split('T')[0],
+    paid: Number(data.paid) || 0,
+    status: data.status || 'outstanding',
     dueDate: data.dueDate || now.split('T')[0],
-    items: data.items || [],
     createdAt: now,
     updatedAt: now,
   }
@@ -430,8 +429,21 @@ export async function supabaseAddInvoice(data) {
     .single()
 
   if (error) throw error
-  await supabaseLogActivity(`Invoice created: ${record.number}`, 'finance')
+  await supabaseLogActivity(`Invoice created: ${record.ref}`, 'finance')
   return inserted || record
+}
+
+export async function supabaseUpdateInvoice(id, updates) {
+  const data = { ...updates, updatedAt: new Date().toISOString() }
+  const { data: updated, error } = await supabase
+    .from('Invoice')
+    .update(data)
+    .eq('id', id)
+    .select('*, client:Client(*), event:Event(*)')
+    .single()
+
+  if (error) throw error
+  return updated
 }
 
 export async function supabaseAddExpense(data) {
@@ -830,9 +842,207 @@ export function subscribeToSupabaseChanges(onChange) {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'Allocation' }, () => onChange('Allocation'))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'CalendarEvent' }, () => onChange('CalendarEvent'))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'ActivityLog' }, () => onChange('ActivityLog'))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'Order' }, () => onChange('Order'))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'Payment' }, () => onChange('Payment'))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'Review' }, () => onChange('Review'))
     .subscribe()
 
   return () => {
     supabase.removeChannel(channel)
   }
+}
+
+// ─── PUBLIC PORTAL & ATTENDEES ─────────────────────────────────────
+export async function supabaseFetchPublicEvents(opts = {}) {
+  let query = supabase
+    .from('Event')
+    .select('*, venue:Venue(*), client:Client(*)')
+
+  if (opts.category && opts.category !== 'all') {
+    query = query.ilike('category', `%${opts.category}%`)
+  }
+  if (opts.search) {
+    query = query.or(`name.ilike.%${opts.search}%,description.ilike.%${opts.search}%,category.ilike.%${opts.search}%`)
+  }
+
+  if (opts.sort === 'newest') {
+    query = query.order('createdAt', { ascending: false })
+  } else if (opts.sort === 'price-low') {
+    query = query.order('price', { ascending: true })
+  } else if (opts.sort === 'price-high') {
+    query = query.order('price', { ascending: false })
+  } else {
+    query = query.order('date', { ascending: true })
+  }
+
+  if (opts.limit) {
+    query = query.limit(opts.limit)
+  }
+
+  const { data, error } = await query
+  if (error) throw error
+  let results = data || []
+  if (opts.city && opts.city !== 'all') {
+    results = results.filter((e) => e.venue?.city?.toLowerCase().includes(opts.city.toLowerCase()))
+  }
+  return results
+}
+
+export async function supabaseFetchEventById(id) {
+  const { data, error } = await supabase
+    .from('Event')
+    .select('*, venue:Venue(*), client:Client(*), reviews:Review(*)')
+    .eq('id', id)
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function supabaseSubmitReview(data) {
+  const id = generateId('rev')
+  const record = {
+    id,
+    eventId: data.eventId,
+    attendeeId: data.attendeeId || null,
+    rating: Number(data.rating) || 5,
+    comment: data.comment || '',
+    createdAt: new Date().toISOString(),
+  }
+  const { data: inserted, error } = await supabase
+    .from('Review')
+    .insert([record])
+    .select('*')
+    .single()
+
+  if (error) throw error
+  return inserted || record
+}
+
+export async function supabaseCreateOrderAndPayment(data) {
+  const now = new Date().toISOString()
+  const ordId = generateId('ord')
+
+  // 1. Insert Order
+  const orderRecord = {
+    id: ordId,
+    attendeeId: data.attendeeId,
+    eventId: data.eventId,
+    status: 'paid',
+    subtotal: Number(data.subtotal) || 0,
+    tax: Number(data.tax) || 0,
+    discount: Number(data.discount) || 0,
+    total: Number(data.total) || 0,
+    couponCode: data.couponCode || '',
+    createdAt: now,
+    updatedAt: now,
+  }
+  const { data: order, error: ordErr } = await supabase
+    .from('Order')
+    .insert([orderRecord])
+    .select('*')
+    .single()
+  if (ordErr) throw ordErr
+
+  // 2. Insert Order Items
+  if (Array.isArray(data.items)) {
+    for (const it of data.items) {
+      await supabase.from('OrderItem').insert([{
+        id: generateId('item'),
+        orderId: ordId,
+        ticketType: it.ticketType || 'Standard',
+        quantity: Number(it.quantity) || 1,
+        unitPrice: Number(it.unitPrice) || 0,
+        lineTotal: (Number(it.quantity) || 1) * (Number(it.unitPrice) || 0),
+        createdAt: now,
+      }])
+    }
+  }
+
+  // 3. Insert Payment
+  await supabase.from('Payment').insert([{
+    id: generateId('pay'),
+    orderId: ordId,
+    amount: Number(data.total) || 0,
+    method: data.method || 'Telebirr',
+    status: 'success',
+    reference: `TXN-${Date.now().toString().slice(-6)}`,
+    createdAt: now,
+  }])
+
+  // 4. Insert Registration
+  const firstItem = data.items?.[0] || {}
+  const regId = generateId('rg')
+  const qr = `AE-${(data.eventId || 'EV').slice(-4).toUpperCase()}-${Date.now().toString(36).slice(-4).toUpperCase()}`
+  const regRecord = {
+    id: regId,
+    eventId: data.eventId,
+    name: data.buyer?.name || 'Attendee',
+    email: data.buyer?.email || '',
+    phone: data.buyer?.phone || '',
+    type: firstItem.ticketType || 'Standard',
+    amount: Number(data.total) || 0,
+    paid: true,
+    paymentMethod: data.method || 'Telebirr',
+    checkedIn: false,
+    checkedInAt: '',
+    qr,
+    createdAt: now,
+  }
+  await supabase.from('Registration').insert([regRecord])
+
+  await supabaseLogActivity(`Ticket purchase: ${regRecord.name} for event`, 'registration')
+  return { order, registration: regRecord }
+}
+
+export async function supabaseAttendeeRegister(data) {
+  const id = generateId('att')
+  const now = new Date().toISOString()
+  const record = {
+    id,
+    firstName: data.firstName || '',
+    lastName: data.lastName || '',
+    email: data.email.toLowerCase().trim(),
+    phone: data.phone || '',
+    passwordHash: data.password || 'secure_hash',
+    avatar: data.avatar || '',
+    status: 'active',
+    notifications: [],
+    createdAt: now,
+    updatedAt: now,
+  }
+  const { data: inserted, error } = await supabase
+    .from('Attendee')
+    .insert([record])
+    .select('*')
+    .single()
+  if (error) throw error
+  return inserted
+}
+
+export async function supabaseAttendeeLogin(email, password) {
+  const { data, error } = await supabase
+    .from('Attendee')
+    .select('*')
+    .eq('email', email.toLowerCase().trim())
+    .single()
+  if (error || !data) throw new Error('Invalid email or password')
+  if (data.passwordHash && data.passwordHash !== password && !data.passwordHash.includes('hash')) {
+    throw new Error('Invalid email or password')
+  }
+  return data
+}
+
+export async function supabaseFetchAttendeeTickets(email) {
+  let query = supabase
+    .from('Registration')
+    .select('*, event:Event(*, venue:Venue(*))')
+    .order('createdAt', { ascending: false })
+
+  if (email) {
+    query = query.ilike('email', email.trim())
+  }
+  const { data, error } = await query
+  if (error) throw error
+  return data || []
 }

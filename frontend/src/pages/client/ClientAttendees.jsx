@@ -71,7 +71,7 @@ export default function ClientAttendees() {
           {myEvents.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
         </select>
         <button className="btn-outline text-xs" onClick={() => {
-          downloadCSV('client-attendees.csv', ['Attendee', 'Email', 'Event', 'Type', 'Amount', 'Checked In'], allRegistrations.map((r) => [r.name, r.email, myEvents.find((e) => e.id === r.eventId)?.name, r.type, r.amount, r.checkedIn ? 'Yes' : 'No']))
+          downloadCSV('client-attendees.csv', ['Attendee', 'Email', 'Event', 'Type', 'Amount', 'Checked In'], allRegistrations.map((r) => [r.name, r.email, myEvents.find((e) => e.id === r.eventId)?.name, r.type, r.amount ?? r.price ?? 0, r.checkedIn ? 'Yes' : 'No']))
         }}><Download size={14} /> Export</button>
       </div>
 
@@ -94,7 +94,7 @@ export default function ClientAttendees() {
                     <Td className="text-ink/60">{r.email}</Td>
                     <Td className="text-ink/60">{evt?.name || '-'}</Td>
                     <Td className="text-ink/60">{r.type}</Td>
-                    <Td className="font-semibold text-brand-700">{fmt(r.amount)}</Td>
+                    <Td className="font-semibold text-brand-700">{fmt(r.amount ?? r.price ?? 0)}</Td>
                     <Td>{r.checkedIn ? <Badge status="active" label="Checked In" /> : <Badge status="pending" label="Pending" />}</Td>
                   </tr>
                 )

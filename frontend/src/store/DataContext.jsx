@@ -34,6 +34,7 @@ import {
   supabaseAddResource,
   supabaseAddVendor,
   supabaseAddInvoice,
+  supabaseUpdateInvoice,
   supabaseAddExpense,
   supabaseAddSpeaker,
   supabaseAddExhibitor,
@@ -127,7 +128,7 @@ export function DataProvider({ children }) {
               return {
                 ...s,
                 ...sbData,
-                calendarEvents: calendarEventsSeed(),
+                calendarEvents: sbData.calendarEvents?.length ? sbData.calendarEvents : calendarEventsSeed(),
                 currentUserId: s.currentUserId || defaultUser?.id || 'st1',
                 currentUser: defaultUser,
                 lastLogin: s.lastLogin || new Date().toISOString(),
@@ -751,15 +752,23 @@ export function DataProvider({ children }) {
   }, [backendOnline, patch, patchBy, logActivity, setDemoFlag])
 
   const recordPayment = useCallback(async (invoiceId, amount) => {
+    const target = state.invoices.find((i) => i.id === invoiceId)
+    const paid = (target?.paid || 0) + Number(amount)
+    const status = paid >= (target?.amount || 0) ? 'paid' : paid > 0 ? 'partial' : 'outstanding'
+    try {
+      await supabaseUpdateInvoice(invoiceId, { paid, status })
+    } catch (e) {
+      console.warn('Supabase invoice update error:', e)
+    }
     if (backendOnline) { try { await api.finance.recordPayment(invoiceId, amount) } catch (e) {} }
     patchBy('invoices', invoiceId, (inv) => {
-      const paid = (inv.paid || 0) + amount
-      const status = paid >= inv.amount ? 'paid' : paid > 0 ? 'partial' : 'outstanding'
-      return { ...inv, paid, status }
+      const p = (inv.paid || 0) + Number(amount)
+      const s = p >= inv.amount ? 'paid' : p > 0 ? 'partial' : 'outstanding'
+      return { ...inv, paid: p, status: s }
     })
     setDemoFlag('financeAction', (n) => (n || 0) + 1)
     logActivity(`Payment of ${amount} recorded`, 'finance')
-  }, [backendOnline, patchBy, logActivity, setDemoFlag])
+  }, [backendOnline, patchBy, logActivity, setDemoFlag, state.invoices])
 
   const addInvoice = useCallback(async (data) => {
     try {

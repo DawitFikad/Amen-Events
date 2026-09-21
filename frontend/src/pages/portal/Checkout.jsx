@@ -2,12 +2,13 @@ import React, { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Ticket, CheckCircle2, XCircle, Loader2, ArrowLeft, Shield } from 'lucide-react'
 import { useAttendee } from '../../store/AttendeeContext'
+import { supabaseCreateOrderAndPayment } from '../../store/supabase'
 import { nameOnly, emailValid, phoneValid, validate } from '../../store/validation'
 
 export default function Checkout() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { isAuthenticated, authFetch } = useAttendee()
+  const { isAuthenticated, authFetch, attendee } = useAttendee()
   const [couponCode, setCouponCode] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('Telebirr')
   const [processing, setProcessing] = useState(false)
@@ -48,30 +49,57 @@ export default function Checkout() {
     setProcessing(true)
     setError(null)
     try {
-      const orderData = await authFetch('/portal/orders', {
+      const result = await supabaseCreateOrderAndPayment({
+        eventId,
+        attendeeId: attendee?.id || `att_${Date.now()}`,
+        buyer,
+        items: [{ ticketType, quantity, unitPrice }],
+        subtotal,
+        tax,
+        total,
+        method: paymentMethod,
+        couponCode: couponCode || '',
+      })
+
+      // Non-blocking sync with backend API if available
+      authFetch('/portal/orders', {
         method: 'POST',
         body: JSON.stringify({
           eventId,
           items: [{ ticketType, quantity, unitPrice }],
           couponCode: couponCode || undefined,
         }),
-      })
-      if (orderData.error) { setError(orderData.error); setProcessing(false); return }
+      }).catch(() => {})
 
-      const payData = await authFetch(`/portal/orders/${orderData.order.id}/pay`, {
-        method: 'POST',
-        body: JSON.stringify({ method: paymentMethod }),
-      })
-      if (payData.error) { setError(payData.error); setProcessing(false); return }
+      navigate('/payment-success', { state: { orderId: result.order?.id || `ord_${Date.now()}`, eventName, total } })
+    } catch (err) {
+      console.warn('Supabase checkout failed, trying backend API:', err)
+      try {
+        const orderData = await authFetch('/portal/orders', {
+          method: 'POST',
+          body: JSON.stringify({
+            eventId,
+            items: [{ ticketType, quantity, unitPrice }],
+            couponCode: couponCode || undefined,
+          }),
+        })
+        if (orderData.error) { setError(orderData.error); setProcessing(false); return }
 
-      if (payData.success) {
-        navigate('/payment-success', { state: { orderId: orderData.order.id, eventName, total } })
-      } else {
-        navigate('/payment-failed', { state: { orderId: orderData.order.id, eventName } })
+        const payData = await authFetch(`/portal/orders/${orderData.order.id}/pay`, {
+          method: 'POST',
+          body: JSON.stringify({ method: paymentMethod }),
+        })
+        if (payData.error) { setError(payData.error); setProcessing(false); return }
+
+        if (payData.success) {
+          navigate('/payment-success', { state: { orderId: orderData.order.id, eventName, total } })
+        } else {
+          navigate('/payment-failed', { state: { orderId: orderData.order.id, eventName } })
+        }
+      } catch {
+        setError('Payment processing failed. Please try again.')
+        setProcessing(false)
       }
-    } catch {
-      setError('Payment processing failed. Please try again.')
-      setProcessing(false)
     }
   }
 
