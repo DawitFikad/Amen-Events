@@ -232,6 +232,55 @@ export default function PortalEventDetail() {
           </div>
         </div>
 
+        {/* Timeline & Milestones */}
+        <div className="mt-6 rounded-[20px] border border-gray-100 bg-white p-7" style={{ boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-gray-900">Event Timeline & Milestones</h2>
+            <span className="rounded-full bg-portal-50 px-3 py-1 text-xs font-bold text-portal-700">
+              {event.progress || 0}% Complete
+            </span>
+          </div>
+          <div className="mt-6 space-y-0">
+            {[
+              { key: 'planning', label: 'Planning & Concept', desc: 'Theme, agenda and budget finalized', threshold: 25 },
+              { key: 'venue', label: 'Venue & Facilities', desc: 'Stage design and venue booking confirmed', threshold: 40 },
+              { key: 'resources', label: 'Equipment & Staffing', desc: 'Technical AV, logistics and catering prepared', threshold: 55 },
+              { key: 'marketing', label: 'Public Launch', desc: 'Registrations opened and promotions live', threshold: 70 },
+              { key: 'running', label: 'Event Execution', desc: 'Live operations and guest check-in', threshold: 90 },
+              { key: 'completed', label: 'Completed', desc: 'Event concluded successfully', threshold: 100 },
+            ].map((st, i, arr) => {
+              const prog = event.progress || 0
+              const isDone = prog >= st.threshold
+              const isCurrent = !isDone && (i === 0 || prog >= arr[i - 1].threshold)
+              return (
+                <div key={st.key} className="flex gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className={`flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-bold transition ${
+                      isDone ? 'border-portal-600 bg-portal-600 text-white' : isCurrent ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-gray-200 bg-white text-gray-400'
+                    }`}>
+                      {isDone ? <CheckCircle2 size={15} /> : i + 1}
+                    </div>
+                    {i < arr.length - 1 && (
+                      <div className={`w-0.5 h-12 ${isDone ? 'bg-portal-500' : 'bg-gray-100'}`} />
+                    )}
+                  </div>
+                  <div className="pb-5">
+                    <div className="flex items-center gap-2">
+                      <p className={`text-sm font-bold ${isDone ? 'text-gray-900' : isCurrent ? 'text-amber-800' : 'text-gray-400'}`}>{st.label}</p>
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                        isDone ? 'bg-portal-50 text-portal-700' : isCurrent ? 'bg-amber-50 text-amber-700' : 'bg-gray-50 text-gray-400'
+                      }`}>
+                        {isDone ? 'Done' : isCurrent ? 'In Progress' : 'Upcoming'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">{st.desc}</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
         {/* Speakers */}
         {event.speakers?.length > 0 && (
           <div className="mt-6 rounded-[20px] border border-gray-100 bg-white p-7" style={{ boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>

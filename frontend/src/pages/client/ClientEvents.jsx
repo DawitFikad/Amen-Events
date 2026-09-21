@@ -12,18 +12,25 @@ export default function ClientEvents() {
   const { state } = useData()
   const navigate = useNavigate()
   const clientId = state.currentUserId
+  const client = state.clients.find((c) => c.id === clientId)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
 
   const myEvents = useMemo(() => {
-    let evts = state.events.filter((e) => e.clientId === clientId)
+    let evts = state.events.filter((e) => {
+      const isOwner = e.clientId === clientId
+      const hasRegistration = state.registrations.some((r) =>
+        r.eventId === e.id && (r.clientId === clientId || (client?.email && r.email?.toLowerCase() === client.email.toLowerCase()))
+      )
+      return isOwner || hasRegistration
+    })
     if (filter !== 'all') evts = evts.filter((e) => e.status === filter)
     if (search) {
       const q = search.toLowerCase()
       evts = evts.filter((e) => e.name.toLowerCase().includes(q) || e.category?.toLowerCase().includes(q))
     }
     return evts
-  }, [state.events, clientId, search, filter])
+  }, [state.events, state.registrations, clientId, client?.email, search, filter])
 
   const filters = [
     { key: 'all', label: 'All' },

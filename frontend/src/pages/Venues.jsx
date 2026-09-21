@@ -106,8 +106,8 @@ export default function Venues() {
     show(`"${v.name}" → ${status}`)
   }
 
-  const VenueMedia = ({ v, className = '' }) => v.image
-    ? <img src={v.image} alt={v.name} className={`object-cover ${className}`} />
+  const VenueMedia = ({ v, className = '' }) => v?.image
+    ? <img src={v.image} alt={v?.name || 'Venue'} className={`object-cover ${className}`} />
     : <div className={`flex w-full items-center justify-center ${className} text-white/70`}><Image size={26} /></div>
 
   const renderFields = (f, setFn) => (

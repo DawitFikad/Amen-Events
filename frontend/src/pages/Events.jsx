@@ -448,7 +448,15 @@ export default function Events() {
             {errors.category && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.category}</p>}
           </Field>
           <Field label="Status"><select className="input" value={form.status || 'upcoming'} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="upcoming">Upcoming</option><option value="ongoing">Ongoing</option><option value="completed">Completed</option><option value="Other">Other</option></select></Field>
-          <Field label="Project Manager"><select className="input" value={form.pmId || 'st2'} onChange={(e) => setForm({ ...form, pmId: e.target.value })}>{state.staff.filter((m) => m.type === 'Employee').map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select></Field>
+          <Field label="Project Manager">
+            <select className="input" value={form.pmId || (state.staff[0]?.id || '')} onChange={(e) => setForm({ ...form, pmId: e.target.value })}>
+              {state.staff.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name} ({m.jobTitle || m.role || m.dept || 'Staff'})
+                </option>
+              ))}
+            </select>
+          </Field>
         </div>
 
         {/* Schedule */}
@@ -469,7 +477,16 @@ export default function Events() {
         {/* Planning */}
         <p className="mt-5 mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/40"><ClipboardCheck size={13} /> Planning</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Venue"><select className="input" value={form.venueId || ''} onChange={(e) => setForm({ ...form, venueId: e.target.value })}><option value="">Select venue…</option>{state.venues.filter((v) => v.status === 'available').map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></Field>
+          <Field label="Venue">
+            <select className="input" value={form.venueId || ''} onChange={(e) => setForm({ ...form, venueId: e.target.value })}>
+              <option value="">Select venue…</option>
+              {state.venues.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name} ({v.city || 'Addis Ababa'})
+                </option>
+              ))}
+            </select>
+          </Field>
           <Field label="Expected Attendees"><div className="relative"><Users size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" /><input type="number" className="input pl-9" value={form.capacity || ''} onChange={(e) => setForm({ ...form, capacity: e.target.value })} placeholder="e.g. 800" /></div></Field>
           <Field label="Registration Deadline"><input type="date" className="input" value={form.deadline || ''} onChange={(e) => setForm({ ...form, deadline: e.target.value })} /></Field>
           <Field label="Budget (ETB) *">
@@ -618,8 +635,15 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
   }
 
   const tabs = [
-    ['overview', 'Overview', Sparkles], ['checklist', 'Checklists', ListChecks],
-    ['timeline', 'Timeline', GitBranch], ['budget', 'Budget', Wallet], ['documents', 'Documents', FileText],
+    ['overview', 'Overview', Sparkles],
+    ['speakers', 'Speakers', Megaphone],
+    ['sponsors', 'Sponsors', Tag],
+    ['exhibitors', 'Exhibitors', Boxes],
+    ['attendees', 'Attendees', Ticket],
+    ['checklist', 'Checklists', ListChecks],
+    ['timeline', 'Timeline', GitBranch],
+    ['budget', 'Budget', Wallet],
+    ['documents', 'Documents', FileText],
   ]
 
   return (
@@ -887,6 +911,144 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
               </div>
             </div>
           )}
+
+          {detailTab === 'speakers' && (
+            <div>
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-bold text-brand-950">Speakers & Keynotes</h3>
+                  <p className="text-xs text-ink/50">Speakers assigned to this event schedule</p>
+                </div>
+                <span className="chip bg-brand-50 text-brand-700 font-bold">
+                  {(state.speakers || []).filter((s) => s.eventId === event.id).length} Confirmed
+                </span>
+              </div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {(state.speakers || []).filter((s) => s.eventId === event.id).map((s) => (
+                  <div key={s.id} className="card p-4 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <Avatar name={s.name} initials={s.initials} color={s.color} size="md" />
+                        <Badge status={s.status} label={s.status} />
+                      </div>
+                      <h4 className="mt-3 font-bold text-brand-950">{s.name}</h4>
+                      <p className="text-xs text-ink/50">{s.company}</p>
+                      <p className="mt-2 text-xs font-semibold text-brand-700 bg-brand-50 rounded-lg p-2">
+                        Topic: {s.topic || 'General Keynote'}
+                      </p>
+                      {s.time && <p className="mt-1 text-[11px] text-ink/40">Session: {s.time}</p>}
+                    </div>
+                    {(s.email || s.phone) && (
+                      <div className="mt-3 pt-2 border-t border-brand-50 text-[11px] text-ink/50">
+                        {s.email && <p>{s.email}</p>}
+                        {s.phone && <p>{s.phone}</p>}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {(state.speakers || []).filter((s) => s.eventId === event.id).length === 0 && (
+                  <div className="col-span-full rounded-xl border border-dashed border-brand-100 p-8 text-center text-sm text-ink/40">
+                    No speakers assigned to this event yet. Add speakers in the Speaker Management module to link them here.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {detailTab === 'sponsors' && (
+            <div>
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-bold text-brand-950">Event Sponsors</h3>
+                  <p className="text-xs text-ink/50">Corporate partners and sponsorship deliverables</p>
+                </div>
+                <span className="chip bg-gold-50 text-gold-700 font-bold">
+                  {(state.sponsors || []).length} Sponsors
+                </span>
+              </div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {(state.sponsors || []).map((sp) => (
+                  <div key={sp.id} className="card p-4 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="chip bg-brand-50 text-brand-800 font-bold uppercase text-[10px]">{sp.package} Sponsor</span>
+                        <Badge status={sp.status} label={sp.status} />
+                      </div>
+                      <h4 className="mt-2 text-base font-bold text-brand-950">{sp.name}</h4>
+                      <p className="text-sm font-black text-gold-700 mt-1">ETB {Number(sp.amount || 0).toLocaleString()}</p>
+                      {sp.deliverables && (
+                        <div className="mt-2 text-xs text-ink/60 bg-brand-50/50 rounded-lg p-2">
+                          <p className="font-semibold text-brand-900 mb-1">Deliverables:</p>
+                          <p>{Array.isArray(sp.deliverables) ? sp.deliverables.join(', ') : sp.deliverables}</p>
+                        </div>
+                      )}
+                    </div>
+                    {(sp.contact || sp.email || sp.phone) && (
+                      <div className="mt-3 pt-2 border-t border-brand-50 text-[11px] text-ink/50">
+                        {sp.contact && <p className="font-semibold">{sp.contact}</p>}
+                        {sp.email && <p>{sp.email}</p>}
+                        {sp.phone && <p>{sp.phone}</p>}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {(state.sponsors || []).length === 0 && (
+                  <div className="col-span-full rounded-xl border border-dashed border-brand-100 p-8 text-center text-sm text-ink/40">
+                    No sponsors recorded. Add sponsors in the Sponsorship module.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {detailTab === 'exhibitors' && (
+            <div>
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-bold text-brand-950">Exhibitors & Booths</h3>
+                  <p className="text-xs text-ink/50">Trade show floor exhibitors and booth assignments</p>
+                </div>
+                <span className="chip bg-brand-50 text-brand-700 font-bold">
+                  {(state.exhibitors || []).length} Exhibitors
+                </span>
+              </div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {(state.exhibitors || []).map((ex) => (
+                  <div key={ex.id} className="card p-4 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="chip bg-sky-50 text-sky-800 font-bold text-[10px]">Booth {ex.booth || '-'}</span>
+                        <Badge status={ex.status} label={ex.status} />
+                      </div>
+                      <h4 className="mt-2 text-base font-bold text-brand-950">{ex.company}</h4>
+                      <div className="mt-1 flex items-center gap-2 text-xs text-ink/60">
+                        <span>{ex.size || 'Standard'}</span>
+                        <span>·</span>
+                        <span className="font-semibold text-brand-700">{ex.package || 'Exhibitor'}</span>
+                      </div>
+                      <p className="text-xs font-bold text-emerald-700 mt-2">Paid: ETB {Number(ex.paid || 0).toLocaleString()}</p>
+                    </div>
+                    {(ex.contact || ex.email || ex.phone) && (
+                      <div className="mt-3 pt-2 border-t border-brand-50 text-[11px] text-ink/50">
+                        {ex.contact && <p className="font-semibold">{ex.contact}</p>}
+                        {ex.email && <p>{ex.email}</p>}
+                        {ex.phone && <p>{ex.phone}</p>}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {(state.exhibitors || []).length === 0 && (
+                  <div className="col-span-full rounded-xl border border-dashed border-brand-100 p-8 text-center text-sm text-ink/40">
+                    No exhibitors registered. Add exhibitors in the Exhibition module.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {detailTab === 'attendees' && (
+            <EventAttendeesTab event={event} state={state} show={show} />
+          )}
         </div>
       </div>
 
@@ -1039,7 +1201,7 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
 
 function TeamPicker({ event, state, onClose, onSave, show }) {
   const [selected, setSelected] = useState(new Set(event.team || []))
-  const members = state.staff.filter((m) => m.type === 'Employee')
+  const members = state.staff
   const toggle = (id) => {
     const next = new Set(selected)
     next.has(id) ? next.delete(id) : next.add(id)
@@ -1314,4 +1476,119 @@ function MiniStat({ label, value, tone = '' }) {
     </div>
   )
 }
+
+function EventAttendeesTab({ event, state, show }) {
+  const { checkIn } = useData()
+  const [q, setQ] = useState('')
+  const regs = (state.registrations || []).filter((r) => r.eventId === event.id)
+  const filtered = regs.filter((r) => {
+    if (!q) return true
+    const s = q.toLowerCase()
+    return r.name?.toLowerCase().includes(s) || r.email?.toLowerCase().includes(s) || r.qr?.toLowerCase().includes(s)
+  })
+  const checkedInCount = regs.filter((r) => r.checkedIn).length
+  const totalRevenue = regs.reduce((sum, r) => sum + (Number(r.amount) || 0), 0)
+
+  const handleCheckIn = async (r) => {
+    try {
+      const res = await checkIn(r.qr || r.id, event.id)
+      if (res?.ok) {
+        show(`${r.name} checked in successfully!`)
+      } else {
+        show(res?.reason || 'Check-in processed')
+      }
+    } catch (e) {
+      show('Check-in error', 'error')
+    }
+  }
+
+  return (
+    <div>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="text-base font-bold text-brand-950">Registered Attendees ({regs.length})</h3>
+          <p className="text-xs text-ink/50">{checkedInCount} checked in · ETB {totalRevenue.toLocaleString()} revenue collected</p>
+        </div>
+        <input
+          type="text"
+          className="input max-w-xs text-xs"
+          placeholder="Search by name, email, or QR code…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+      </div>
+
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="card p-3 bg-brand-50/60">
+          <p className="text-[11px] font-semibold text-ink/50">Total Registrations</p>
+          <p className="text-lg font-black text-brand-950">{regs.length}</p>
+        </div>
+        <div className="card p-3 bg-emerald-50/60">
+          <p className="text-[11px] font-semibold text-emerald-800">Checked In</p>
+          <p className="text-lg font-black text-emerald-700">{checkedInCount}</p>
+        </div>
+        <div className="card p-3 bg-gold-50/60">
+          <p className="text-[11px] font-semibold text-gold-800">Pending Arrival</p>
+          <p className="text-lg font-black text-gold-700">{regs.length - checkedInCount}</p>
+        </div>
+      </div>
+
+      <div className="card overflow-hidden">
+        {filtered.length === 0 ? (
+          <div className="p-8 text-center text-sm text-ink/40">
+            {regs.length === 0 ? 'No attendees registered for this event yet.' : 'No attendees match search query.'}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[700px]">
+              <thead className="bg-brand-50/50">
+                <tr>
+                  <Th>Attendee</Th>
+                  <Th>Email & Phone</Th>
+                  <Th>Ticket Type</Th>
+                  <Th className="text-right">Amount</Th>
+                  <Th>Status</Th>
+                  <Th className="text-right">Action</Th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-brand-50">
+                {filtered.map((r) => (
+                  <tr key={r.id} className="hover:bg-brand-50/30">
+                    <Td className="font-bold text-brand-950">{r.name}</Td>
+                    <Td className="text-xs text-ink/60">
+                      <div>{r.email || '-'}</div>
+                      <div className="text-[10px] text-ink/40">{r.phone}</div>
+                    </Td>
+                    <Td><span className="chip bg-brand-50 text-brand-800 font-semibold text-[11px]">{r.type || 'Standard'}</span></Td>
+                    <Td className="text-right font-bold text-brand-900">ETB {Number(r.amount || 0).toLocaleString()}</Td>
+                    <Td>
+                      {r.checkedIn ? (
+                        <Badge status="active" label="Checked In" />
+                      ) : (
+                        <Badge status="pending" label="Pending" />
+                      )}
+                    </Td>
+                    <Td className="text-right">
+                      {!r.checkedIn ? (
+                        <button
+                          className="btn-primary !py-1 !px-2.5 text-xs"
+                          onClick={() => handleCheckIn(r)}
+                        >
+                          Check In
+                        </button>
+                      ) : (
+                        <span className="text-xs font-semibold text-emerald-700">✓ Arrived</span>
+                      )}
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 

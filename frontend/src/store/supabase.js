@@ -303,18 +303,36 @@ export async function supabaseRegisterAttendee(data) {
   return inserted || record
 }
 
-export async function supabaseCheckInAttendee(id) {
+export async function supabaseCheckInAttendee(identifier) {
   const now = new Date().toISOString()
-  const { data: updated, error } = await supabase
+  const clean = String(identifier || '').trim()
+
+  // Try by ID first
+  let res = await supabase
     .from('Registration')
     .update({ checkedIn: true, checkedInAt: now })
-    .eq('id', id)
+    .eq('id', clean)
     .select('*, event:Event(*)')
-    .single()
+    .maybeSingle()
 
-  if (error) throw error
+  // If not found by ID, try by QR code
+  if (!res.data) {
+    res = await supabase
+      .from('Registration')
+      .update({ checkedIn: true, checkedInAt: now })
+      .ilike('qr', clean)
+      .select('*, event:Event(*)')
+      .maybeSingle()
+  }
+
+  if (res.error) throw res.error
+  const updated = res.data
+  if (updated) {
+    await supabaseLogActivity(`Attendee checked in: ${updated.name || clean} (${updated.type || 'Standard'})`, 'checkin')
+  }
   return updated
 }
+
 
 // ─── VENUES ────────────────────────────────────────────────────────
 export async function supabaseAddVenue(data) {
@@ -451,15 +469,12 @@ export async function supabaseAddExpense(data) {
   const now = new Date().toISOString()
   const record = {
     id,
-    title: data.title,
     eventId: data.eventId && data.eventId.trim() ? data.eventId.trim() : null,
     vendorId: data.vendorId && data.vendorId.trim() ? data.vendorId.trim() : null,
     amount: Number(data.amount) || 0,
     category: data.category || 'General',
-    status: data.status || 'approved',
     date: data.date || now.split('T')[0],
     createdAt: now,
-    updatedAt: now,
   }
 
   const { data: inserted, error } = await supabase
@@ -469,7 +484,7 @@ export async function supabaseAddExpense(data) {
     .single()
 
   if (error) throw error
-  await supabaseLogActivity(`Expense recorded: ${record.title}`, 'finance')
+  await supabaseLogActivity(`Expense recorded: ${data.category || data.title || 'Expense'} (ETB ${record.amount})`, 'finance')
   return inserted || record
 }
 
@@ -526,7 +541,6 @@ export async function supabaseAddSpeaker(data) {
     time: data.time || '12:00',
     status: data.status || 'pending',
     createdAt: now,
-    updatedAt: now,
   }
   const { data: inserted, error } = await supabase.from('Speaker').insert([record]).select('*, event:Event(*)').single()
   if (error) throw error
@@ -540,7 +554,7 @@ export async function supabaseAddExhibitor(data) {
   const record = {
     id,
     company: data.company || 'Exhibitor',
-    contactPerson: data.contactPerson || '',
+    contact: data.contact || data.contactPerson || '',
     email: data.email || '',
     phone: data.phone || '',
     booth: data.booth || '-',
@@ -549,7 +563,6 @@ export async function supabaseAddExhibitor(data) {
     paid: Number(data.paid) || 0,
     status: data.status || 'registering',
     createdAt: now,
-    updatedAt: now,
   }
   const { data: inserted, error } = await supabase.from('Exhibitor').insert([record]).select('*').single()
   if (error) throw error
@@ -572,7 +585,6 @@ export async function supabaseAddSponsor(data) {
     phone: data.phone || '',
     date: data.date || '',
     createdAt: now,
-    updatedAt: now,
   }
   const { data: inserted, error } = await supabase.from('Sponsor').insert([record]).select('*').single()
   if (error) throw error
@@ -992,6 +1004,26 @@ export async function supabaseCreateOrderAndPayment(data) {
   await supabase.from('Registration').insert([regRecord])
 
   await supabaseLogActivity(`Ticket purchase: ${regRecord.name} for event`, 'registration')
+
+  // Notify client and PM in Supabase
+  try {
+    const { data: ev } = await supabase.from('Event').select('name, clientId, pmId').eq('id', data.eventId).single()
+    if (ev?.clientId) {
+      await supabaseAddNotification(
+        `Ticket booked: ${regRecord.name} registered for "${ev.name}" (${firstItem.ticketType || 'Standard'}).`,
+        'registration',
+        ev.clientId
+      )
+    }
+    if (ev?.pmId) {
+      await supabaseAddNotification(
+        `Ticket booked: ${regRecord.name} registered for "${ev.name}" (${firstItem.ticketType || 'Standard'}).`,
+        'registration',
+        ev.pmId
+      )
+    }
+  } catch (e) {}
+
   return { order, registration: regRecord }
 }
 
@@ -1046,3 +1078,41 @@ export async function supabaseFetchAttendeeTickets(email) {
   if (error) throw error
   return data || []
 }
+
+export async function supabaseFetchAttendeeEvents(email) {
+  if (!email) return []
+  const cleanEmail = email.trim().toLowerCase()
+  const { data: regs, error } = await supabase
+    .from('Registration')
+    .select('*, event:Event(*, venue:Venue(*), client:Client(*))')
+    .ilike('email', cleanEmail)
+    .order('createdAt', { ascending: false })
+
+  if (error || !regs) return []
+  return regs.map((r) => {
+    const e = r.event || {}
+    return {
+      ...e,
+      id: e.id || r.eventId,
+      name: e.name || 'Registered Event',
+      date: e.date,
+      time: e.time,
+      status: e.status || 'upcoming',
+      category: e.category || 'General',
+      venue: e.venue || { name: 'TBA' },
+      client: e.client,
+      registration: {
+        id: r.id,
+        name: r.name,
+        email: r.email,
+        type: r.type,
+        amount: r.amount,
+        checkedIn: r.checkedIn,
+        checkedInAt: r.checkedInAt,
+        qr: r.qr,
+        createdAt: r.createdAt,
+      },
+    }
+  })
+}
+

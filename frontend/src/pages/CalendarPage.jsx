@@ -7,6 +7,7 @@ import api from '../store/api'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Toast } from '../components/ui'
 import { textRequired, dateRequired, validate } from '../store/validation'
+import { supabaseAddNotification, supabaseLogActivity } from '../store/supabase'
 
 const TYPE_META = {
   event: { icon: CalendarDays, color: 'bg-brand-600', label: 'Event' },
@@ -26,7 +27,7 @@ export default function CalendarPage() {
   const [cursor, setCursor] = useState(() => { const d = new Date(); return { month: d.getMonth(), year: d.getFullYear() } })
   const [selectedDate, setSelectedDate] = useState(null)
   const [showAdd, setShowAdd] = useState(false)
-  const [newEvent, setNewEvent] = useState({ title: '', type: 'meeting', date: '', time: '', location: '', notes: '' })
+  const [newEvent, setNewEvent] = useState({ title: '', type: 'meeting', date: '', time: '', location: '', notes: '', clientId: '' })
   const [errors, setErrors] = useState({})
   const [toast, setToast] = useState(null)
 
@@ -43,21 +44,19 @@ export default function CalendarPage() {
         setEvents(evts || [])
       }
     } catch (err) {
-      show(err.message || 'Failed to load calendar', 'error')
+      // Non-blocking: Supabase state holds calendar events
     }
   }
 
-  // Offline mode: derive entries from store events, tasks and meetings
-  const offlineEvents = useMemo(() => {
-    if (backendOnline) return events
+  // Combine events, tasks, and meetings from store and API
+  const sourceEvents = useMemo(() => {
     const venueName = (id) => state.venues.find((v) => v.id === id)?.name || ''
-    const evts = state.events.map((e) => ({ id: 'evt-' + e.id, title: e.name, type: 'event', date: e.date, time: e.time || '', location: venueName(e.venueId), notes: '' }))
-    const tks = state.tasks.map((t) => ({ id: 'tkt-' + t.id, title: t.title, type: 'task', date: t.due, time: '', location: '', notes: '' }))
-    const meetings = state.calendarEvents.map((m) => ({ ...m }))
-    return [...evts, ...tks, ...meetings]
-  }, [backendOnline, events, state.events, state.tasks, state.calendarEvents, state.venues])
-
-  const sourceEvents = backendOnline ? events : offlineEvents
+    const evts = (state.events || []).map((e) => ({ id: 'evt-' + e.id, title: e.name, type: 'event', date: e.date, time: e.time || '', location: venueName(e.venueId), notes: '' }))
+    const tks = (state.tasks || []).map((t) => ({ id: 'tkt-' + t.id, title: t.title, type: 'task', date: t.due, time: '', location: '', notes: '' }))
+    const meetings = (state.calendarEvents || []).map((m) => ({ ...m, type: m.type || 'meeting' }))
+    const apiEvts = (events || []).filter((e) => !meetings.some((m) => m.id === e.id) && !evts.some((ev) => ev.id === e.id))
+    return [...evts, ...tks, ...meetings, ...apiEvts]
+  }, [state.events, state.tasks, state.calendarEvents, state.venues, events])
 
   const eventsByDate = useMemo(() => {
     const map = {}
@@ -97,21 +96,37 @@ export default function CalendarPage() {
     const res = validate(newEvent, { title: [textRequired('Title', { min: 3, max: 120 })], date: [dateRequired('Date')] })
     if (!res.ok) { setErrors(res.errors); show(res.first, 'error'); return }
     setErrors({})
-    if (backendOnline) {
-      try {
-        await api.calendar.create(newEvent)
-        show('Calendar event created')
-        setShowAdd(false)
-        setNewEvent({ title: '', type: 'meeting', date: '', time: '', location: '', notes: '' })
-        await loadCalendar()
-      } catch (err) {
-        show(err.message || 'Failed to create event', 'error')
+    try {
+      const eventToSave = {
+        title: newEvent.title,
+        type: 'meeting',
+        date: newEvent.date,
+        time: newEvent.time || '',
+        location: newEvent.location || '',
+        notes: newEvent.notes || '',
+        entityId: newEvent.clientId || null,
+        userId: newEvent.clientId || null,
       }
-    } else {
-      addCalendarEvent(newEvent)
-      show('Calendar event created')
+      await addCalendarEvent(eventToSave)
+
+      // Dispatch notification & reminder to client if selected
+      if (newEvent.clientId) {
+        const clientObj = state.clients.find((c) => c.id === newEvent.clientId)
+        const clientName = clientObj?.company || clientObj?.contactPerson || 'Client'
+        await supabaseAddNotification(
+          `Meeting scheduled: "${newEvent.title}" on ${newEvent.date}${newEvent.time ? ` at ${newEvent.time}` : ''} with Amen Events.`,
+          'meeting',
+          newEvent.clientId
+        )
+        await supabaseLogActivity(`Meeting scheduled with ${clientName}: "${newEvent.title}" on ${newEvent.date}`, 'workflow')
+      }
+
+      show('Meeting scheduled successfully')
       setShowAdd(false)
-      setNewEvent({ title: '', type: 'meeting', date: '', time: '', location: '', notes: '' })
+      setNewEvent({ title: '', type: 'meeting', date: '', time: '', location: '', notes: '', clientId: '' })
+      if (backendOnline) await loadCalendar()
+    } catch (err) {
+      show(err.message || 'Failed to create meeting', 'error')
     }
   }
 
@@ -230,13 +245,28 @@ export default function CalendarPage() {
                 <input className="input" value={newEvent.title} onChange={(e) => setNewEvent((n) => ({ ...n, title: e.target.value }))} placeholder="Meeting title…" />
                 {errors.title && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.title}</p>}
               </div>
-              <div className="grid grid-cols-2 gap-3">
-<div>
-                <label className="lbl">Type</label>
-                <select className="input" value="meeting" disabled>
-                  <option value="meeting">Meeting</option>
+              <div>
+                <label className="lbl">Client / Organization</label>
+                <select
+                  className="input"
+                  value={newEvent.clientId || ''}
+                  onChange={(e) => setNewEvent((n) => ({ ...n, clientId: e.target.value }))}
+                >
+                  <option value="">Select a client (optional)...</option>
+                  {(state.clients || []).map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.company} ({c.contactPerson || c.email || 'Client'})
+                    </option>
+                  ))}
                 </select>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="lbl">Type</label>
+                  <select className="input" value="meeting" disabled>
+                    <option value="meeting">Meeting</option>
+                  </select>
+                </div>
                 <div>
                   <label className="lbl">Date</label>
                   <input type="date" className="input" value={newEvent.date} onChange={(e) => setNewEvent((n) => ({ ...n, date: e.target.value }))} />

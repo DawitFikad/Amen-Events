@@ -10,14 +10,25 @@ export default function ClientTickets() {
   const [selectedEvent, setSelectedEvent] = useState('all')
   const [qrTicket, setQrTicket] = useState(null)
 
-  const myEvents = useMemo(() => state.events.filter((e) => e.clientId === clientId), [state.events, clientId])
+  const client = state.clients.find((c) => c.id === clientId)
+  const myEvents = useMemo(() => {
+    return state.events.filter((e) => {
+      const isOwner = e.clientId === clientId
+      const hasRegistration = state.registrations.some((r) =>
+        r.eventId === e.id && (r.clientId === clientId || (client?.email && r.email?.toLowerCase() === client.email.toLowerCase()))
+      )
+      return isOwner || hasRegistration
+    })
+  }, [state.events, state.registrations, clientId, client?.email])
   const myEventIds = useMemo(() => new Set(myEvents.map((e) => e.id)), [myEvents])
 
   const allRegs = useMemo(() => {
-    let regs = state.registrations.filter((r) => myEventIds.has(r.eventId) || r.clientId === clientId)
+    let regs = state.registrations.filter((r) =>
+      myEventIds.has(r.eventId) || r.clientId === clientId || (client?.email && r.email?.toLowerCase() === client.email.toLowerCase())
+    )
     if (selectedEvent !== 'all') regs = regs.filter((r) => r.eventId === selectedEvent)
     return regs
-  }, [state.registrations, myEventIds, selectedEvent, clientId])
+  }, [state.registrations, myEventIds, selectedEvent, clientId, client?.email])
 
   const ticketTypes = ['VVIP', 'VIP', 'Standard', 'Group']
   const totalRevenue = allRegs.reduce((a, r) => a + (r.amount ?? r.price ?? 0), 0)

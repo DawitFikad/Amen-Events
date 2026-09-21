@@ -53,6 +53,7 @@ import {
   supabaseAddAllocation,
   supabaseAddCalendarEvent,
   subscribeToSupabaseChanges,
+  supabase,
 } from './supabase'
 
 const DataContext = createContext(null)
@@ -100,9 +101,20 @@ const getFallbackSeed = () => ({
   approvals: approvalsSeed, calendarEvents: calendarEventsSeed(),
 })
 
+const getCachedState = () => {
+  try {
+    const raw = sessionStorage.getItem('amen_erp_cache')
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      return { ...emptyState, ...parsed }
+    }
+  } catch (e) {}
+  return emptyState
+}
+
 export function DataProvider({ children }) {
-  const [state, setState] = useState(emptyState)
-  const [loading, setLoading] = useState(true)
+  const [state, setState] = useState(getCachedState)
+  const [loading, setLoading] = useState(() => !sessionStorage.getItem('amen_erp_cache'))
   const [backendOnline, setBackendOnline] = useState(false)
 
   // On mount: try to restore session or connect directly to Supabase
@@ -111,37 +123,36 @@ export function DataProvider({ children }) {
     let unsubscribeRealtime = null
 
     async function init() {
-      // 1. Direct Supabase initialization (works everywhere: Vercel, localhost, mobile)
+      // 1. Direct Supabase initialization (fast concurrent load)
       try {
-        const sbHealth = await checkSupabaseHealth()
-        if (sbHealth.ok) {
-          const sbData = await fetchAllSupabaseData()
-          if (mounted) {
-            setBackendOnline(true)
-            setState((s) => {
-              const defaultUser = s.currentUser || (sbData.staff?.[0] ? {
-                id: sbData.staff[0].id,
-                name: sbData.staff[0].name,
-                email: sbData.staff[0].email,
-                userRoles: [{ role: { key: 'admin' } }],
-              } : null)
-              return {
-                ...s,
-                ...sbData,
-                calendarEvents: sbData.calendarEvents?.length ? sbData.calendarEvents : calendarEventsSeed(),
-                currentUserId: s.currentUserId || defaultUser?.id || 'st1',
-                currentUser: defaultUser,
-                lastLogin: s.lastLogin || new Date().toISOString(),
-              }
-            })
-            setLoading(false)
-          }
+        const sbData = await fetchAllSupabaseData()
+        if (mounted && sbData && (sbData.events?.length || sbData.staff?.length || sbData.clients?.length)) {
+          setBackendOnline(true)
+          try { sessionStorage.setItem('amen_erp_cache', JSON.stringify(sbData)) } catch (e) {}
+          setState((s) => {
+            const defaultUser = s.currentUser || (sbData.staff?.[0] ? {
+              id: sbData.staff[0].id,
+              name: sbData.staff[0].name,
+              email: sbData.staff[0].email,
+              userRoles: [{ role: { key: 'admin' } }],
+            } : null)
+            return {
+              ...s,
+              ...sbData,
+              calendarEvents: sbData.calendarEvents?.length ? sbData.calendarEvents : calendarEventsSeed(),
+              currentUserId: s.currentUserId || defaultUser?.id || 'st1',
+              currentUser: defaultUser,
+              lastLogin: s.lastLogin || new Date().toISOString(),
+            }
+          })
+          setLoading(false)
 
           // Subscribe to live database changes from any connected device
           unsubscribeRealtime = subscribeToSupabaseChanges(async () => {
             try {
               const fresh = await fetchAllSupabaseData()
-              if (mounted) {
+              if (mounted && fresh) {
+                try { sessionStorage.setItem('amen_erp_cache', JSON.stringify(fresh)) } catch (e) {}
                 setState((s) => ({ ...s, ...fresh }))
               }
             } catch (e) {}
@@ -636,6 +647,25 @@ export function DataProvider({ children }) {
       setDemoFlag('lastRegId', registration.id)
       logActivity(`Registration added: ${data.name} (${data.type})`, 'registration')
 
+      // Notify client and PM
+      const targetEv = state.events.find((e) => e.id === data.eventId)
+      if (targetEv) {
+        if (targetEv.clientId) {
+          supabaseAddNotification(
+            `New attendee registered: ${data.name} for "${targetEv.name}".`,
+            'registration',
+            targetEv.clientId
+          ).catch(() => {})
+        }
+        if (targetEv.pmId) {
+          supabaseAddNotification(
+            `New attendee registered: ${data.name} for "${targetEv.name}".`,
+            'registration',
+            targetEv.pmId
+          ).catch(() => {})
+        }
+      }
+
       // If document attached, upload to Document table
       let docUrl = data.documentUrl || ''
       if (data.documentUrl || data.documentName) {
@@ -696,19 +726,55 @@ export function DataProvider({ children }) {
       return list.find((r) => (r.qr && ci(r.qr) === c) || (r.id && ci(r.id) === c) || (r.name && ci(r.name) === c) || (r.email && ci(r.email) === c))
     }
     const eventRegs = eventId ? state.registrations.filter((r) => r.eventId === eventId) : state.registrations
-    const existing = matchIn(eventRegs, code)
+    let existing = matchIn(eventRegs, code)
+
+    // If not found in local event registrations, check other events or query Supabase directly
     if (!existing) {
       const other = eventId ? matchIn(state.registrations.filter((r) => r.eventId !== eventId), code) : null
       if (other) return { ok: false, reason: 'wrong-event', reg: other }
+
+      // Query Supabase for freshly created or external tickets
+      try {
+        const { data: found } = await supabase
+          .from('Registration')
+          .select('*, event:Event(*)')
+          .or(`qr.ilike.${code},id.eq.${code}`)
+          .maybeSingle()
+        if (found) {
+          if (eventId && found.eventId !== eventId) {
+            return { ok: false, reason: 'wrong-event', reg: found }
+          }
+          existing = found
+        }
+      } catch (e) {}
+    }
+
+    if (!existing) {
       return { ok: false, reason: 'not-found' }
     }
+
     if (existing.checkedIn) return { ok: false, reason: 'duplicate', reg: existing }
+
+    // Helper to advance event execution progress (Stage 11: Check-in)
+    const advanceEventProgress = (targetEventId) => {
+      const targetId = targetEventId || existing.eventId
+      if (!targetId) return
+      const ev = state.events.find((e) => e.id === targetId)
+      if (ev && (ev.progress || 0) < 90) {
+        const newProgress = Math.max(ev.progress || 0, 90)
+        const newStatus = ev.status === 'upcoming' ? 'ongoing' : ev.status
+        patchBy('events', targetId, (e) => ({ ...e, progress: newProgress, status: newStatus }))
+        supabaseUpdateEvent(targetId, { progress: newProgress, status: newStatus }).catch(() => {})
+      }
+    }
+
     try {
-      const updated = await supabaseCheckInAttendee(existing.id)
-      patchBy('registrations', existing.id, (r) => ({ ...r, checkedIn: true, checkedInAt: updated.checkedInAt || new Date().toLocaleString() }))
+      const updated = await supabaseCheckInAttendee(existing.id || code)
+      patchBy('registrations', existing.id, (r) => ({ ...r, checkedIn: true, checkedInAt: updated?.checkedInAt || new Date().toLocaleString() }))
       setDemoFlag('lastCheckinId', existing.id)
       logActivity(`QR check-in recorded for ${existing.name}`, 'checkin')
-      return { ok: true, reg: { ...existing, checkedIn: true, checkedInAt: new Date().toLocaleString() } }
+      advanceEventProgress(eventId || existing.eventId)
+      return { ok: true, reg: { ...existing, checkedIn: true, checkedInAt: updated?.checkedInAt || new Date().toLocaleString() } }
     } catch (e) {
       if (backendOnline) {
         try {
@@ -716,15 +782,17 @@ export function DataProvider({ children }) {
           patchBy('registrations', registration.id, (r) => ({ ...r, checkedIn: true, checkedInAt: registration.checkedInAt || new Date().toLocaleString() }))
           setDemoFlag('lastCheckinId', registration.id)
           logActivity(`QR check-in recorded for ${registration.name}`, 'checkin')
+          advanceEventProgress(eventId || registration.eventId)
           return { ok: true, reg: registration }
         } catch (err) {}
       }
       patchBy('registrations', existing.id, (r) => ({ ...r, checkedIn: true, checkedInAt: new Date().toLocaleString() }))
       setDemoFlag('lastCheckinId', existing.id)
       logActivity(`QR check-in recorded for ${existing.name}`, 'checkin')
+      advanceEventProgress(eventId || existing.eventId)
       return { ok: true, reg: { ...existing, checkedIn: true, checkedInAt: new Date().toLocaleString() } }
     }
-  }, [backendOnline, state.registrations, patchBy, logActivity, setDemoFlag])
+  }, [backendOnline, state.registrations, state.events, patchBy, logActivity, setDemoFlag])
 
   const recordExpense = useCallback(async (data) => {
     try {

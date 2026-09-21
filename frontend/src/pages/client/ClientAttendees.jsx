@@ -13,18 +13,29 @@ export default function ClientAttendees() {
   const [search, setSearch] = useState('')
   const [selectedEvent, setSelectedEvent] = useState('all')
 
-  const myEvents = useMemo(() => state.events.filter((e) => e.clientId === clientId), [state.events, clientId])
+  const client = state.clients.find((c) => c.id === clientId)
+  const myEvents = useMemo(() => {
+    return state.events.filter((e) => {
+      const isOwner = e.clientId === clientId
+      const hasRegistration = state.registrations.some((r) =>
+        r.eventId === e.id && (r.clientId === clientId || (client?.email && r.email?.toLowerCase() === client.email.toLowerCase()))
+      )
+      return isOwner || hasRegistration
+    })
+  }, [state.events, state.registrations, clientId, client?.email])
   const myEventIds = useMemo(() => new Set(myEvents.map((e) => e.id)), [myEvents])
 
   const allRegistrations = useMemo(() => {
-    let regs = state.registrations.filter((r) => myEventIds.has(r.eventId))
+    let regs = state.registrations.filter((r) =>
+      myEventIds.has(r.eventId) || r.clientId === clientId || (client?.email && r.email?.toLowerCase() === client.email.toLowerCase())
+    )
     if (selectedEvent !== 'all') regs = regs.filter((r) => r.eventId === selectedEvent)
     if (search) {
       const q = search.toLowerCase()
       regs = regs.filter((r) => r.name.toLowerCase().includes(q) || r.email?.toLowerCase().includes(q))
     }
     return regs
-  }, [state.registrations, myEventIds, selectedEvent, search])
+  }, [state.registrations, myEventIds, clientId, client?.email, selectedEvent, search])
 
   const stats = useMemo(() => ({
     total: allRegistrations.length,

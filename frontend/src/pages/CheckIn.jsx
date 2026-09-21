@@ -80,6 +80,26 @@ export default function CheckIn() {
       (r.qr && r.qr.toLowerCase() === c) || (r.id && r.id.toLowerCase() === c) ||
       (r.name && r.name.toLowerCase() === c) || (r.email && r.email.toLowerCase() === c))
     if (!reg) {
+      // Attempt live database check via checkIn
+      if (!offlineRef.current) {
+        const res = await checkInRef.current(code, activeEvent?.id)
+        if (res?.ok) {
+          const full = res.reg
+          setResult({ ok: true, full, name: full?.name, type: full?.type, email: full?.email, phone: full?.phone, amount: full?.amount, paid: full?.paid, paymentMethod: full?.paymentMethod })
+          setTicketView({ ...full, event: activeEvent, venue: activeEvent ? state.venues.find((v) => v.id === activeEvent.venueId) : null })
+          show(`Welcome, ${full?.name || 'Guest'}! Checked in`)
+          return
+        } else if (res?.reason === 'duplicate') {
+          setResult({ ok: false, dup: true, name: res.reg?.name, type: res.reg?.type })
+          show('Already checked in - duplicate detected', 'warn')
+          return
+        } else if (res?.reason === 'wrong-event') {
+          setResult({ ok: false, payload: { name: res.reg?.name }, wrongEvent: true })
+          show(`This ticket belongs to another event - check-in is for "${activeEvent.name}"`, 'error')
+          return
+        }
+      }
+
       // A valid QR payload carries the attendee's full details even if not yet in
       // this event's local list - surface them instead of a blank "not found".
       if (parsed && parsed.payload) {

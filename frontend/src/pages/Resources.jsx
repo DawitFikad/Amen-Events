@@ -101,20 +101,37 @@ export default function Resources() {
     (cat === 'All' || r.category === cat))
 
   const counts = {
-    available: state.resources.filter((r) => r.status === 'available').length,
-    inUse: state.resources.filter((r) => r.status === 'in-use').length,
-    maintenance: state.resources.filter((r) => r.status === 'maintenance').length,
+    available: (state.resources || []).filter((r) => r.status === 'available').length,
+    inUse: (state.resources || []).filter((r) => r.status === 'in-use').length,
+    maintenance: (state.resources || []).filter((r) => r.status === 'maintenance').length,
   }
 
-  const AssetThumb = ({ r, className = 'h-9 w-9' }) => r.image
-    ? <img src={r.image} alt={r.name} className={`${className} rounded-lg object-cover ring-1 ring-brand-100`} />
+  const activeAllocations = React.useMemo(() => {
+    const list = []
+    ;(state.events || []).forEach((e) => {
+      ;(e.allocations || []).forEach((a, idx) => {
+        list.push({
+          id: `${e.id}-${a.resourceId}-${idx}`,
+          resourceId: a.resourceId,
+          eventId: e.id,
+          qty: a.qty || 1,
+          by: e.pmId || 'st1',
+          date: e.date || 'Upcoming',
+        })
+      })
+    })
+    return list.length ? list : allocations.filter((al) => (state.resources || []).some((r) => r.id === al.resourceId))
+  }, [state.events, state.resources])
+
+  const AssetThumb = ({ r, className = 'h-9 w-9' }) => r?.image
+    ? <img src={r.image} alt={r?.name || 'Asset'} className={`${className} rounded-lg object-cover ring-1 ring-brand-100`} />
     : <span className={`${className} flex items-center justify-center rounded-lg bg-brand-50 text-brand-700`}><Boxes size={16} /></span>
 
   const renderFields = (f, setFn) => (
     <>
       <div className="mb-4 flex items-center gap-4">
         <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-brand-50 ring-1 ring-brand-100">
-          {f.image
+          {f?.image
             ? <img src={f.image} alt="Asset" className="h-full w-full object-cover" />
             : <Upload size={24} className="text-brand-400" />}
         </div>
@@ -126,7 +143,7 @@ export default function Resources() {
               <Upload size={14} /> Choose image
               <input type="file" accept="image/*" className="hidden" onChange={(e) => onPhoto(e, setFn)} />
             </label>
-            {f.image && <button className="btn-ghost !py-1.5 text-xs !text-red-600" onClick={() => setFn((x) => ({ ...x, image: '' }))}><Trash2 size={13} /> Remove</button>}
+            {f?.image && <button className="btn-ghost !py-1.5 text-xs !text-red-600" onClick={() => setFn((x) => ({ ...x, image: '' }))}><Trash2 size={13} /> Remove</button>}
           </div>
         </div>
       </div>
@@ -223,22 +240,27 @@ export default function Resources() {
           <span className="flex items-center gap-1.5 text-xs text-ink/45"><AlertTriangle size={13} className="text-gold-500" /> Auto-syncs with events</span>
         </div>
         <div className="space-y-2">
-          {allocations.map((al) => {
-            const r = state.resources.find((x) => x.id === al.resourceId)
-            const ev = state.events.find((e) => e.id === al.eventId)
-            const m = state.staff.find((x) => x.id === al.by)
+          {activeAllocations.map((al) => {
+            const r = (state.resources || []).find((x) => x.id === al.resourceId)
+            const ev = (state.events || []).find((e) => e.id === al.eventId)
+            const m = (state.staff || []).find((x) => x.id === al.by)
             return (
               <div key={al.id} className="flex flex-wrap items-center gap-3 rounded-lg border border-brand-100 p-3">
                 <AssetThumb r={r} className="h-9 w-9" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-brand-950">{r?.name} × {al.qty}</p>
-                  <p className="text-[11px] text-ink/45">{ev?.name} · allocated {al.date}</p>
+                  <p className="text-sm font-semibold text-brand-950">{r?.name || 'Assigned Asset'} × {al.qty}</p>
+                  <p className="text-[11px] text-ink/45">{ev?.name || 'Event'} · allocated {al.date}</p>
                 </div>
-                <span className="hidden sm:flex items-center gap-1.5 text-xs text-ink/50">by <Avatar name={m?.name} initials={m?.initials} color={m?.color} size="xs" />{m?.name}</span>
-                <Badge status={r?.status} label={r?.status} />
+                <span className="hidden sm:flex items-center gap-1.5 text-xs text-ink/50">by <Avatar name={m?.name || 'Staff'} initials={m?.initials || 'ST'} color={m?.color || 'bg-brand-600'} size="xs" />{m?.name || 'Staff'}</span>
+                <Badge status={r?.status || 'in-use'} label={r?.status || 'in-use'} />
               </div>
             )
           })}
+          {activeAllocations.length === 0 && (
+            <p className="rounded-lg border border-dashed border-brand-200 p-4 text-center text-xs text-ink/35">
+              No active equipment allocations recorded.
+            </p>
+          )}
         </div>
       </div>
 
@@ -250,14 +272,14 @@ export default function Resources() {
         <div className="space-y-2">
           {(state.maintenance || []).length === 0 && <p className="rounded-lg border border-dashed border-brand-200 p-4 text-center text-xs text-ink/35">No maintenance tasks scheduled.</p>}
           {(state.maintenance || []).map((mt) => {
-            const r = state.resources.find((x) => x.id === mt.resourceId)
+            const r = (state.resources || []).find((x) => x.id === mt.resourceId)
             const overdue = mt.status !== 'done' && mt.date < new Date().toISOString().slice(0, 10)
             return (
               <div key={mt.id} className="flex flex-wrap items-center gap-3 rounded-lg border border-brand-100 p-3">
                 <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${mt.status === 'done' ? 'bg-brand-100 text-brand-700' : 'bg-gold-100 text-gold-700'}`}><Wrench size={16} /></span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-brand-950">{r?.name} - {mt.task}</p>
-                  <p className="text-[11px] text-ink/45">{r?.code} · scheduled {mt.date}{overdue ? ' · overdue' : ''}</p>
+                  <p className="text-sm font-semibold text-brand-950">{r?.name || 'Asset'} - {mt.task}</p>
+                  <p className="text-[11px] text-ink/45">{r?.code || '-'} · scheduled {mt.date}{overdue ? ' · overdue' : ''}</p>
                 </div>
                 <Badge status={mt.status === 'done' ? 'done' : 'scheduled'} label={mt.status} />
                 {mt.status !== 'done' && (

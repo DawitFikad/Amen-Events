@@ -2,20 +2,49 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Calendar, MapPin, Ticket, CheckCircle2, Clock, XCircle } from 'lucide-react'
 import { useAttendee } from '../../store/AttendeeContext'
+import { supabaseFetchAttendeeEvents } from '../../store/supabase'
 
 export default function MyEvents() {
-  const { authFetch, isAuthenticated } = useAttendee()
+  const { authFetch, isAuthenticated, attendee } = useAttendee()
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
 
   useEffect(() => {
     if (!isAuthenticated) { setLoading(false); return }
-    authFetch('/portal/my-events').then((data) => {
-      setEvents(data.events || [])
+
+    async function loadMyEvents() {
+      setLoading(true)
+      let list = []
+      if (attendee?.email) {
+        try {
+          const sbEvents = await supabaseFetchAttendeeEvents(attendee.email)
+          if (sbEvents && sbEvents.length > 0) {
+            list = sbEvents
+          }
+        } catch (e) {
+          console.warn('Supabase fetch attendee events error:', e)
+        }
+      }
+
+      try {
+        const data = await authFetch('/portal/my-events')
+        if (data && data.events && data.events.length > 0) {
+          const existingIds = new Set(list.map((e) => e.registration?.id || e.id))
+          for (const ev of data.events) {
+            if (!existingIds.has(ev.registration?.id || ev.id)) {
+              list.push(ev)
+            }
+          }
+        }
+      } catch (e) {}
+
+      setEvents(list)
       setLoading(false)
-    })
-  }, [isAuthenticated])
+    }
+
+    loadMyEvents()
+  }, [isAuthenticated, attendee?.email])
 
   if (!isAuthenticated) {
     return (

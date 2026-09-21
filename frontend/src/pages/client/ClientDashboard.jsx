@@ -15,7 +15,15 @@ export default function ClientDashboard() {
   const clientId = state.currentUserId
   const client = state.clients.find((c) => c.id === clientId)
 
-  const myEvents = useMemo(() => state.events.filter((e) => e.clientId === clientId), [state.events, clientId])
+  const myEvents = useMemo(() => {
+    return state.events.filter((e) => {
+      const isOwner = e.clientId === clientId
+      const hasRegistration = state.registrations.some((r) =>
+        r.eventId === e.id && (r.clientId === clientId || (client?.email && r.email?.toLowerCase() === client.email.toLowerCase()))
+      )
+      return isOwner || hasRegistration
+    })
+  }, [state.events, state.registrations, clientId, client?.email])
   const myInvoices = useMemo(() => state.invoices.filter((inv) => inv.clientId === clientId), [state.invoices, clientId])
   const myRegistrations = useMemo(() => {
     const eventIds = new Set(myEvents.map((e) => e.id))
@@ -30,6 +38,17 @@ export default function ClientDashboard() {
     const totalBudget = myEvents.reduce((a, e) => a + (e.budget || 0), 0)
     return { total: myEvents.length, upcoming, ongoing, completed, outstanding, totalBudget }
   }, [myEvents, myInvoices])
+
+  const myMeetings = useMemo(() => {
+    return (state.calendarEvents || [])
+      .filter((m) => {
+        const matchClient = m.entityId === clientId || m.userId === clientId
+        const matchCompany = client?.company && m.title?.toLowerCase().includes(client.company.toLowerCase())
+        const matchContact = client?.contactPerson && m.title?.toLowerCase().includes(client.contactPerson.toLowerCase())
+        return (m.type === 'meeting' || !m.type) && (matchClient || matchCompany || matchContact)
+      })
+      .sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999'))
+  }, [state.calendarEvents, clientId, client?.company, client?.contactPerson])
 
   const upcomingEvents = useMemo(() =>
     myEvents
@@ -167,6 +186,57 @@ export default function ClientDashboard() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Scheduled Meetings & Reminders */}
+      <div className="card p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-100 text-purple-700">
+              <Clock size={18} />
+            </span>
+            <div>
+              <p className="font-bold text-brand-950">Scheduled Meetings & Reminders</p>
+              <p className="text-xs text-ink/50">Direct briefings and status consultations with Amen Event managers</p>
+            </div>
+          </div>
+          <span className="chip bg-purple-50 text-purple-700 font-bold">{myMeetings.length} Scheduled</span>
+        </div>
+        {myMeetings.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-brand-100 p-6 text-center text-sm text-ink/40">
+            No meetings scheduled yet. When your Amen Event Manager schedules a briefing, it will appear here with live reminders.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {myMeetings.map((m) => (
+              <div key={m.id} className="flex flex-col justify-between rounded-xl border border-purple-100 bg-purple-50/20 p-4 transition hover:border-purple-300 hover:shadow-sm">
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="chip bg-purple-100 text-purple-800 text-[10px] font-bold uppercase">Meeting</span>
+                    <span className="text-xs font-semibold text-purple-700">{m.date} {m.time ? `· ${m.time}` : ''}</span>
+                  </div>
+                  <h4 className="mt-2 text-sm font-bold text-brand-950 line-clamp-1">{m.title}</h4>
+                  {m.location && (
+                    <p className="mt-1.5 flex items-center gap-1.5 text-xs text-ink/60">
+                      <MapPin size={13} className="text-purple-600 shrink-0" /> {m.location}
+                    </p>
+                  )}
+                  {m.notes && (
+                    <p className="mt-2 rounded-lg bg-white/80 p-2 text-xs text-ink/70 border border-purple-100">
+                      {m.notes}
+                    </p>
+                  )}
+                </div>
+                <div className="mt-3 flex items-center justify-between pt-2 border-t border-purple-100/60 text-[11px]">
+                  <span className="text-emerald-700 font-bold flex items-center gap-1">
+                    <CheckCircle2 size={12} /> Confirmed
+                  </span>
+                  <span className="text-ink/40 font-medium">Amen Event Manager</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Recent activities + deadlines */}
