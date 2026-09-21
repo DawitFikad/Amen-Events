@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Users, FileText, ShieldCheck, CalendarDays, UserPlus, MapPin, Wallet,
@@ -96,6 +97,16 @@ export default function DemoWizard() {
     return () => clearTimeout(t)
   }, [autoplay, current, uniqueDone.join(',')])
 
+  useEffect(() => {
+    if (demo.open) {
+      const originalOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = originalOverflow
+      }
+    }
+  }, [demo.open])
+
   const go = (step, i, opts = {}) => {
     if (i > current && !opts.force) return
     if (step.intent) setIntent(step.intent)
@@ -128,10 +139,10 @@ export default function DemoWizard() {
       </button>
 
       {/* Drawer */}
-      {demo.open && (
-        <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-brand-950/40 backdrop-blur-[1px]" onClick={() => setDemoOpen(false)} />
-          <div className="absolute right-0 top-0 flex h-full w-full max-w-sm flex-col bg-white shadow-pop">
+      {demo.open && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999]">
+          <div className="fixed inset-0 bg-brand-950/40 backdrop-blur-[1px] transition-opacity" onClick={() => setDemoOpen(false)} />
+          <div className="fixed right-0 top-0 flex h-full w-full max-w-sm flex-col bg-white shadow-pop z-10 animate-fade-in">
             {/* Header */}
             <div className="bg-brand-900 p-5 text-white">
               <div className="flex items-center justify-between">
@@ -243,7 +254,8 @@ export default function DemoWizard() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )

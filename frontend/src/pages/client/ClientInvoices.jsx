@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Wallet, Download, FileText, CheckCircle2, AlertCircle, CreditCard, Shield, X } from 'lucide-react'
 import { useData } from '../../store/DataContext'
 import { Badge, Th, Td, Toast } from '../../components/ui'
@@ -15,6 +16,16 @@ export default function ClientInvoices() {
   const [toast, setToast] = useState(null)
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 3000) }
+
+  useEffect(() => {
+    if (payInvoice) {
+      const originalOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = originalOverflow
+      }
+    }
+  }, [payInvoice])
 
   const myInvoices = useMemo(() => {
     let invs = state.invoices.filter((inv) => inv.clientId === clientId)
@@ -172,9 +183,9 @@ export default function ClientInvoices() {
       </div>
 
       {/* Pay modal */}
-      {payInvoice && (
-        <div className="fixed inset-0 z-[55] flex items-center justify-center bg-black/40 p-4" onClick={() => setPayInvoice(null)}>
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      {payInvoice && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-4 overflow-y-auto" onClick={() => setPayInvoice(null)}>
+          <div className="w-full max-w-md my-auto rounded-2xl bg-white p-6 shadow-2xl z-10 animate-scale-in" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-black text-brand-950">Pay Invoice</h3>
               <button onClick={() => setPayInvoice(null)} className="flex h-8 w-8 items-center justify-center rounded-lg text-ink/40 hover:bg-brand-50"><X size={18} /></button>
@@ -210,7 +221,8 @@ export default function ClientInvoices() {
               {busy ? (<span className="flex items-center gap-2"><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> Processing…</span>) : (<><CreditCard size={16} /> Pay ETB {fmtCompact(payAmount)}</>)}
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <Toast toast={toast} />

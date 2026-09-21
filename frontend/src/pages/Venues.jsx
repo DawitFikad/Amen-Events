@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { MapPin, Plus, CalendarDays, Users, LayoutTemplate, Phone, Mail, Image, Upload, Trash2, Info, Globe, Building2 } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, SearchBox, Toast, Modal, Field } from '../components/ui'
@@ -44,6 +45,16 @@ export default function Venues() {
       clearIntent()
     }
   }, [intent])
+
+  useEffect(() => {
+    if (detail) {
+      const originalOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = originalOverflow
+      }
+    }
+  }, [detail])
 
   const filtered = state.venues.filter((v) => v.name.toLowerCase().includes(q.toLowerCase()))
 
@@ -221,10 +232,10 @@ export default function Venues() {
       </div>
 
       {/* Detail drawer */}
-      {detail && (
-        <div className="fixed inset-0 z-40 flex justify-end">
-          <div className="absolute inset-0 bg-brand-950/30" onClick={() => setDetail(null)} />
-          <div className="relative flex h-full w-full max-w-lg flex-col bg-white shadow-pop">
+      {detail && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex justify-end">
+          <div className="fixed inset-0 bg-brand-950/30 backdrop-blur-[2px] transition-opacity" onClick={() => setDetail(null)} />
+          <div className="relative flex h-full w-full max-w-lg flex-col bg-white shadow-pop z-10 animate-fade-in">
             <div className="relative h-44">
               <VenueMedia v={detail} className="h-full w-full" />
               {!detail.image && <div className={`absolute inset-0 flex items-end p-6 ${detail.color}`}><span className="text-5xl font-black text-white/90">{detail.abbr}</span></div>}
@@ -284,7 +295,8 @@ export default function Venues() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Add venue modal */}

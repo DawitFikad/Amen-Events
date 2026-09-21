@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Ticket, TrendingUp, Download, QrCode, Users, X, CalendarDays, MapPin, CheckCircle2 } from 'lucide-react'
 import { useData } from '../../store/DataContext'
 import { fmtCompact, fmt } from '../../store/data'
@@ -9,6 +10,16 @@ export default function ClientTickets() {
   const clientId = state.currentUserId
   const [selectedEvent, setSelectedEvent] = useState('all')
   const [qrTicket, setQrTicket] = useState(null)
+
+  useEffect(() => {
+    if (qrTicket) {
+      const originalOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = originalOverflow
+      }
+    }
+  }, [qrTicket])
 
   const client = state.clients.find((c) => c.id === clientId)
   const myEvents = useMemo(() => {
@@ -148,9 +159,9 @@ export default function ClientTickets() {
       </div>
 
       {/* QR modal */}
-      {qrTicket && (
-        <div className="fixed inset-0 z-[55] flex items-center justify-center bg-black/40 p-4" onClick={() => setQrTicket(null)}>
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      {qrTicket && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-4 overflow-y-auto" onClick={() => setQrTicket(null)}>
+          <div className="w-full max-w-sm my-auto rounded-2xl bg-white p-6 shadow-2xl z-10 animate-scale-in" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
               <h3 className="font-black text-brand-950">Your Ticket</h3>
               <button onClick={() => setQrTicket(null)} className="flex h-8 w-8 items-center justify-center rounded-lg text-ink/40 hover:bg-brand-50"><X size={18} /></button>
@@ -172,7 +183,8 @@ export default function ClientTickets() {
             </div>
             <button onClick={() => { setQrTicket(null); window.print() }} className="btn-primary w-full mt-4"><Download size={16} /> Download Ticket</button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

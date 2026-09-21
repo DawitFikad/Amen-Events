@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Users, Building2, FileText, Phone, Mail, MapPin, Plus, Filter, StickyNote,
   MessageSquare, ShieldCheck, Eye, ArrowRight, Upload, Globe, Link, Trash2, Info,
@@ -245,6 +246,16 @@ export default function CRM() {
 
   const detail = view && state.clients.find((c) => c.id === view.id)
   const detailEvents = state.events.filter((e) => e.clientId === view?.id)
+
+  useEffect(() => {
+    if (detail) {
+      const originalOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = originalOverflow
+      }
+    }
+  }, [detail])
 
   useEffect(() => {
     if (!intent) return
@@ -608,10 +619,10 @@ export default function CRM() {
       </Modal>
 
       {/* Client detail drawer */}
-      {detail && (
-        <div className="fixed inset-0 z-40 flex justify-end">
-          <div className="absolute inset-0 bg-brand-950/30 backdrop-blur-[1px]" onClick={() => setView(null)} />
-          <div className="relative flex h-full w-full max-w-lg flex-col bg-white shadow-pop">
+      {detail && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex justify-end">
+          <div className="fixed inset-0 bg-brand-950/30 backdrop-blur-[1px] transition-opacity" onClick={() => setView(null)} />
+          <div className="relative flex h-full w-full max-w-lg flex-col bg-white shadow-pop z-10 animate-fade-in">
             <div className="bg-brand-900 p-6 text-white">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-4">
@@ -692,7 +703,8 @@ export default function CRM() {
               <button className="btn-primary w-full" onClick={() => { setCommClient(detail.company); setCommOpen(true) }}>Open Communication History</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* New quotation modal */}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Ticket, Plus, QrCode, Users, Download, Search, Clock3, XCircle, CheckCircle2 } from 'lucide-react'
 import { QRCodeCanvas } from 'qrcode.react'
 import { useData } from '../store/DataContext'
@@ -30,6 +31,16 @@ export default function Ticketing() {
   const [qrView, setQrView] = useState(null)
   const [q, setQ] = useState('')
   const qrCanvasRef = useRef(null)
+
+  useEffect(() => {
+    if (qrView) {
+      const originalOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = originalOverflow
+      }
+    }
+  }, [qrView])
 
   const exportList = () => {
     downloadCSV('ticket-registrations.csv',
@@ -276,10 +287,10 @@ export default function Ticketing() {
       </Modal>
 
       {/* QR ticket view */}
-      {qrView && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-brand-950/60" onClick={() => setQrView(null)} />
-          <div className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-pop">
+      {qrView && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 overflow-y-auto">
+          <div className="fixed inset-0 bg-brand-950/60 backdrop-blur-[2px] transition-opacity" onClick={() => setQrView(null)} />
+          <div className="relative w-full max-w-md my-auto overflow-hidden rounded-2xl bg-white shadow-pop z-10 animate-scale-in">
             <div className="bg-brand-900 px-6 py-4 text-white">
               <div className="flex items-center justify-between">
                 <div>
@@ -304,7 +315,7 @@ export default function Ticketing() {
               <p className="font-mono text-sm font-bold tracking-widest text-brand-900">{qrView.qr || 'AE-REG-0012'}</p>
               <p className="mt-1 text-xs text-ink/45">This QR embeds the attendee's full details - scan at the entrance to validate instantly.</p>
             </div>
-            <div className="px-6 py-4">
+            <div className="px-6 py-4 max-h-[50vh] overflow-y-auto">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-bold text-brand-950">{qrView.name}</p>
@@ -340,7 +351,8 @@ export default function Ticketing() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <Toast toast={toast} />

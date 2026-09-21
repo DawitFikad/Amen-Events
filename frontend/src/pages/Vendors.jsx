@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Handshake, Plus, Star, Phone, FileText, CheckCircle2 } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, SearchBox, Toast, EmptyState, Th, Td, Avatar, Modal, Field } from '../components/ui'
@@ -126,10 +127,10 @@ export default function Vendors() {
         </div>
       </div>
 
-      {detail && (
-        <div className="fixed inset-0 z-40 flex justify-end">
-          <div className="absolute inset-0 bg-brand-950/30" onClick={() => setDetail(null)} />
-          <div className="relative flex h-full w-full max-w-md flex-col bg-white shadow-pop">
+      {detail && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex justify-end">
+          <div className="fixed inset-0 bg-brand-950/30 backdrop-blur-[2px] transition-opacity" onClick={() => setDetail(null)} />
+          <div className="relative flex h-full w-full max-w-md flex-col bg-white shadow-pop z-10 animate-fade-in">
             <div className="bg-brand-900 p-6 text-white">
               <div className="flex items-center gap-4">
                 <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gold-400 text-2xl">{typeIcon[detail.type]}</span>
@@ -158,7 +159,8 @@ export default function Vendors() {
               <button className="btn-primary mt-6 w-full" onClick={() => { setErrors({}); setOpen(true); setForm({ type: detail.type, contact: detail.contact, phone: detail.phone, rating: detail.rating }) }}><Plus size={14} /> Add Similar Vendor</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Add vendor modal */}

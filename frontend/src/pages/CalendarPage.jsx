@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import api from '../store/api'
 import { useData } from '../store/DataContext'
-import { PageHeader, Badge, Toast } from '../components/ui'
+import { PageHeader, Badge, Toast, Modal } from '../components/ui'
 import { textRequired, dateRequired, validate } from '../store/validation'
 import { supabaseAddNotification, supabaseLogActivity } from '../store/supabase'
 
@@ -232,66 +232,58 @@ export default function CalendarPage() {
       </div>
 
       {/* Add event modal */}
-      {showAdd && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setShowAdd(false)}>
-          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-pop" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-4 flex items-center justify-between">
-              <p className="font-bold text-brand-950">New Calendar Entry</p>
-              <button onClick={() => setShowAdd(false)} className="text-ink/40 hover:text-ink/70"><X size={18} /></button>
+      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="New Meeting" width="max-w-md">
+        <div className="space-y-3">
+          <div>
+            <label className="lbl">Title</label>
+            <input className="input" value={newEvent.title} onChange={(e) => setNewEvent((n) => ({ ...n, title: e.target.value }))} placeholder="Meeting title…" />
+            {errors.title && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.title}</p>}
+          </div>
+          <div>
+            <label className="lbl">Client / Organization</label>
+            <select
+              className="input"
+              value={newEvent.clientId || ''}
+              onChange={(e) => setNewEvent((n) => ({ ...n, clientId: e.target.value }))}
+            >
+              <option value="">Select a client (optional)...</option>
+              {(state.clients || []).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.company} ({c.contactPerson || c.email || 'Client'})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="lbl">Type</label>
+              <select className="input" value="meeting" disabled>
+                <option value="meeting">Meeting</option>
+              </select>
             </div>
-            <div className="space-y-3">
-              <div>
-                <label className="lbl">Title</label>
-                <input className="input" value={newEvent.title} onChange={(e) => setNewEvent((n) => ({ ...n, title: e.target.value }))} placeholder="Meeting title…" />
-                {errors.title && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.title}</p>}
-              </div>
-              <div>
-                <label className="lbl">Client / Organization</label>
-                <select
-                  className="input"
-                  value={newEvent.clientId || ''}
-                  onChange={(e) => setNewEvent((n) => ({ ...n, clientId: e.target.value }))}
-                >
-                  <option value="">Select a client (optional)...</option>
-                  {(state.clients || []).map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.company} ({c.contactPerson || c.email || 'Client'})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="lbl">Type</label>
-                  <select className="input" value="meeting" disabled>
-                    <option value="meeting">Meeting</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="lbl">Date</label>
-                  <input type="date" className="input" value={newEvent.date} onChange={(e) => setNewEvent((n) => ({ ...n, date: e.target.value }))} />
-                  {errors.date && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.date}</p>}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="lbl">Time</label>
-                  <input type="time" className="input" value={newEvent.time} onChange={(e) => setNewEvent((n) => ({ ...n, time: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="lbl">Location</label>
-                  <input className="input" value={newEvent.location} onChange={(e) => setNewEvent((n) => ({ ...n, location: e.target.value }))} placeholder="Office, Zoom…" />
-                </div>
-              </div>
-              <div>
-                <label className="lbl">Notes</label>
-                <textarea className="input min-h-[60px]" value={newEvent.notes} onChange={(e) => setNewEvent((n) => ({ ...n, notes: e.target.value }))} placeholder="Optional notes…" />
-              </div>
-              <button onClick={addEvent} className="btn-primary w-full">Create Entry</button>
+            <div>
+              <label className="lbl">Date</label>
+              <input type="date" className="input" value={newEvent.date} onChange={(e) => setNewEvent((n) => ({ ...n, date: e.target.value }))} />
+              {errors.date && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.date}</p>}
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="lbl">Time</label>
+              <input type="time" className="input" value={newEvent.time} onChange={(e) => setNewEvent((n) => ({ ...n, time: e.target.value }))} />
+            </div>
+            <div>
+              <label className="lbl">Location</label>
+              <input className="input" value={newEvent.location} onChange={(e) => setNewEvent((n) => ({ ...n, location: e.target.value }))} placeholder="Office, Zoom…" />
+            </div>
+          </div>
+          <div>
+            <label className="lbl">Notes</label>
+            <textarea className="input min-h-[60px]" value={newEvent.notes} onChange={(e) => setNewEvent((n) => ({ ...n, notes: e.target.value }))} placeholder="Optional notes…" />
+          </div>
+          <button onClick={addEvent} className="btn-primary w-full mt-2">Create Entry</button>
         </div>
-      )}
+      </Modal>
 
       <Toast toast={toast} />
     </div>

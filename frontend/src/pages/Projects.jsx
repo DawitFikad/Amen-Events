@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import {
   KanbanSquare, Plus, CalendarDays, Calendar, Grid3x3, Users, MessageSquare,
   Paperclip, Clock3, ChevronRight, ArrowRight, LayoutGrid,
@@ -361,10 +362,18 @@ function TaskModal({ task, state, onClose, show, updateTask }) {
     updateTask(task.id, { ...edit, progress: Number(edit.progress) || 0 })
     show('Task updated')
   }
-  return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-brand-950/40" onClick={onClose} />
-      <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-pop">
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = originalOverflow
+    }
+  }, [])
+
+  const modalElement = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 overflow-y-auto">
+      <div className="fixed inset-0 bg-brand-950/40 backdrop-blur-[2px] transition-opacity" onClick={onClose} />
+      <div className="relative max-h-[90vh] w-full max-w-lg my-auto overflow-y-auto rounded-2xl bg-white p-6 shadow-pop z-10 animate-scale-in">
         <div className="mb-3 flex items-center justify-between">
           <div className="flex gap-2"><Badge status={edit.priority} label={edit.priority} /><Badge status={edit.status} label={edit.status.replace('-', ' ')} /></div>
           <button onClick={onClose} className="rounded-lg p-1 text-ink/40 hover:bg-brand-50"><X /></button>
@@ -422,6 +431,8 @@ function TaskModal({ task, state, onClose, show, updateTask }) {
       </div>
     </div>
   )
+
+  return typeof document !== 'undefined' ? createPortal(modalElement, document.body) : modalElement
 }
 
 function X() {

@@ -1,4 +1,5 @@
-import React, { useMemo, useState, useRef } from 'react'
+import React, { useMemo, useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { FileText, Download, File, Image, FileCheck, FileSpreadsheet, Search, Upload, Plus, X, CheckCircle2 } from 'lucide-react'
 import { useData } from '../../store/DataContext'
 import { downloadCSV } from '../../store/exportUtils'
@@ -55,6 +56,16 @@ export default function ClientDocuments() {
   })
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 3000) }
+
+  useEffect(() => {
+    if (showUpload) {
+      const originalOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = originalOverflow
+      }
+    }
+  }, [showUpload])
 
   const myEvents = useMemo(() => state.events.filter((e) => e.clientId === clientId), [state.events, clientId])
   const myEventIds = useMemo(() => new Set(myEvents.map((e) => e.id)), [myEvents])
@@ -246,9 +257,9 @@ export default function ClientDocuments() {
       )}
 
       {/* Upload Modal */}
-      {showUpload && (
-        <div className="fixed inset-0 z-[55] flex items-center justify-center bg-black/40 p-4" onClick={() => setShowUpload(false)}>
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      {showUpload && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-4 overflow-y-auto" onClick={() => setShowUpload(false)}>
+          <div className="w-full max-w-md my-auto rounded-2xl bg-white p-6 shadow-2xl z-10 animate-scale-in" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-black text-brand-950">Upload Document</h3>
               <button onClick={() => setShowUpload(false)} className="flex h-8 w-8 items-center justify-center rounded-lg text-ink/40 hover:bg-brand-50">
@@ -326,7 +337,8 @@ export default function ClientDocuments() {
               </button>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <Toast toast={toast} />

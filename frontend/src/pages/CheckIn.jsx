@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { QrCode, ScanLine, Users, CheckCircle2, XCircle, AlertTriangle, RefreshCw, WifiOff, Upload, Image as ImageIcon, Download, X, Ticket as TicketIcon } from 'lucide-react'
 import jsQR from 'jsqr'
 import { QRCodeCanvas } from 'qrcode.react'
@@ -19,6 +20,16 @@ export default function CheckIn() {
   const inputRef = useRef(null)
   const uploadRef = useRef(null)
   const qrCanvasRef = useRef(null)
+
+  useEffect(() => {
+    if (ticketView) {
+      const originalOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = originalOverflow
+      }
+    }
+  }, [ticketView])
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2400) }
 
@@ -484,10 +495,10 @@ export default function CheckIn() {
       </div>
 
       {/* Full ticket detail modal */}
-      {ticketView && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-brand-950/60" onClick={() => setTicketView(null)} />
-          <div className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-pop">
+      {ticketView && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 overflow-y-auto">
+          <div className="fixed inset-0 bg-brand-950/60 backdrop-blur-[2px] transition-opacity" onClick={() => setTicketView(null)} />
+          <div className="relative w-full max-w-md my-auto overflow-hidden rounded-2xl bg-white shadow-pop z-10 animate-scale-in">
             <button onClick={() => setTicketView(null)} className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"><X size={15} /></button>
             <div className="bg-brand-900 px-6 py-4 text-white">
               <div className="flex items-center justify-between">
@@ -515,7 +526,7 @@ export default function CheckIn() {
               <p className="font-mono text-sm font-bold tracking-widest text-brand-900">{ticketView.qr}</p>
               <p className="mt-1 text-xs text-ink/45">Unique ticket code - cannot be re-used after entry</p>
             </div>
-            <div className="px-6 py-4">
+            <div className="px-6 py-4 max-h-[50vh] overflow-y-auto">
               <div className="mb-3 flex items-center justify-between rounded-xl bg-brand-50 px-3 py-2">
                 <div className="flex items-center gap-2">
                   <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-white"><CheckCircle2 size={16} /></span>
@@ -558,7 +569,8 @@ export default function CheckIn() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <Toast toast={toast} />

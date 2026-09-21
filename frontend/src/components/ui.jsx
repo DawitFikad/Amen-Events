@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { Check, X, AlertTriangle, Info, TrendingUp, ChevronRight, Loader2, ArrowLeft } from 'lucide-react'
 
@@ -164,26 +165,54 @@ export function Td({ children, className = '' }) {
 // ---- Modal ---- 
 export function Modal({ open, onClose, title, children, width = 'max-w-lg' }) {
   const ref = useRef(null)
+
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose && onClose()
     if (open) window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
+
+  // Prevent background scrolling while modal is open
+  useEffect(() => {
+    if (open) {
+      const originalOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = originalOverflow
+      }
+    }
+  }, [open])
+
   if (!open) return null
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-brand-950/40 backdrop-blur-[2px]" onClick={onClose} />
-      <div ref={ref} className={`relative w-full ${width} rounded-2xl bg-white shadow-pop max-h-[90vh] flex flex-col`}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-brand-100">
+
+  const modalElement = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 overflow-y-auto">
+      <div
+        className="fixed inset-0 bg-brand-950/50 backdrop-blur-[2px] transition-opacity"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div
+        ref={ref}
+        className={`relative w-full ${width} my-auto rounded-2xl bg-white shadow-pop max-h-[90vh] flex flex-col z-10 animate-scale-in`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-brand-100 shrink-0">
           <h3 className="font-bold text-brand-950">{title}</h3>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-ink/40 hover:bg-brand-50 hover:text-brand-800">
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-ink/40 hover:bg-brand-50 hover:text-brand-800 transition"
+            aria-label="Close modal"
+          >
             <X size={18} />
           </button>
         </div>
-        <div className="overflow-y-auto px-5 py-4">{children}</div>
+        <div className="overflow-y-auto px-5 py-4 flex-1">{children}</div>
       </div>
     </div>
   )
+
+  return typeof document !== 'undefined' ? createPortal(modalElement, document.body) : modalElement
 }
 
 // ---- Field wrapper ---- 
@@ -307,11 +336,22 @@ export function SkeletonTable({ rows = 5, cols = 5 }) {
 
 // ---- Confirmation dialog for destructive actions ----
 export function ConfirmDialog({ open, onClose, onConfirm, title = 'Confirm Action', message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', danger = true }) {
+  useEffect(() => {
+    if (open) {
+      const originalOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = originalOverflow
+      }
+    }
+  }, [open])
+
   if (!open) return null
-  return (
-    <div className="fixed inset-0 z-[55] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-brand-950/40 backdrop-blur-[2px]" onClick={onClose} />
-      <div className="relative w-full max-w-sm rounded-2xl bg-white shadow-pop">
+
+  const dialogElement = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 overflow-y-auto">
+      <div className="fixed inset-0 bg-brand-950/40 backdrop-blur-[2px] transition-opacity" onClick={onClose} />
+      <div className="relative w-full max-w-sm my-auto rounded-2xl bg-white shadow-pop z-10 animate-scale-in">
         <div className="px-5 py-4">
           <div className="flex items-start gap-3">
             <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${danger ? 'bg-red-50 text-red-600' : 'bg-gold-50 text-gold-700'}`}>
@@ -330,6 +370,8 @@ export function ConfirmDialog({ open, onClose, onConfirm, title = 'Confirm Actio
       </div>
     </div>
   )
+
+  return typeof document !== 'undefined' ? createPortal(dialogElement, document.body) : dialogElement
 }
 
 // ---- Breadcrumbs ----

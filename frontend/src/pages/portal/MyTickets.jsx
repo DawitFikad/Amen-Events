@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { QrCode, Calendar, MapPin, Ticket, Download, Share2, CheckCircle2, Clock, X } from 'lucide-react'
 import { QRCodeCanvas } from 'qrcode.react'
@@ -12,6 +13,16 @@ export default function MyTickets() {
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
   const qrCanvasRef = useRef(null)
+
+  useEffect(() => {
+    if (selected) {
+      const originalOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = originalOverflow
+      }
+    }
+  }, [selected])
 
   const downloadQr = () => {
     const canvas = qrCanvasRef.current
@@ -85,9 +96,9 @@ export default function MyTickets() {
       )}
 
       {/* QR Modal - premium */}
-      {selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={() => setSelected(null)}>
-          <div className="animate-portal-scale-in w-full max-w-sm rounded-[24px] border border-gray-100 bg-white p-7 text-center" style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }} onClick={(e) => e.stopPropagation()}>
+      {selected && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm overflow-y-auto" onClick={() => setSelected(null)}>
+          <div className="animate-portal-scale-in w-full max-w-sm my-auto rounded-[24px] border border-gray-100 bg-white p-7 text-center z-10" style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }} onClick={(e) => e.stopPropagation()}>
             <button onClick={() => setSelected(null)} className="ml-auto block text-gray-400 hover:text-gray-600"><X size={20} /></button>
             <h3 className="text-lg font-bold text-gray-900">{selected.event?.name}</h3>
             <div className="mt-5 rounded-2xl border-2 border-portal-200 bg-portal-50/50 p-6">
@@ -97,7 +108,7 @@ export default function MyTickets() {
               <p className="mt-4 text-lg font-bold tracking-wider text-gray-900">{selected.qr}</p>
               <p className="mt-1 text-xs text-gray-400">QR embeds your full ticket details - present at the entrance</p>
             </div>
-            <div className="mt-4 space-y-2 text-left text-sm">
+            <div className="mt-4 space-y-2 text-left text-sm max-h-[35vh] overflow-y-auto">
               <div className="flex justify-between py-1"><span className="text-gray-400">Attendee</span><span className="font-semibold text-gray-900">{attendee?.name || '-'}</span></div>
               <div className="flex justify-between py-1"><span className="text-gray-400">Email</span><span className="font-semibold text-gray-900">{attendee?.email || '-'}</span></div>
               <div className="flex justify-between py-1.5"><span className="text-gray-400">Type</span><span className="font-semibold text-gray-900">{selected.type}</span></div>
@@ -113,7 +124,8 @@ export default function MyTickets() {
               <button onClick={() => navigator.share?.({ text: `My ticket: ${selected.qr}` }).catch(() => {})} className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"><Share2 size={16} /> Share</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
