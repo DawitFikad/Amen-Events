@@ -52,7 +52,7 @@ export function loadRefreshToken() {
   return refreshToken
 }
 
-// Core fetch wrapper with auto-refresh
+// Core fetch wrapper with auto-refresh and timeout protection
 async function apiFetch(path, options = {}) {
   const token = getAccessToken()
   const headers = {
@@ -63,21 +63,49 @@ async function apiFetch(path, options = {}) {
     headers.Authorization = `Bearer ${token}`
   }
 
-  let res = await fetch(`${API_URL}${path}`, { ...options, headers })
+  // Fast timeout to prevent blocking the UI when backend is unreachable or on serverless cold starts
+  const timeoutMs = options.timeout || 2000
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+  let res
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers,
+      signal: options.signal || controller.signal,
+    })
+  } catch (err) {
+    clearTimeout(timeoutId)
+    throw new Error(err.name === 'AbortError' ? 'Backend API request timed out' : (err.message || 'Network request failed'))
+  }
+  clearTimeout(timeoutId)
+
+  // Ensure response is actually JSON and not an HTML SPA fallback (e.g. Vercel index.html)
+  const contentType = res.headers.get('content-type') || ''
+  if (!contentType.includes('application/json')) {
+    throw new Error('Backend API unavailable (non-JSON response)')
+  }
 
   // Auto-refresh on 401
   const currentRefresh = loadRefreshToken()
   if (res.status === 401 && currentRefresh && !options._retried) {
-    const refreshRes = await fetch(`${API_URL}/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken: currentRefresh }),
-    })
-    if (refreshRes.ok) {
-      const { accessToken: newToken } = await refreshRes.json()
-      setTokens(newToken, currentRefresh)
-      headers.Authorization = `Bearer ${newToken}`
-      res = await fetch(`${API_URL}${path}`, { ...options, headers, _retried: true })
+    let refreshRes = null
+    try {
+      refreshRes = await fetch(`${API_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: currentRefresh }),
+      })
+    } catch (e) {}
+
+    if (refreshRes && refreshRes.ok) {
+      const { accessToken: newToken } = await refreshRes.json().catch(() => ({}))
+      if (newToken) {
+        setTokens(newToken, currentRefresh)
+        headers.Authorization = `Bearer ${newToken}`
+        res = await fetch(`${API_URL}${path}`, { ...options, headers, _retried: true })
+      }
     } else {
       clearTokens()
       throw new Error('Session expired')

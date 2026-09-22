@@ -43,38 +43,43 @@ export default function PortalRegister() {
 
     setLoading(true)
     try {
-      const res = await fetch(`${API_URL}/portal/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          firstName: form.firstName, lastName: form.lastName,
-          email: form.email, phone: form.phone, password: form.password,
-          avatar: form.avatar,
-        }),
-      })
-      const data = await res.json()
-      if (data.error) {
-        try {
-          const att = await supabaseAttendeeRegister(form)
-          login(`sb_${att.id}`, att)
-          navigate(redirect)
-          return
-        } catch {}
-        setError(data.error)
-      } else {
-        login(data.token, data.attendee)
-        navigate(redirect)
-      }
-    } catch {
+      // 1. Direct Supabase attendee registration (<300ms)
+      const att = await supabaseAttendeeRegister(form)
+      login(`sb_${att.id}`, att)
+      navigate(redirect)
+      return
+    } catch (sbErr) {
+      // 2. Fast API fallback if Supabase direct registration errored
       try {
-        const att = await supabaseAttendeeRegister(form)
-        login(`sb_${att.id}`, att)
-        navigate(redirect)
-      } catch (err) {
-        setError(err.message || 'Registration failed. Please try again.')
-      }
+        const controller = new AbortController()
+        const tId = setTimeout(() => controller.abort(), 1500)
+        const res = await fetch(`${API_URL}/portal/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            firstName: form.firstName, lastName: form.lastName,
+            email: form.email, phone: form.phone, password: form.password,
+            avatar: form.avatar,
+          }),
+          signal: controller.signal,
+        })
+        clearTimeout(tId)
+        if (res.ok) {
+          const contentType = res.headers.get('content-type') || ''
+          if (contentType.includes('application/json')) {
+            const data = await res.json()
+            if (data.attendee) {
+              login(data.token, data.attendee)
+              navigate(redirect)
+              return
+            }
+          }
+        }
+      } catch (e) {}
+      setError(sbErr.message || 'Registration failed. Please try again.')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (

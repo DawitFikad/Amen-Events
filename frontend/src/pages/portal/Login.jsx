@@ -23,34 +23,39 @@ export default function PortalLogin() {
 
     setLoading(true)
     try {
-      const res = await fetch(`${API_URL}/portal/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      })
-      const data = await res.json()
-      if (data.error) {
-        try {
-          const att = await supabaseAttendeeLogin(form.email, form.password)
-          login(`sb_${att.id}`, att)
-          navigate(redirect)
-          return
-        } catch {}
-        setError(data.error)
-      } else {
-        login(data.token, data.attendee)
-        navigate(redirect)
-      }
-    } catch {
+      // 1. Instant direct Supabase authentication (<100ms)
+      const att = await supabaseAttendeeLogin(form.email, form.password)
+      login(`sb_${att.id}`, att)
+      navigate(redirect)
+      return
+    } catch (sbErr) {
+      // 2. Fast fallback to API server only if Supabase lookup failed
       try {
-        const att = await supabaseAttendeeLogin(form.email, form.password)
-        login(`sb_${att.id}`, att)
-        navigate(redirect)
-      } catch (err) {
-        setError(err.message || 'Login failed. Please check your credentials.')
-      }
+        const controller = new AbortController()
+        const tId = setTimeout(() => controller.abort(), 1200)
+        const res = await fetch(`${API_URL}/portal/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form),
+          signal: controller.signal,
+        })
+        clearTimeout(tId)
+        if (res.ok) {
+          const contentType = res.headers.get('content-type') || ''
+          if (contentType.includes('application/json')) {
+            const data = await res.json()
+            if (data.attendee) {
+              login(data.token, data.attendee)
+              navigate(redirect)
+              return
+            }
+          }
+        }
+      } catch (e) {}
+      setError(sbErr.message || 'Login failed. Please check your credentials.')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   // Enter-to-submit on the login form

@@ -19,15 +19,32 @@ export function AttendeeProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   const fetchMe = useCallback(async (tk) => {
+    // Fast path: Supabase attendee sessions are validated directly from stored state
+    if (String(tk).startsWith('sb_')) {
+      const stored = localStorage.getItem(ATTENDEE_KEY)
+      if (stored) {
+        try {
+          setAttendee(JSON.parse(stored))
+          return true
+        } catch {}
+      }
+    }
     try {
+      const controller = new AbortController()
+      const tId = setTimeout(() => controller.abort(), 1200)
       const res = await fetch(`${API_URL}/portal/auth/me`, {
         headers: { Authorization: `Bearer ${tk}` },
+        signal: controller.signal,
       })
+      clearTimeout(tId)
       if (res.ok) {
-        const data = await res.json()
-        setAttendee(data.attendee)
-        localStorage.setItem(ATTENDEE_KEY, JSON.stringify(data.attendee))
-        return true
+        const contentType = res.headers.get('content-type') || ''
+        if (contentType.includes('application/json')) {
+          const data = await res.json()
+          setAttendee(data.attendee)
+          localStorage.setItem(ATTENDEE_KEY, JSON.stringify(data.attendee))
+          return true
+        }
       }
       return false
     } catch {

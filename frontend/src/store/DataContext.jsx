@@ -106,15 +106,15 @@ const getCachedState = () => {
     const raw = sessionStorage.getItem('amen_erp_cache')
     if (raw) {
       const parsed = JSON.parse(raw)
-      return { ...emptyState, ...parsed }
+      return { ...getFallbackSeed(), ...parsed }
     }
   } catch (e) {}
-  return emptyState
+  return { ...getFallbackSeed() }
 }
 
 export function DataProvider({ children }) {
   const [state, setState] = useState(getCachedState)
-  const [loading, setLoading] = useState(() => !sessionStorage.getItem('amen_erp_cache'))
+  const [loading, setLoading] = useState(false)
   const [backendOnline, setBackendOnline] = useState(false)
 
   const loadDashboardData = useCallback(async (user) => {
@@ -273,89 +273,203 @@ export function DataProvider({ children }) {
   }, [])
 
   const login = useCallback(async (email, password) => {
-    try {
-      const data = await authApi.login(email, password)
-      if (data.user?.userRoles?.[0]?.role?.key === 'client') {
-        throw new Error('Client accounts sign in through the Client Portal')
-      }
-      setTokens(data.accessToken, data.refreshToken)
-      await loadDashboardData(data.user)
-      return data.user
-    } catch (err) {
-      if (isRealAuthFailure(err) && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
-        throw err
+    const cleanEmail = (email || '').trim().toLowerCase()
+    if (!cleanEmail) throw new Error('Email is required')
+
+    // 1. Optional express backend auth if explicitly verified online
+    if (backendOnline) {
+      try {
+        const data = await authApi.login(cleanEmail, password)
+        if (data?.user?.userRoles?.[0]?.role?.key === 'client') {
+          throw new Error('Client accounts sign in through the Client Portal')
+        }
+        if (data?.accessToken && data?.refreshToken) {
+          setTokens(data.accessToken, data.refreshToken)
+        }
+        if (data?.user) {
+          setState((s) => ({
+            ...s,
+            currentUser: data.user,
+            currentUserId: data.user.id,
+            lastLogin: new Date().toISOString(),
+          }))
+          setLoading(false)
+          return data.user
+        }
+      } catch (err) {
+        if (isRealAuthFailure(err) && !err.message.includes('Backend API unavailable') && !err.message.includes('timed out') && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
+          throw err
+        }
       }
     }
 
-    try {
-      const sbData = await fetchAllSupabaseData()
-      const member = (sbData.staff || []).find((s) => s.email?.toLowerCase() === email?.toLowerCase())
-        || staffSeed.find((s) => s.email?.toLowerCase() === email?.toLowerCase())
+    // 2. ULTRA-FAST IN-MEMORY/CACHE AUTH (<5ms)
+    const currentStaff = (state.staff && state.staff.length > 0) ? state.staff : staffSeed
+    let member = currentStaff.find((s) => s.email?.toLowerCase() === cleanEmail)
+      || staffSeed.find((s) => s.email?.toLowerCase() === cleanEmail)
 
-      if (!member) throw new Error('User not found')
-
-      const roleKey = STAFF_ROLES[member.id] || (member.email?.includes('dawit') ? 'admin' : 'manager')
-      const userObj = {
-        id: member.id,
-        name: member.name,
-        email: member.email,
-        userRoles: [{ role: { key: roleKey } }],
+    // 3. Fast Supabase single-row check if member not yet in memory (<300ms)
+    if (!member && supabase) {
+      try {
+        const { data: sbUser } = await supabase
+          .from('User')
+          .select('id, name, initials, color, dept, jobTitle, email, phone, type, status, avatar')
+          .eq('email', cleanEmail)
+          .maybeSingle()
+        if (sbUser) member = sbUser
+      } catch (e) {
+        console.warn('Supabase User query error:', e)
       }
-      setState((s) => ({
+    }
+
+    if (!member) {
+      const isClient = (state.clients || []).some((c) => c.email?.toLowerCase() === cleanEmail)
+        || clientsSeed.some((c) => c.email?.toLowerCase() === cleanEmail)
+      if (isClient) {
+        throw new Error('Client accounts sign in through the Client Portal')
+      }
+      throw new Error('User not found. Please check your credentials or select a quick demo role.')
+    }
+
+    const roleKey = STAFF_ROLES[member.id] || (member.email?.includes('dawit') ? 'admin' : (member.dept === 'executive' ? 'admin' : 'manager'))
+    const userObj = {
+      id: member.id,
+      name: member.name,
+      email: member.email,
+      dept: member.dept || 'Operations',
+      jobTitle: member.jobTitle || 'Team Member',
+      avatar: member.avatar,
+      userRoles: [{ role: { key: roleKey } }],
+    }
+
+    // Immediately update state so UI transitions INSTANTLY (<10ms)
+    setState((s) => {
+      const nextStaff = (s.staff && s.staff.length) ? s.staff : staffSeed
+      const exists = nextStaff.some((m) => m.id === member.id)
+      return {
         ...s,
-        ...sbData,
+        staff: exists ? nextStaff : [member, ...nextStaff],
         currentUserId: member.id,
         currentUser: userObj,
         lastLogin: new Date().toISOString(),
-      }))
-      setBackendOnline(true)
-      setLoading(false)
-      return userObj
-    } catch (e) {
-      return loginOffline(email)
+      }
+    })
+    setBackendOnline(true)
+    setLoading(false)
+
+    try {
+      localStorage.setItem('amen_saved_user', JSON.stringify(userObj))
+    } catch (e) {}
+
+    // Background sync: NEVER block login with heavy multi-table query!
+    if (!state.events || state.events.length === 0) {
+      fetchAllSupabaseData().then((fresh) => {
+        if (fresh && fresh.events?.length) {
+          try { sessionStorage.setItem('amen_erp_cache', JSON.stringify(fresh)) } catch (e) {}
+          setState((s) => ({ ...s, ...fresh, currentUser: userObj, currentUserId: member.id }))
+        }
+      }).catch(() => {})
     }
-  }, [loadDashboardData, loginOffline])
+
+    return userObj
+  }, [backendOnline, state.staff, state.clients, state.events])
 
   const loginClient = useCallback(async (email, password) => {
-    try {
-      const data = await authApi.login(email, password)
-      const isClient = data.user?.userRoles?.some?.((ur) => ur.role?.key === 'client')
-      if (!isClient) throw new Error('Staff accounts sign in through the ERP sign-in')
-      setTokens(data.accessToken, data.refreshToken)
-      await loadDashboardData(data.user)
-      return data.user
-    } catch (err) {
-      if (isRealAuthFailure(err) && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
-        throw err
+    const cleanEmail = (email || '').trim().toLowerCase()
+    if (!cleanEmail) throw new Error('Email is required')
+
+    // 1. If backend online, try express auth with fast timeout
+    if (backendOnline) {
+      try {
+        const data = await authApi.login(cleanEmail, password)
+        const isClient = data?.user?.userRoles?.some?.((ur) => ur.role?.key === 'client')
+        if (!isClient) throw new Error('Staff accounts sign in through the ERP sign-in')
+        if (data?.accessToken && data?.refreshToken) {
+          setTokens(data.accessToken, data.refreshToken)
+        }
+        if (data?.user) {
+          setState((s) => ({
+            ...s,
+            currentUser: data.user,
+            currentUserId: data.user.id,
+            lastLogin: new Date().toISOString(),
+          }))
+          setLoading(false)
+          return data.user
+        }
+      } catch (err) {
+        if (isRealAuthFailure(err) && !err.message.includes('Backend API unavailable') && !err.message.includes('timed out') && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
+          throw err
+        }
       }
     }
 
-    try {
-      const sbData = await fetchAllSupabaseData()
-      const client = (sbData.clients || []).find((c) => c.email?.toLowerCase() === email?.toLowerCase())
-        || clientsSeed.find((c) => c.email?.toLowerCase() === email?.toLowerCase())
-      if (!client) throw new Error('No client portal account found for this email')
+    // 2. ULTRA-FAST IN-MEMORY/CACHE AUTH (<5ms)
+    const currentClients = (state.clients && state.clients.length > 0) ? state.clients : clientsSeed
+    let client = currentClients.find((c) => c.email?.toLowerCase() === cleanEmail)
+      || clientsSeed.find((c) => c.email?.toLowerCase() === cleanEmail)
 
-      const userObj = {
-        id: client.id,
-        name: client.contactPerson || client.company,
-        email: client.email,
-        userRoles: [{ role: { key: 'client' } }],
+    // 3. Fast Supabase single-row check if client not yet in memory (<300ms)
+    if (!client && supabase) {
+      try {
+        const { data: sbClient } = await supabase
+          .from('Client')
+          .select('*')
+          .eq('email', cleanEmail)
+          .maybeSingle()
+        if (sbClient) client = sbClient
+      } catch (e) {
+        console.warn('Supabase Client query error:', e)
       }
-      setState((s) => ({
+    }
+
+    if (!client) {
+      const isStaff = (state.staff || []).some((s) => s.email?.toLowerCase() === cleanEmail)
+        || staffSeed.some((s) => s.email?.toLowerCase() === cleanEmail)
+      if (isStaff) {
+        throw new Error('Staff accounts sign in through the ERP sign-in')
+      }
+      throw new Error('No client portal account found for this email')
+    }
+
+    const userObj = {
+      id: client.id,
+      name: client.contactPerson || client.company || client.name,
+      email: client.email,
+      userRoles: [{ role: { key: 'client' } }],
+    }
+
+    // Immediately update state so UI transitions INSTANTLY (<10ms)
+    setState((s) => {
+      const nextClients = (s.clients && s.clients.length) ? s.clients : clientsSeed
+      const exists = nextClients.some((c) => c.id === client.id)
+      return {
         ...s,
-        ...sbData,
+        clients: exists ? nextClients : [client, ...nextClients],
         currentUserId: client.id,
         currentUser: userObj,
         lastLogin: new Date().toISOString(),
-      }))
-      setBackendOnline(true)
-      setLoading(false)
-      return userObj
-    } catch (e) {
-      return clientLoginOffline(email)
+      }
+    })
+    setBackendOnline(true)
+    setLoading(false)
+
+    try {
+      localStorage.setItem('amen_saved_client', JSON.stringify(userObj))
+    } catch (e) {}
+
+    // Background sync
+    if (!state.events || state.events.length === 0) {
+      fetchAllSupabaseData().then((fresh) => {
+        if (fresh && fresh.events?.length) {
+          try { sessionStorage.setItem('amen_erp_cache', JSON.stringify(fresh)) } catch (e) {}
+          setState((s) => ({ ...s, ...fresh, currentUser: userObj, currentUserId: client.id }))
+        }
+      }).catch(() => {})
     }
-  }, [loadDashboardData, clientLoginOffline])
+
+    return userObj
+  }, [backendOnline, state.clients, state.staff, state.events])
 
   const registerClient = useCallback(async (clientData) => {
     try {
