@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { Settings, ShieldCheck, Users, DatabaseBackup, Activity, Bell, Globe, Lock, KeyRound, Smartphone, Mail, Download, FileText, Plus, X, Ticket } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Settings, ShieldCheck, Users, DatabaseBackup, Activity, Bell, Globe, Lock, KeyRound, Smartphone, Mail, Download, FileText, Plus, X, Ticket, Workflow, TrendingUp, ArrowUpRight } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { ROLE_DEFINITIONS, MODULES, PERMISSIONS } from '../store/permissions'
 import { PageHeader, Badge, Toast, Th, Td, Avatar, Modal, Field } from '../components/ui'
@@ -201,6 +202,75 @@ export default function Admin() {
           ))}
         </div>
       )}
+
+      {/* ── Workflow Pipeline Overview Card ── */}
+      <div className="mb-5 card overflow-hidden border-brand-200/80 shadow-sm">
+        <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between border-b border-brand-100">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
+              <Workflow size={20} />
+            </span>
+            <div>
+              <h3 className="text-sm font-black text-brand-950">Event Lifecycle Pipeline</h3>
+              <p className="text-xs text-ink/50">14-stage governance workflow — real-time status across all active events</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Link to="/erp/admin/events" className="btn-outline text-xs !py-2 flex items-center gap-1.5">
+              <TrendingUp size={13} /> Manage Events
+            </Link>
+            <Link to="/erp/workflow" className="btn-primary text-xs !py-2 flex items-center gap-1.5">
+              <Workflow size={13} /> Open Pipeline <ArrowUpRight size={13} />
+            </Link>
+          </div>
+        </div>
+        <div className="p-5 grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="rounded-xl bg-brand-50 border border-brand-100 p-4 text-center">
+            <p className="text-2xl font-black text-brand-950">{state.events.length}</p>
+            <p className="text-xs font-semibold text-ink/50 mt-1">Total Events</p>
+          </div>
+          <div className="rounded-xl bg-amber-50 border border-amber-100 p-4 text-center">
+            <p className="text-2xl font-black text-amber-700">{state.events.filter((e) => e.status === 'upcoming' || e.status === 'ongoing').length}</p>
+            <p className="text-xs font-semibold text-ink/50 mt-1">In-Flight</p>
+          </div>
+          <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-4 text-center">
+            <p className="text-2xl font-black text-emerald-700">{state.events.filter((e) => e.status === 'completed').length}</p>
+            <p className="text-xs font-semibold text-ink/50 mt-1">Completed</p>
+          </div>
+          <div className="rounded-xl bg-brand-50 border border-brand-100 p-4 text-center">
+            <p className="text-2xl font-black text-brand-700">
+              {state.events.length > 0 ? Math.round(state.events.reduce((acc, e) => acc + (e.progress ?? 0), 0) / state.events.length) : 0}%
+            </p>
+            <p className="text-xs font-semibold text-ink/50 mt-1">Avg Progress</p>
+          </div>
+        </div>
+        {state.events.length > 0 && (
+          <div className="border-t border-brand-100 px-5 py-3">
+            <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-ink/40">Top Active Events</p>
+            <div className="space-y-1.5">
+              {state.events
+                .filter((e) => e.status !== 'completed')
+                .slice(0, 4)
+                .map((e) => {
+                  const pct = e.progress ?? 0
+                  return (
+                    <div key={e.id} className="flex items-center gap-3">
+                      <p className="flex-1 truncate text-xs font-semibold text-brand-900">{e.name}</p>
+                      <span className="chip bg-brand-100 text-brand-800 text-[10px]">Stage {(e.stage ?? 0) + 1}/14</span>
+                      <div className="w-28 h-1.5 overflow-hidden rounded-full bg-brand-100">
+                        <div className="h-full bg-brand-600 transition-all" style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="text-[11px] font-bold text-brand-700 w-8 text-right">{pct}%</span>
+                      <Link to={`/erp/workflow?eventId=${e.id}`} className="text-brand-600 hover:text-brand-900 transition">
+                        <ArrowUpRight size={14} />
+                      </Link>
+                    </div>
+                  )
+                })}
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="mb-5 flex flex-wrap gap-1.5">
         {tabs.map(([v, l, I]) => (

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import {
   CalendarDays, Plus, MapPin, Users, Wallet, ClipboardCheck, FileText, Clock3,
   ChevronRight, ArrowLeft, ListChecks, Sparkles, BarChart3, GitBranch, Boxes,
   Upload, Globe, Trash2, Info as InfoIcon, Tag, Megaphone, Ticket, Image as ImageIcon, Phone,
   ChevronDown, Check, CheckCircle2, PackageCheck, Activity,
-  Mic, Store, Truck, Search,
+  Mic, Store, Truck, Search, Workflow,
 } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Progress, Avatar, Modal, ConfirmModal, Field, SearchBox, Toast, EmptyState, Th, Td, Segmented, StatCard } from '../components/ui'
@@ -639,6 +640,20 @@ export default function Events() {
                       ) : null}
                       <span className="inline-flex items-center gap-1 text-xs font-bold text-brand-700 sm:opacity-0 sm:transition sm:group-hover:opacity-100">Open <ChevronRight size={14} /></span>
                     </div>
+                  </div>
+
+                  {/* Workflow Stage Chip */}
+                  <div className="mt-2 flex items-center justify-between text-[11px]" onClick={(ev) => ev.stopPropagation()}>
+                    <span className="inline-flex items-center gap-1 rounded-md bg-brand-50 border border-brand-100 px-2 py-1 font-medium text-brand-700">
+                      <Workflow size={10} /> Stage {(e.stage ?? 0) + 1}/14
+                    </span>
+                    <Link
+                      to={`/erp/workflow?eventId=${e.id}`}
+                      onClick={(ev) => ev.stopPropagation()}
+                      className="inline-flex items-center gap-1 rounded-md bg-brand-700 px-2 py-1 text-[10px] font-bold text-white hover:bg-brand-800 transition"
+                    >
+                      <Workflow size={10} /> Pipeline
+                    </Link>
                   </div>
 
                   {/* Expandable Assigned Details */}
@@ -1812,7 +1827,14 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
                 </div>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <Link
+                to={`/erp/workflow?eventId=${event.id}`}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-xs font-bold text-white hover:bg-white/20 transition"
+                title="Open in Event Workflow Pipeline"
+              >
+                <Workflow size={14} /> Workflow Pipeline
+              </Link>
               <button className="btn-gold" onClick={onStatus}>{event.status === 'ongoing' ? 'Mark Completed' : event.status === 'completed' ? 'Reopen' : 'Start Event'}</button>
               <button className="btn-outline !border-white/20 !bg-white/10 !text-white hover:!bg-white/20" onClick={() => { setEditForm({ ...event }); setEditOpen(true) }}>Edit</button>
               <button className="rounded-xl border border-red-400/40 bg-red-500/20 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/30 transition flex items-center gap-1" onClick={() => setDeleteConfirmOpen(true)} title="Delete Event"><Trash2 size={14} /> Delete</button>
