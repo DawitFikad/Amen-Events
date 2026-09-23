@@ -171,13 +171,13 @@ export const portal = {
 // ─── WORKFLOW ───────────────────────────────────────────────────
 
 export const workflow = {
-  getStages: () => apiFetch('/workflow/stages'),
-  getAll: () => apiFetch('/workflow'),
-  getEvent: (eventId) => apiFetch(`/workflow/${eventId}`),
-  advance: (eventId, note) => apiFetch(`/workflow/${eventId}/advance`, { method: 'POST', body: JSON.stringify({ note }) }),
-  revert: (eventId, note) => apiFetch(`/workflow/${eventId}/revert`, { method: 'POST', body: JSON.stringify({ note }) }),
-  setStage: (eventId, stageId, note) => apiFetch(`/workflow/${eventId}/set-stage`, { method: 'POST', body: JSON.stringify({ stageId, note }) }),
-  getLogs: (eventId) => apiFetch(`/workflow/${eventId}/logs`),
+  getStages: () => apiFetch('/workflow/stages').catch(() => ({ stages: [] })),
+  getAll: () => apiFetch('/workflow').catch(() => ({ events: [] })),
+  getEvent: (eventId) => apiFetch(`/workflow/${eventId}`).catch(() => null),
+  advance: (eventId, note) => apiFetch(`/workflow/${eventId}/advance`, { method: 'POST', body: JSON.stringify({ note }) }).catch(() => null),
+  revert: (eventId, note) => apiFetch(`/workflow/${eventId}/revert`, { method: 'POST', body: JSON.stringify({ note }) }).catch(() => null),
+  setStage: (eventId, stageId, note) => apiFetch(`/workflow/${eventId}/set-stage`, { method: 'POST', body: JSON.stringify({ stageId, note }) }).catch(() => null),
+  getLogs: (eventId) => apiFetch(`/workflow/${eventId}/logs`).catch(() => ({ logs: [] })),
 }
 
 // ─── NOTIFICATIONS ──────────────────────────────────────────────

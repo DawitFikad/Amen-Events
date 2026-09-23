@@ -6,11 +6,13 @@ import {
   Package, Wallet, Ticket, QrCode, BarChart3, Trophy, ArrowRight, History,
   Search, Filter, ExternalLink, Sparkles, AlertCircle, Check, ArrowUpRight,
   TrendingUp, Layers, Compass, UserCheck, Shield, RefreshCw, Send,
+  Pencil, Plus, CheckSquare, MessageSquare, User, Tag, Calendar, DollarSign,
+  Users, CheckCircle, AlertTriangle, X
 } from 'lucide-react'
 import api from '../store/api'
 import { useData } from '../store/DataContext'
 import { PageHeader, Badge, Toast, Modal, Field } from '../components/ui'
-import { fmt } from '../store/data'
+import { fmt, todayISO } from '../store/data'
 
 export const CANONICAL_STAGES = [
   { id: 0, name: 'Client Created', key: 'client_created', module: 'crm', route: '/erp/crm', actionLabel: 'Open CRM' },
@@ -41,6 +43,21 @@ const PIPELINE_PHASES = [
   { id: 'planning', label: '2. Planning', range: [4, 8], color: 'from-amber-500/20 to-yellow-500/10 text-amber-700' },
   { id: 'execution', label: '3. Operations', range: [9, 11], color: 'from-emerald-500/20 to-teal-500/10 text-emerald-700' },
   { id: 'closeout', label: '4. Closeout', range: [12, 13], color: 'from-purple-500/20 to-brand-500/10 text-purple-700' },
+]
+
+const EVENT_STATUSES = [
+  { id: 'upcoming', label: 'Upcoming', cls: 'bg-blue-100 text-blue-800 border-blue-200' },
+  { id: 'planning', label: 'Planning', cls: 'bg-amber-100 text-amber-800 border-amber-200' },
+  { id: 'confirmed', label: 'Confirmed', cls: 'bg-brand-100 text-brand-800 border-brand-200' },
+  { id: 'ongoing', label: 'In Progress / Ongoing', cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+  { id: 'completed', label: 'Completed', cls: 'bg-purple-100 text-purple-800 border-purple-200' },
+  { id: 'on-hold', label: 'On Hold', cls: 'bg-gray-100 text-gray-800 border-gray-200' },
+  { id: 'cancelled', label: 'Cancelled', cls: 'bg-red-100 text-red-800 border-red-200' },
+]
+
+const EVENT_CATEGORIES = [
+  'Conference', 'Exhibition', 'Product Launch', 'Summit', 'Retreat',
+  'Gala Dinner', 'Award Ceremony', 'Workshop', 'Festival', 'Wedding', 'Other'
 ]
 
 export function computeStageChecklist(event, state) {
@@ -101,42 +118,42 @@ export function computeStageChecklist(event, state) {
         break
       case 'resources':
         done = allocations.length > 0
-        detail = allocations.length > 0 ? `${allocations.length} inventory asset(s) reserved` : 'No equipment allocated'
-        hint = allocations.length > 0 ? 'Production & AV assets assigned' : 'Reserve inventory in Resources'
+        detail = allocations.length > 0 ? `${allocations.length} inventory asset(s) deployed` : 'No gear allocated'
+        hint = allocations.length > 0 ? 'AV & production inventory locked' : 'Allocate equipment in Resources module'
         break
       case 'budget':
         done = budgetVal > 0
-        detail = `Budget: ETB ${budgetVal.toLocaleString()} | Spent: ETB ${spentVal.toLocaleString()}`
-        hint = budgetVal > 0 ? (spentVal > budgetVal ? 'Warning: Budget overspend' : 'Budget locked & monitored') : 'Configure event budget'
+        detail = budgetVal > 0 ? `Budget: ETB ${budgetVal.toLocaleString()} (Spend: ETB ${spentVal.toLocaleString()})` : 'No budget set'
+        hint = budgetVal > 0 ? `Financial utilization: ${Math.round((spentVal / (budgetVal || 1)) * 100)}%` : 'Set financial baseline in Finance'
         break
       case 'registration':
         done = registrations.length > 0
-        detail = registrations.length > 0 ? `${registrations.length} attendee(s) registered` : 'No registrations yet'
-        hint = registrations.length > 0 ? 'Attendee registration open' : 'Publish tickets on portal'
+        detail = registrations.length > 0 ? `${registrations.length} attendee(s) registered` : 'Registration pending'
+        hint = registrations.length > 0 ? 'Attendee roster active' : 'Publish passes in Ticketing'
         break
       case 'qr_tickets':
         done = qrGeneratedCount > 0
-        detail = qrGeneratedCount > 0 ? `${qrGeneratedCount} QR pass(es) generated` : 'No QR passes issued'
-        hint = qrGeneratedCount > 0 ? 'Digital check-in codes ready' : 'Issue digital tickets in Ticketing'
+        detail = qrGeneratedCount > 0 ? `${qrGeneratedCount} verified QR pass(es) generated` : 'No QR tickets issued'
+        hint = qrGeneratedCount > 0 ? 'Access credentials generated' : 'Issue QR passes to confirmed attendees'
         break
       case 'checkin':
         done = checkedInCount > 0
-        detail = checkedInCount > 0 ? `${checkedInCount} of ${registrations.length} guest(s) checked in` : 'No check-ins recorded'
-        hint = checkedInCount > 0 ? `Turnout: ${registrations.length ? Math.round((checkedInCount / registrations.length) * 100) : 0}%` : 'Scan guest tickets at venue'
+        detail = checkedInCount > 0 ? `${checkedInCount} attendee(s) checked in` : 'Doors not opened / 0 check-ins'
+        hint = checkedInCount > 0 ? 'On-site entry scanning underway' : 'Validate tickets via Check-In scanner'
         break
       case 'reports':
-        done = event.status === 'completed' || (event.stage ?? 0) >= 12
-        detail = (event.stage ?? 0) >= 12 ? 'Audit & financial reporting available' : 'Pending post-event review'
-        hint = 'View debrief & financial reports'
+        done = (event.stage >= 12 || (state.invoices || []).some((i) => i.eventId === event.id))
+        detail = (state.invoices || []).some((i) => i.eventId === event.id) ? 'Invoices & financial report generated' : 'Post-event accounting review'
+        hint = 'Generate settlement reports and client invoice'
         break
       case 'completed':
-        done = event.status === 'completed' || (event.stage ?? 0) === 13
-        detail = event.status === 'completed' ? 'Event officially completed & evaluated' : 'Workflow in progress'
-        hint = 'Final stage: Lifecycle closed'
+        done = event.stage === 13 || event.status === 'completed'
+        detail = (event.stage === 13 || event.status === 'completed') ? 'Event officially wrapped & archived' : 'Pending final signoff'
+        hint = 'All 14 lifecycle milestones finalized'
         break
       default:
-        done = false
-        detail = ''
+        done = idx <= event.stage
+        detail = 'Stage milestone'
         hint = ''
     }
 
@@ -150,32 +167,45 @@ export function computeStageChecklist(event, state) {
 }
 
 export default function WorkflowPage() {
-  const { rbac, backendOnline, state, updateEvent, logActivity } = useData()
+  const { rbac, backendOnline, state, updateEvent, addTask, updateTask, addNotification, logActivity, setDemoFlag } = useData()
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
 
-  const [eventsData, setEventsData] = useState([])
   const [selectedId, setSelectedId] = useState(searchParams.get('eventId') || null)
-  const [logs, setLogs] = useState([])
-  const [view, setView] = useState('pipeline') // 'pipeline' | 'matrix' | 'history'
+  const [view, setView] = useState('pipeline') // 'pipeline' | 'matrix' | 'tasks' | 'history'
   const [phaseFilter, setPhaseFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [toast, setToast] = useState(null)
-  const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
 
-  // Transition Note Modal state
+  // Stage Transition Modal state
   const [modalOpen, setModalOpen] = useState(false)
   const [modalTargetStage, setModalTargetStage] = useState(null)
   const [modalActionType, setModalActionType] = useState('advance') // 'advance' | 'revert' | 'jump'
   const [modalNote, setModalNote] = useState('')
 
+  // Quick Edit Event Modal state
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [editForm, setEditForm] = useState({})
+
+  // Dispatch Action / Task Modal state
+  const [actionModalOpen, setActionModalOpen] = useState(false)
+  const [actionForm, setActionForm] = useState({
+    title: '',
+    description: '',
+    priority: 'medium',
+    due: todayISO(),
+    assigneeId: '',
+    stageId: 5,
+    notify: true,
+  })
+
   const show = (m, t = 'success') => {
     setToast({ message: m, type: t })
-    setTimeout(() => setToast(null), 3000)
+    setTimeout(() => setToast(null), 3200)
   }
 
-  // Derive enriched events list from store, ensuring accurate stage & progress
+  // Derive enriched events list directly from live Supabase / local data store
   const storeEvents = useMemo(() => {
     return (state.events || []).map((e) => {
       const explicitStage = typeof e.stage === 'number' && e.stage >= 0 && e.stage <= 13 ? e.stage : null
@@ -183,20 +213,30 @@ export default function WorkflowPage() {
       const checklist = computeStageChecklist({ ...e, stage: computedStage }, state)
       const client = state.clients?.find((c) => c.id === e.clientId)
       const venue = state.venues?.find((v) => v.id === e.venueId)
+      const pm = state.staff?.find((s) => s.id === e.pmId)
       const completedSteps = checklist.filter((c) => c.done).length
 
       return {
         id: e.id,
         name: e.name || 'Untitled Event',
+        category: e.category || 'Conference',
         date: e.date || 'TBD',
-        time: e.time || '',
+        time: e.time || '09:00',
+        endDate: e.endDate || '',
+        endTime: e.endTime || '',
         status: e.status || 'upcoming',
-        budget: e.budget || 0,
-        spent: e.spent || 0,
+        budget: Number(e.budget) || 0,
+        spent: Number(e.spent) || 0,
+        capacity: Number(e.capacity) || 0,
         clientId: e.clientId,
         venueId: e.venueId,
-        client: { company: client?.company || 'No client' },
-        venue: { name: venue?.name || 'No venue' },
+        pmId: e.pmId,
+        description: e.description || '',
+        contactName: e.contactName || '',
+        contactPhone: e.contactPhone || '',
+        client: { company: client?.company || 'No client assigned' },
+        venue: { name: venue?.name || 'Unassigned venue' },
+        pm: { name: pm?.name || 'Unassigned Lead' },
         stage: computedStage,
         stageName: CANONICAL_STAGES[computedStage]?.name || `Stage ${computedStage + 1}`,
         progress: e.progress ?? Math.round(((computedStage + 1) / 14) * 100),
@@ -205,52 +245,15 @@ export default function WorkflowPage() {
         checklist,
       }
     })
-  }, [state.events, state.clients, state.venues, state.tasks, state.allocations, state.registrations, state.contracts])
-
-  // Resilient data fetcher: query backend API if available, gracefully falling back to storeEvents
-  const loadData = useCallback(async () => {
-    try {
-      if (backendOnline && api?.workflow?.getAll) {
-        const res = await api.workflow.getAll().catch(() => null)
-        if (res?.events && Array.isArray(res.events) && res.events.length > 0) {
-          // Enrich backend events with frontend checklist
-          const enriched = res.events.map((e) => {
-            const explicitStage = typeof e.stage === 'number' && e.stage >= 0 && e.stage <= 13 ? e.stage : 0
-            const checklist = computeStageChecklist({ ...e, stage: explicitStage }, state)
-            return {
-              ...e,
-              stage: explicitStage,
-              stageName: CANONICAL_STAGES[explicitStage]?.name || `Stage ${explicitStage + 1}`,
-              checklist,
-              completedSteps: checklist.filter((c) => c.done).length,
-              totalSteps: 14,
-            }
-          })
-          setEventsData(enriched)
-          setLoading(false)
-          return
-        }
-      }
-    } catch (err) {
-      console.warn('Backend workflow fetch skipped, using live store:', err)
-    }
-    setEventsData(storeEvents)
-    setLoading(false)
-  }, [backendOnline, storeEvents, state])
-
-  useEffect(() => {
-    loadData()
-  }, [loadData])
-
-  // Determine active event list
-  const activeEvents = eventsData.length > 0 ? eventsData : storeEvents
+  }, [state.events, state.clients, state.venues, state.staff, state.tasks, state.allocations, state.registrations, state.contracts, state.invoices, state.expenses])
 
   // Filtered event list for sidebar
   const filteredEvents = useMemo(() => {
-    return activeEvents.filter((e) => {
+    return storeEvents.filter((e) => {
       const matchesSearch =
         e.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (e.client?.company || '').toLowerCase().includes(searchQuery.toLowerCase())
+        (e.client?.company || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (e.category || '').toLowerCase().includes(searchQuery.toLowerCase())
 
       if (!matchesSearch) return false
 
@@ -261,58 +264,40 @@ export default function WorkflowPage() {
       }
       return true
     })
-  }, [activeEvents, searchQuery, phaseFilter])
+  }, [storeEvents, searchQuery, phaseFilter])
 
   // Selected event
   const selected = useMemo(() => {
     if (selectedId) {
-      const found = activeEvents.find((e) => e.id === selectedId)
+      const found = storeEvents.find((e) => e.id === selectedId)
       if (found) return found
     }
-    return activeEvents[0] || null
-  }, [activeEvents, selectedId])
+    return storeEvents[0] || null
+  }, [storeEvents, selectedId])
 
   // Synchronize selection with URL search param
   const selectEvent = (evt) => {
     setSelectedId(evt.id)
     setSearchParams({ eventId: evt.id }, { replace: true })
-    loadLogs(evt.id)
   }
 
-  // Load history logs for event
-  const loadLogs = useCallback(async (eventId) => {
-    if (backendOnline && api?.workflow?.getLogs) {
-      try {
-        const { logs: l } = await api.workflow.getLogs(eventId)
-        if (l && Array.isArray(l)) {
-          setLogs(l)
-          return
-        }
-      } catch (e) {
-        // Fallback to local logs
-      }
-    }
-    // Generate audit logs from activity and event seed
-    const localLogs = (state.activities || [])
-      .filter((a) => a.text?.toLowerCase().includes('workflow') || a.text?.toLowerCase().includes(selected?.name?.toLowerCase() || ''))
-      .map((a) => ({
-        id: a.id,
-        user: { name: a.user?.name || 'Administrator' },
-        action: a.text?.includes('advanced') ? 'advanced' : a.text?.includes('reverted') ? 'reverted' : 'set',
-        stageName: a.text?.split('to ')?.[1] || 'Updated Stage',
-        note: a.text,
-        createdAt: a.at ? new Date().toISOString() : new Date().toISOString(),
-      }))
-    setLogs(localLogs)
-  }, [backendOnline, state.activities, selected?.name])
+  // Active tasks for the selected event
+  const eventTasks = useMemo(() => {
+    if (!selected?.id) return []
+    return (state.tasks || []).filter((t) => t.eventId === selected.id)
+  }, [state.tasks, selected?.id])
 
-  useEffect(() => {
-    if (selected?.id) {
-      loadLogs(selected.id)
-    }
-  }, [selected?.id, loadLogs])
+  // Real-time event activities from Supabase ActivityLog and workflow logs
+  const eventActivities = useMemo(() => {
+    if (!selected) return []
+    const evName = (selected.name || '').toLowerCase()
+    return (state.activities || []).filter((a) => {
+      const txt = (a.text || '').toLowerCase()
+      return txt.includes(evName) || txt.includes(selected.id.toLowerCase()) || a.type === 'workflow'
+    }).slice(0, 30)
+  }, [state.activities, selected])
 
-  // Trigger modal for state transition
+  // Trigger modal for stage transition
   const initiateTransition = (targetStage, actionType = 'advance') => {
     setModalTargetStage(targetStage)
     setModalActionType(actionType)
@@ -320,7 +305,7 @@ export default function WorkflowPage() {
     setModalOpen(true)
   }
 
-  // Execute stage update with full persistence
+  // Execute stage update with full Supabase PostgreSQL persistence
   const commitStageTransition = async () => {
     if (!selected || modalTargetStage === null) return
     setBusy(true)
@@ -331,60 +316,44 @@ export default function WorkflowPage() {
     const stageName = CANONICAL_STAGES[nextStageId].name
 
     try {
-      // 1. Persist directly to Supabase / local data store
+      // 1. Direct write to Supabase Postgres DB & reactive local state
       await updateEvent(selected.id, {
         stage: nextStageId,
         progress: nextProgress,
         status: nextStatus,
       })
 
-      // 2. Try calling backend workflow route if online
+      // 2. Best-effort backend workflow log sync if backend available (silent failure safe)
       if (backendOnline && api?.workflow) {
         if (modalActionType === 'advance') {
-          await api.workflow.advance(selected.id, modalNote).catch(() => {})
+          await api.workflow.advance(selected.id, modalNote)
         } else if (modalActionType === 'revert') {
-          await api.workflow.revert(selected.id, modalNote).catch(() => {})
+          await api.workflow.revert(selected.id, modalNote)
         } else {
-          await api.workflow.setStage(selected.id, nextStageId, modalNote).catch(() => {})
+          await api.workflow.setStage(selected.id, nextStageId, modalNote)
         }
       }
 
-      // 3. Record local activity and workflow log
+      // 3. Record in Supabase Activity table
       const logText = modalNote
-        ? `Workflow: ${selected.name} set to ${stageName} — "${modalNote}"`
-        : `Workflow: ${selected.name} set to ${stageName}`
+        ? `Workflow: ${selected.name} advanced to Stage ${nextStageId + 1} (${stageName}) — "${modalNote}"`
+        : `Workflow: ${selected.name} set to Stage ${nextStageId + 1} (${stageName})`
       logActivity(logText, 'workflow')
 
-      const newLog = {
-        id: 'wf-' + Date.now().toString(36),
-        user: { name: state.currentUser?.name || 'Administrator' },
-        action: modalActionType === 'advance' ? 'advanced' : modalActionType === 'revert' ? 'reverted' : 'set',
-        stageName,
-        note: modalNote || `Stage updated to ${stageName}`,
-        createdAt: new Date().toISOString(),
+      // 4. Notify PM or Client
+      if (selected.pmId) {
+        addNotification({
+          text: `Workflow updated: "${selected.name}" is now at Stage ${nextStageId + 1}: ${stageName}`,
+          type: 'workflow',
+          userId: selected.pmId,
+        })
       }
-      setLogs((prev) => [newLog, ...prev])
-
-      // 4. Update in-memory state
-      setEventsData((prev) =>
-        prev.map((e) =>
-          e.id === selected.id
-            ? {
-                ...e,
-                stage: nextStageId,
-                stageName,
-                progress: nextProgress,
-                status: nextStatus,
-                checklist: computeStageChecklist({ ...e, stage: nextStageId }, state),
-              }
-            : e
-        )
-      )
 
       show(`Event successfully updated to Stage ${nextStageId + 1}: ${stageName}`)
       setModalOpen(false)
     } catch (err) {
-      show(err.message || 'Failed to update workflow stage', 'error')
+      console.error('Stage transition error:', err)
+      show('Failed to update stage in database', 'error')
     } finally {
       setBusy(false)
     }
@@ -401,51 +370,192 @@ export default function WorkflowPage() {
     initiateTransition(selected.stage - 1, 'revert')
   }
 
+  // Live Event Status update (Supabase Postgres write)
+  const handleStatusChange = async (newStatus) => {
+    if (!selected || selected.status === newStatus) return
+    setBusy(true)
+    try {
+      const updates = { status: newStatus }
+      if (newStatus === 'completed') {
+        updates.stage = 13
+        updates.progress = 100
+      }
+      await updateEvent(selected.id, updates)
+      logActivity(`Event "${selected.name}" status updated to ${newStatus}`, 'event')
+
+      if (selected.pmId) {
+        addNotification({
+          text: `Status for "${selected.name}" changed to ${newStatus.toUpperCase()}`,
+          type: 'event',
+          userId: selected.pmId,
+        })
+      }
+
+      show(`Status updated to "${newStatus}"`)
+    } catch (err) {
+      show('Failed to update event status', 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // Open Quick Edit Modal
+  const openEditModal = () => {
+    if (!selected) return
+    setEditForm({
+      name: selected.name,
+      category: selected.category,
+      status: selected.status,
+      date: selected.date,
+      time: selected.time,
+      endDate: selected.endDate,
+      endTime: selected.endTime,
+      venueId: selected.venueId || '',
+      clientId: selected.clientId || '',
+      pmId: selected.pmId || '',
+      budget: selected.budget || 0,
+      capacity: selected.capacity || 0,
+      description: selected.description || '',
+      contactName: selected.contactName || '',
+      contactPhone: selected.contactPhone || '',
+    })
+    setEditModalOpen(true)
+  }
+
+  // Save Event Edit to Supabase
+  const handleSaveEdit = async () => {
+    if (!selected || !editForm.name?.trim()) {
+      show('Please fill out this field: Event name', 'warn')
+      return
+    }
+    setBusy(true)
+    try {
+      await updateEvent(selected.id, {
+        ...editForm,
+        budget: Number(editForm.budget) || 0,
+        capacity: Number(editForm.capacity) || 0,
+      })
+      logActivity(`Event details updated for "${editForm.name}"`, 'event')
+      show('Event details saved to database')
+      setEditModalOpen(false)
+    } catch (err) {
+      show('Failed to save changes to database', 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // Open Action Dispatch Modal
+  const openActionModal = () => {
+    if (!selected) return
+    setActionForm({
+      title: '',
+      description: '',
+      priority: 'medium',
+      due: todayISO(),
+      assigneeId: selected.pmId || state.staff[0]?.id || '',
+      stageId: selected.stage || 5,
+      notify: true,
+    })
+    setActionModalOpen(true)
+  }
+
+  // Dispatch Action / Task to Person (Supabase Task + Notification + Activity write)
+  const handleDispatchAction = async () => {
+    if (!actionForm.title?.trim()) {
+      show('Please fill out this field: Action title', 'warn')
+      return
+    }
+    if (!actionForm.assigneeId) {
+      show('Please select a person to assign this action to', 'warn')
+      return
+    }
+    setBusy(true)
+    try {
+      const assignedPerson = state.staff?.find((s) => s.id === actionForm.assigneeId)
+      const personName = assignedPerson?.name || 'Team Member'
+
+      // 1. Write Task to Supabase Task Table
+      const taskPayload = {
+        title: actionForm.title.trim(),
+        description: actionForm.description.trim() || `Workflow Action for ${selected.name} (Stage ${actionForm.stageId + 1}: ${CANONICAL_STAGES[actionForm.stageId]?.name})`,
+        eventId: selected.id,
+        assigneeId: actionForm.assigneeId,
+        priority: actionForm.priority,
+        status: 'todo',
+        due: actionForm.due || todayISO(),
+        progress: 0,
+      }
+      await addTask(taskPayload)
+
+      // 2. Dispatch Live Notification to Assigned Person in Supabase
+      if (actionForm.notify) {
+        addNotification({
+          text: `Action Assigned by Workflow: "${actionForm.title}" for event "${selected.name}". Due: ${actionForm.due}`,
+          type: 'task',
+          userId: actionForm.assigneeId,
+        })
+      }
+
+      // 3. Record Audit Trail in Supabase Activity Table
+      logActivity(`Workflow Action dispatched to ${personName}: "${actionForm.title}" (${selected.name})`, 'task')
+
+      show(`Action dispatched to ${personName}!`)
+      setActionModalOpen(false)
+      setView('tasks')
+    } catch (err) {
+      show('Failed to dispatch action item', 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // Toggle Task Completion Live
+  const toggleTaskStatus = async (task) => {
+    const nextStatus = task.status === 'done' ? 'todo' : 'done'
+    const nextProgress = nextStatus === 'done' ? 100 : 0
+    await updateTask(task.id, { status: nextStatus, progress: nextProgress })
+    logActivity(`Task "${task.title}" marked as ${nextStatus}`, 'task')
+    show(`Task marked as ${nextStatus}`)
+  }
+
   // Summary statistics
   const stats = useMemo(() => {
-    const total = activeEvents.length
-    const completed = activeEvents.filter((e) => e.stage === 13 || e.status === 'completed').length
+    const total = storeEvents.length
+    const completed = storeEvents.filter((e) => e.stage === 13 || e.status === 'completed').length
     const inProgress = total - completed
-    const avgProgress = total > 0 ? Math.round(activeEvents.reduce((acc, e) => acc + (e.progress || 0), 0) / total) : 0
+    const avgProgress = total > 0 ? Math.round(storeEvents.reduce((acc, e) => acc + (e.progress || 0), 0) / total) : 0
     return { total, completed, inProgress, avgProgress }
-  }, [activeEvents])
-
-  if (loading && activeEvents.length === 0) {
-    return (
-      <div className="space-y-6">
-        <PageHeader title="Event Workflow Pipeline" subtitle="14-stage enterprise event lifecycle pipeline" icon={Workflow} />
-        <div className="card flex items-center justify-center p-16">
-          <div className="flex flex-col items-center gap-3">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-200 border-t-brand-700" />
-            <p className="text-sm font-semibold text-brand-900">Loading workflow pipeline…</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  }, [storeEvents])
 
   return (
     <div className="space-y-6">
-      {/* Top Page Header with Live Status Badges */}
+      {/* Top Page Header with Live Status Badges & Controls */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <PageHeader
-          title="Event Workflow Pipeline"
-          subtitle="Real-time 14-stage governance pipeline tracking events from client brief to post-event closeout."
+          title="Event Workflow & Governance Center"
+          subtitle="Real-time 14-stage lifecycle pipeline, event status control, and action item dispatch with live Supabase database sync."
           icon={Workflow}
         />
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => loadData()}
-            className="btn-outline flex items-center gap-2 text-xs !py-2"
-            title="Refresh pipeline status"
-          >
-            <RefreshCw size={13} className={busy ? 'animate-spin' : ''} /> Refresh
-          </button>
-          <Link to="/erp/admin" className="btn-outline flex items-center gap-1.5 text-xs !py-2">
-            <Building2 size={13} /> Admin Portal
-          </Link>
-          <Link to="/erp/admin/events" className="btn-primary flex items-center gap-1.5 text-xs !py-2">
-            <CalendarDays size={13} /> Manage Events
+        <div className="flex flex-wrap items-center gap-2">
+          {selected && (
+            <>
+              <button
+                onClick={openActionModal}
+                className="btn-primary flex items-center gap-1.5 text-xs !py-2 px-3.5 shadow-sm"
+              >
+                <Send size={13} /> Dispatch Action
+              </button>
+              <button
+                onClick={openEditModal}
+                className="btn-outline flex items-center gap-1.5 text-xs !py-2 px-3"
+              >
+                <Pencil size={13} /> Edit Event
+              </button>
+            </>
+          )}
+          <Link to="/erp/admin/events" className="btn-outline flex items-center gap-1.5 text-xs !py-2">
+            <CalendarDays size={13} /> Events Directory
           </Link>
         </div>
       </div>
@@ -462,7 +572,7 @@ export default function WorkflowPage() {
               <Layers size={18} />
             </span>
           </div>
-          <div className="mt-2 text-[11px] text-ink/50">Active ERP tracked records</div>
+          <div className="mt-2 text-[11px] text-ink/50">Live Supabase tracked records</div>
         </div>
 
         <div className="card relative overflow-hidden p-4">
@@ -508,16 +618,16 @@ export default function WorkflowPage() {
       </div>
 
       {/* Main Grid: Event Navigator + Pipeline Workspace */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[310px_1fr]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[320px_1fr]">
         {/* Left: Event Selection Drawer */}
         <div className="space-y-3">
           <div className="card flex flex-col p-3.5 space-y-3">
             <div className="flex items-center justify-between border-b border-brand-100 pb-2.5">
               <span className="text-xs font-bold uppercase tracking-wider text-brand-900">
-                Events ({filteredEvents.length})
+                Registered Events ({filteredEvents.length})
               </span>
               <span className="chip bg-brand-100 text-[10px] font-semibold text-brand-800">
-                14-Stage Lifecycle
+                Live Postgres Sync
               </span>
             </div>
 
@@ -528,7 +638,7 @@ export default function WorkflowPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search event or client…"
+                placeholder="Search event, client or category…"
                 className="w-full rounded-lg border border-brand-200 bg-white py-1.5 pl-8 pr-3 text-xs focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
               />
             </div>
@@ -551,7 +661,7 @@ export default function WorkflowPage() {
             </div>
 
             {/* Event List */}
-            <div className="max-h-[620px] overflow-y-auto space-y-1.5 pr-0.5">
+            <div className="max-h-[640px] overflow-y-auto space-y-1.5 pr-0.5">
               {filteredEvents.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-brand-200 p-6 text-center text-xs text-ink/40">
                   No matching events found.
@@ -587,16 +697,21 @@ export default function WorkflowPage() {
                       </div>
 
                       {/* Stage indicator chip */}
-                      <div className="mt-2 flex items-center gap-1.5">
-                        <span
-                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] ${
-                            isDone ? 'bg-emerald-600 text-white' : 'bg-brand-200 text-brand-900'
-                          }`}
-                        >
-                          <StageIcon size={10} />
-                        </span>
-                        <span className="truncate text-[10px] font-medium text-brand-900">
-                          Stage {evt.stage + 1}: {evt.stageName}
+                      <div className="mt-2 flex items-center justify-between gap-1.5">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span
+                            className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] ${
+                              isDone ? 'bg-emerald-600 text-white' : 'bg-brand-200 text-brand-900'
+                            }`}
+                          >
+                            <StageIcon size={10} />
+                          </span>
+                          <span className="truncate text-[10px] font-medium text-brand-900">
+                            Stage {evt.stage + 1}: {evt.stageName}
+                          </span>
+                        </div>
+                        <span className="text-[10px] uppercase font-semibold text-ink/40">
+                          {evt.status}
                         </span>
                       </div>
 
@@ -621,19 +736,52 @@ export default function WorkflowPage() {
         <div className="space-y-4">
           {selected ? (
             <>
-              {/* Event Header Banner Card */}
-              <div className="card border-brand-200/80 bg-gradient-to-br from-white via-white to-brand-50/30 p-5 shadow-sm">
+              {/* Event Header Banner Card with Live Status Selector & Controls */}
+              <div className="card border-brand-200/80 bg-gradient-to-br from-white via-white to-brand-50/30 p-5 shadow-sm space-y-4">
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                  <div className="space-y-1.5">
+                  <div className="space-y-2 flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-xl font-black text-brand-950 tracking-tight">{selected.name}</h2>
-                      <Badge status={selected.status} label={selected.status} />
                       <span className="chip bg-brand-100 text-brand-800 text-[11px] font-bold">
-                        Stage {selected.stage + 1} of 14
+                        Stage {selected.stage + 1} of 14: {CANONICAL_STAGES[selected.stage]?.name}
                       </span>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-4 text-xs text-ink/60">
+                    {/* Quick Status Control Dropdown */}
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <span className="text-xs font-semibold text-ink/50">Event Status:</span>
+                      <select
+                        value={selected.status}
+                        onChange={(e) => handleStatusChange(e.target.value)}
+                        disabled={busy}
+                        className="rounded-lg border border-brand-300 bg-white px-2.5 py-1 text-xs font-bold text-brand-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                      >
+                        {EVENT_STATUSES.map((st) => (
+                          <option key={st.id} value={st.id}>
+                            {st.label}
+                          </option>
+                        ))}
+                      </select>
+
+                      <button
+                        onClick={openEditModal}
+                        className="btn-ghost !py-1 !px-2 text-xs flex items-center gap-1 text-brand-700 hover:bg-brand-100"
+                        title="Edit event details"
+                      >
+                        <Pencil size={12} /> Edit Details
+                      </button>
+
+                      <button
+                        onClick={openActionModal}
+                        className="btn-ghost !py-1 !px-2 text-xs flex items-center gap-1 text-brand-700 hover:bg-brand-100"
+                        title="Assign new action item"
+                      >
+                        <Plus size={12} /> Assign Action
+                      </button>
+                    </div>
+
+                    {/* Metadata Grid */}
+                    <div className="flex flex-wrap items-center gap-y-1.5 gap-x-4 text-xs text-ink/65 pt-1">
                       <span className="inline-flex items-center gap-1">
                         <Building2 size={13} className="text-brand-600" />
                         <strong>Client:</strong> {selected.client?.company || 'No client assigned'}
@@ -644,7 +792,11 @@ export default function WorkflowPage() {
                       </span>
                       <span className="inline-flex items-center gap-1">
                         <CalendarDays size={13} className="text-brand-600" />
-                        <strong>Date:</strong> {selected.date || 'TBD'}
+                        <strong>Date:</strong> {selected.date || 'TBD'} ({selected.time || '09:00'})
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <UserCheck size={13} className="text-brand-600" />
+                        <strong>Lead:</strong> {selected.pm?.name || 'Unassigned'}
                       </span>
                       <span className="inline-flex items-center gap-1">
                         <Wallet size={13} className="text-brand-600" />
@@ -653,7 +805,7 @@ export default function WorkflowPage() {
                     </div>
                   </div>
 
-                  {/* Advance / Revert Action Buttons */}
+                  {/* Stage Advance / Revert Action Buttons */}
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       onClick={handleQuickRevert}
@@ -679,11 +831,11 @@ export default function WorkflowPage() {
                 </div>
 
                 {/* Main Visual Progress Tracker Bar */}
-                <div className="mt-5 pt-4 border-t border-brand-100">
+                <div className="pt-3 border-t border-brand-100">
                   <div className="flex items-center justify-between text-xs mb-1.5 font-semibold">
                     <span className="text-brand-950 flex items-center gap-1.5">
                       <Sparkles size={14} className="text-amber-500" />
-                      Pipeline Governance: Stage {selected.stage + 1} ({CANONICAL_STAGES[selected.stage]?.name})
+                      Lifecycle Progress: Stage {selected.stage + 1} of 14 ({CANONICAL_STAGES[selected.stage]?.name})
                     </span>
                     <span className="text-brand-800">
                       {selected.completedSteps} of 14 prerequisites verified ({selected.progress}%)
@@ -700,7 +852,7 @@ export default function WorkflowPage() {
 
               {/* View Switcher Tabs */}
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-brand-200 pb-2">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={() => setView('pipeline')}
                     className={`tab flex items-center gap-1.5 ${view === 'pipeline' ? 'tab-active' : 'tab-idle'}`}
@@ -714,16 +866,22 @@ export default function WorkflowPage() {
                     <Layers size={14} /> Phase Matrix
                   </button>
                   <button
+                    onClick={() => setView('tasks')}
+                    className={`tab flex items-center gap-1.5 ${view === 'tasks' ? 'tab-active' : 'tab-idle'}`}
+                  >
+                    <CheckSquare size={14} /> Actions & Team Tasks ({eventTasks.length})
+                  </button>
+                  <button
                     onClick={() => setView('history')}
                     className={`tab flex items-center gap-1.5 ${view === 'history' ? 'tab-active' : 'tab-idle'}`}
                   >
-                    <History size={14} /> Audit Trail & Logs ({logs.length})
+                    <History size={14} /> Live Supabase Activities ({eventActivities.length})
                   </button>
                 </div>
 
                 {/* Quick module direct link */}
                 <div className="text-xs text-ink/50 flex items-center gap-2">
-                  <span>Target Module:</span>
+                  <span>Current Module:</span>
                   <Link
                     to={CANONICAL_STAGES[selected.stage]?.route || '/erp/dashboard'}
                     className="inline-flex items-center gap-1 text-brand-700 font-bold hover:underline"
@@ -929,64 +1087,126 @@ export default function WorkflowPage() {
                 </div>
               )}
 
-              {/* VIEW 3: Audit Trail & Logs View */}
+              {/* VIEW 3: Actions & Team Tasks View */}
+              {view === 'tasks' && (
+                <div className="card p-5 space-y-4 shadow-sm">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-brand-100 pb-3">
+                    <div>
+                      <h3 className="font-bold text-brand-950 text-sm">Active Action Items & Team Dispatch</h3>
+                      <p className="text-xs text-ink/45">Assigned tasks and deliverables for {selected.name}</p>
+                    </div>
+                    <button
+                      onClick={openActionModal}
+                      className="btn-primary text-xs !py-1.5 px-3 flex items-center gap-1.5 self-start sm:self-auto"
+                    >
+                      <Plus size={13} /> Dispatch New Action
+                    </button>
+                  </div>
+
+                  {eventTasks.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-brand-200 py-10 text-center text-xs text-ink/40">
+                      No action items assigned to this event yet. Click "Dispatch New Action" above to assign tasks to team members.
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-brand-50">
+                      {eventTasks.map((t) => {
+                        const assignee = state.staff?.find((s) => s.id === t.assigneeId)
+                        const isDone = t.status === 'done'
+
+                        return (
+                          <div key={t.id} className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div className="flex items-start gap-3 flex-1 min-w-0">
+                              <button
+                                onClick={() => toggleTaskStatus(t)}
+                                className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition ${
+                                  isDone
+                                    ? 'bg-emerald-600 border-emerald-600 text-white'
+                                    : 'border-brand-300 bg-white hover:border-brand-500'
+                                }`}
+                                title={isDone ? 'Mark as incomplete' : 'Mark as completed'}
+                              >
+                                {isDone && <Check size={13} strokeWidth={3} />}
+                              </button>
+                              <div className="space-y-0.5 min-w-0">
+                                <p className={`text-xs font-bold text-brand-950 ${isDone ? 'line-through text-ink/40' : ''}`}>
+                                  {t.title}
+                                </p>
+                                {t.description && (
+                                  <p className="text-[11px] text-ink/55 truncate max-w-md">{t.description}</p>
+                                )}
+                                <div className="flex flex-wrap items-center gap-2 text-[10px] text-ink/45 pt-0.5">
+                                  <span className="font-semibold text-brand-800">
+                                    Assigned to: {assignee?.name || 'Team Member'}
+                                  </span>
+                                  <span>·</span>
+                                  <span>Due: {t.due || 'TBD'}</span>
+                                  <span>·</span>
+                                  <span className={`chip text-[9px] font-bold uppercase ${
+                                    t.priority === 'urgent' ? 'bg-red-100 text-red-700' :
+                                    t.priority === 'high' ? 'bg-amber-100 text-amber-700' :
+                                    'bg-brand-50 text-brand-800'
+                                  }`}>
+                                    {t.priority}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 self-end sm:self-center">
+                              <span className={`chip text-[10px] font-bold ${
+                                isDone ? 'bg-emerald-100 text-emerald-800' : 'bg-brand-100 text-brand-800'
+                              }`}>
+                                {t.status}
+                              </span>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* VIEW 4: Audit Trail & Live Activities View */}
               {view === 'history' && (
                 <div className="card p-5 space-y-4 shadow-sm">
                   <div className="flex items-center justify-between border-b border-brand-100 pb-3">
                     <div>
-                      <h3 className="font-bold text-brand-950 text-sm">Workflow Governance Audit Log</h3>
-                      <p className="text-xs text-ink/45">Historical transitions and approvals recorded for {selected.name}</p>
+                      <h3 className="font-bold text-brand-950 text-sm">Live Supabase Governance Activity Log</h3>
+                      <p className="text-xs text-ink/45">Real-time audit activities and transitions recorded for {selected.name}</p>
                     </div>
                     <span className="chip bg-brand-100 text-brand-800 text-xs font-bold">
-                      {logs.length} transitions logged
+                      {eventActivities.length} activities logged
                     </span>
                   </div>
 
-                  {logs.length === 0 ? (
+                  {eventActivities.length === 0 ? (
                     <div className="rounded-xl border border-dashed border-brand-200 py-10 text-center text-xs text-ink/40">
-                      No transitions logged yet. Advance or set a stage to record your first transition.
+                      No activity records found for this event yet.
                     </div>
                   ) : (
-                    <div className="space-y-3">
-                      {logs.map((log) => (
+                    <div className="space-y-2.5">
+                      {eventActivities.map((act) => (
                         <div
-                          key={log.id}
-                          className="flex items-start gap-3 rounded-xl border border-brand-100/80 bg-white p-3.5 shadow-sm"
+                          key={act.id}
+                          className="flex items-start gap-3 rounded-xl border border-brand-100/80 bg-white p-3 shadow-sm"
                         >
-                          <span
-                            className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                              log.action === 'advanced'
-                                ? 'bg-emerald-100 text-emerald-700'
-                                : log.action === 'reverted'
-                                ? 'bg-amber-100 text-amber-700'
-                                : 'bg-brand-100 text-brand-700'
-                            }`}
-                          >
-                            {log.action === 'advanced' ? (
-                              <ArrowRight size={14} />
-                            ) : log.action === 'reverted' ? (
-                              <ChevronLeft size={14} />
-                            ) : (
-                              <Send size={14} />
-                            )}
+                          <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-700">
+                            <Activity size={13} />
                           </span>
 
-                          <div className="flex-1 space-y-1">
+                          <div className="flex-1 space-y-0.5">
                             <div className="flex items-center justify-between">
                               <p className="text-xs font-semibold text-brand-950">
-                                <span className="font-black text-brand-900">{log.user?.name || 'Administrator'}</span>{' '}
-                                <span className="text-ink/60">{log.action} event to</span>{' '}
-                                <span className="font-bold text-brand-700">{log.stageName}</span>
+                                {act.text}
                               </p>
-                              <span className="text-[11px] text-ink/40">
-                                {new Date(log.createdAt).toLocaleString()}
+                              <span className="text-[10px] text-ink/40">
+                                {act.at || (act.createdAt ? new Date(act.createdAt).toLocaleTimeString() : 'Recent')}
                               </span>
                             </div>
-                            {log.note && (
-                              <p className="rounded-md bg-brand-50/60 p-2 text-xs text-ink/75 border border-brand-100/70">
-                                "{log.note}"
-                              </p>
-                            )}
+                            <span className="chip text-[9px] bg-brand-50 text-brand-800 font-semibold uppercase">
+                              {act.type || 'workflow'}
+                            </span>
                           </div>
                         </div>
                       ))}
@@ -1005,7 +1225,7 @@ export default function WorkflowPage() {
         </div>
       </div>
 
-      {/* Transition Confirmation & Note Modal */}
+      {/* Stage Transition Note Modal */}
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -1060,6 +1280,290 @@ export default function WorkflowPage() {
             >
               {busy && <RefreshCw size={13} className="animate-spin" />}
               Confirm Transition
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Quick Edit Event Modal */}
+      <Modal
+        open={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        title={`Edit Event · ${selected?.name || ''}`}
+        width="max-w-2xl"
+      >
+        <div className="space-y-4 py-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Event Name *" className="sm:col-span-2">
+              <input
+                type="text"
+                className="input"
+                value={editForm.name || ''}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                placeholder="e.g. Annual Tech Summit 2026"
+              />
+            </Field>
+
+            <Field label="Category">
+              <select
+                className="input"
+                value={editForm.category || 'Conference'}
+                onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+              >
+                {EVENT_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Status">
+              <select
+                className="input"
+                value={editForm.status || 'upcoming'}
+                onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+              >
+                {EVENT_STATUSES.map((st) => (
+                  <option key={st.id} value={st.id}>{st.label}</option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Start Date">
+              <input
+                type="date"
+                className="input"
+                value={editForm.date || ''}
+                onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+              />
+            </Field>
+
+            <Field label="Start Time">
+              <input
+                type="time"
+                className="input"
+                value={editForm.time || '09:00'}
+                onChange={(e) => setEditForm({ ...editForm, time: e.target.value })}
+              />
+            </Field>
+
+            <Field label="Client Profile">
+              <select
+                className="input"
+                value={editForm.clientId || ''}
+                onChange={(e) => setEditForm({ ...editForm, clientId: e.target.value })}
+              >
+                <option value="">Unassigned client</option>
+                {(state.clients || []).map((c) => (
+                  <option key={c.id} value={c.id}>{c.company} ({c.contactPerson})</option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Venue Booking">
+              <select
+                className="input"
+                value={editForm.venueId || ''}
+                onChange={(e) => setEditForm({ ...editForm, venueId: e.target.value })}
+              >
+                <option value="">Unassigned venue</option>
+                {(state.venues || []).map((v) => (
+                  <option key={v.id} value={v.id}>{v.name} ({v.city || 'Addis Ababa'})</option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Assigned Event Lead / PM">
+              <select
+                className="input"
+                value={editForm.pmId || ''}
+                onChange={(e) => setEditForm({ ...editForm, pmId: e.target.value })}
+              >
+                <option value="">Unassigned</option>
+                {(state.staff || []).map((s) => (
+                  <option key={s.id} value={s.id}>{s.name} ({s.role || s.dept})</option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Budget (ETB)">
+              <input
+                type="number"
+                className="input"
+                value={editForm.budget || ''}
+                onChange={(e) => setEditForm({ ...editForm, budget: e.target.value })}
+                placeholder="e.g. 500000"
+              />
+            </Field>
+
+            <Field label="Target Capacity (pax)">
+              <input
+                type="number"
+                className="input"
+                value={editForm.capacity || ''}
+                onChange={(e) => setEditForm({ ...editForm, capacity: e.target.value })}
+                placeholder="e.g. 1500"
+              />
+            </Field>
+
+            <Field label="Contact Phone">
+              <input
+                type="text"
+                className="input"
+                value={editForm.contactPhone || ''}
+                onChange={(e) => setEditForm({ ...editForm, contactPhone: e.target.value })}
+                placeholder="+251 9XX XXX XXX"
+              />
+            </Field>
+
+            <Field label="Event Description / Objectives" className="sm:col-span-2">
+              <textarea
+                rows={2}
+                className="input min-h-[60px]"
+                value={editForm.description || ''}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                placeholder="Scope, key VIPs, themes, deliverables..."
+              />
+            </Field>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-brand-100">
+            <button
+              onClick={() => setEditModalOpen(false)}
+              className="btn-outline text-xs !py-2"
+              disabled={busy}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSaveEdit}
+              disabled={busy}
+              className="btn-primary text-xs !py-2 px-5 flex items-center gap-1.5 shadow-sm"
+            >
+              {busy && <RefreshCw size={13} className="animate-spin" />}
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Dispatch Action Item to Person Modal */}
+      <Modal
+        open={actionModalOpen}
+        onClose={() => setActionModalOpen(false)}
+        title={`Dispatch Action Item · ${selected?.name || ''}`}
+        width="max-w-lg"
+      >
+        <div className="space-y-4 py-2">
+          <div className="rounded-xl border border-brand-200 bg-brand-50/70 p-3 flex items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white">
+              <Send size={16} />
+            </span>
+            <div>
+              <p className="text-xs font-bold text-brand-950">Workflow Governance Action</p>
+              <p className="text-[11px] text-ink/55">Create a task, assign to a person, and dispatch an instant live notification.</p>
+            </div>
+          </div>
+
+          <Field label="Action / Task Title *">
+            <input
+              type="text"
+              className="input"
+              value={actionForm.title}
+              onChange={(e) => setActionForm({ ...actionForm, title: e.target.value })}
+              placeholder="e.g. Sign Venue Contract, Finalize Catering Tasting, Inspect Stage Rigging..."
+            />
+          </Field>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Assign To (Requested Person) *">
+              <select
+                className="input"
+                value={actionForm.assigneeId}
+                onChange={(e) => setActionForm({ ...actionForm, assigneeId: e.target.value })}
+              >
+                <option value="">Select team member…</option>
+                {(state.staff || []).map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.role || s.dept})
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Related Lifecycle Stage">
+              <select
+                className="input"
+                value={actionForm.stageId}
+                onChange={(e) => setActionForm({ ...actionForm, stageId: Number(e.target.value) })}
+              >
+                {CANONICAL_STAGES.map((st) => (
+                  <option key={st.id} value={st.id}>
+                    Stage {st.id + 1}: {st.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Priority">
+              <select
+                className="input"
+                value={actionForm.priority}
+                onChange={(e) => setActionForm({ ...actionForm, priority: e.target.value })}
+              >
+                <option value="low">Low Priority</option>
+                <option value="medium">Medium Priority</option>
+                <option value="high">High Priority</option>
+                <option value="urgent">Urgent Priority (Immediate Action)</option>
+              </select>
+            </Field>
+
+            <Field label="Due Date">
+              <input
+                type="date"
+                className="input"
+                value={actionForm.due}
+                onChange={(e) => setActionForm({ ...actionForm, due: e.target.value })}
+              />
+            </Field>
+          </div>
+
+          <Field label="Detailed Instructions / Deliverables">
+            <textarea
+              rows={3}
+              className="input min-h-[60px]"
+              value={actionForm.description}
+              onChange={(e) => setActionForm({ ...actionForm, description: e.target.value })}
+              placeholder="Provide context, required documents, vendor contacts, or deadlines..."
+            />
+          </Field>
+
+          <label className="flex items-center gap-2 cursor-pointer pt-1">
+            <input
+              type="checkbox"
+              checked={actionForm.notify}
+              onChange={(e) => setActionForm({ ...actionForm, notify: e.target.checked })}
+              className="rounded border-brand-300 text-brand-600 focus:ring-brand-500"
+            />
+            <span className="text-xs font-semibold text-brand-900">
+              Dispatch instant live alert notification to assignee in Supabase
+            </span>
+          </label>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-brand-100">
+            <button
+              onClick={() => setActionModalOpen(false)}
+              className="btn-outline text-xs !py-2"
+              disabled={busy}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDispatchAction}
+              disabled={busy}
+              className="btn-primary text-xs !py-2 px-5 flex items-center gap-1.5 shadow-sm"
+            >
+              {busy ? <RefreshCw size={13} className="animate-spin" /> : <Send size={13} />}
+              Dispatch Action Item
             </button>
           </div>
         </div>

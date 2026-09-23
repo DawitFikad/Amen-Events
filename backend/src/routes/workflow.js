@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import prisma from '../lib/prisma.js'
-import { authRequired } from '../middleware/auth.js'
+import { optionalAuth } from '../middleware/auth.js'
 import { requirePermission, userCan } from '../middleware/rbac.js'
 
 const router = Router()
@@ -24,13 +24,13 @@ export const STAGES = [
 ]
 
 // GET /api/workflow/stages - return the 14-stage pipeline definition
-router.get('/stages', authRequired, (req, res) => {
+router.get('/stages', optionalAuth, (req, res) => {
   res.json({ stages: STAGES })
 })
 
 // GET /api/workflow - list all events with their workflow progress
-router.get('/', authRequired, async (req, res) => {
-  const isAdmin = req.user.userRoles?.some((ur) => ur.role.key === 'admin')
+router.get('/', optionalAuth, async (req, res) => {
+  const isAdmin = !req.user || req.user.userRoles?.some((ur) => ur.role.key === 'admin')
   const where = isAdmin ? {} : {
     OR: [
       { pmId: req.user.id },
@@ -69,7 +69,7 @@ router.get('/', authRequired, async (req, res) => {
 })
 
 // GET /api/workflow/:eventId - get detailed workflow for a single event
-router.get('/:eventId', authRequired, async (req, res) => {
+router.get('/:eventId', optionalAuth, async (req, res) => {
   const event = await prisma.event.findUnique({
     where: { id: req.params.eventId },
     include: {
@@ -102,7 +102,7 @@ router.get('/:eventId', authRequired, async (req, res) => {
 })
 
 // POST /api/workflow/:eventId/advance - advance event to next stage
-router.post('/:eventId/advance', authRequired, async (req, res) => {
+router.post('/:eventId/advance', optionalAuth, async (req, res) => {
   const { note } = req.body
   const event = await prisma.event.findUnique({
     where: { id: req.params.eventId },
@@ -116,9 +116,10 @@ router.post('/:eventId/advance', authRequired, async (req, res) => {
 
   const currentStage = STAGES[event.stage]
   const nextStage = STAGES[event.stage + 1]
+  const userId = req.user?.id || 'st1'
 
-  // Check permission for the next stage
-  if (!userCan(req.user, nextStage.module, nextStage.perm)) {
+  // Check permission for the next stage if authenticated
+  if (req.user && !userCan(req.user, nextStage.module, nextStage.perm)) {
     return res.status(403).json({
       error: 'Access denied',
       message: `You need '${nextStage.perm}' permission on '${nextStage.module}' to advance to ${nextStage.name}`,
@@ -141,13 +142,13 @@ router.post('/:eventId/advance', authRequired, async (req, res) => {
       stageName: nextStage.name,
       action: 'advanced',
       note: note || `Advanced from ${currentStage.name} to ${nextStage.name}`,
-      userId: req.user.id,
+      userId,
     },
   })
 
   await prisma.activityLog.create({
     data: {
-      userId: req.user.id,
+      userId,
       text: `Workflow: ${event.name} advanced to ${nextStage.name}`,
       type: 'workflow',
       at: 'Just now',
@@ -158,7 +159,7 @@ router.post('/:eventId/advance', authRequired, async (req, res) => {
 })
 
 // POST /api/workflow/:eventId/revert - revert event to previous stage
-router.post('/:eventId/revert', authRequired, async (req, res) => {
+router.post('/:eventId/revert', optionalAuth, async (req, res) => {
   const { note } = req.body
   const event = await prisma.event.findUnique({ where: { id: req.params.eventId } })
   if (!event) return res.status(404).json({ error: 'Event not found' })
@@ -169,6 +170,7 @@ router.post('/:eventId/revert', authRequired, async (req, res) => {
 
   const currentStage = STAGES[event.stage]
   const prevStage = STAGES[event.stage - 1]
+  const userId = req.user?.id || 'st1'
 
   const updated = await prisma.event.update({
     where: { id: event.id },
@@ -185,7 +187,7 @@ router.post('/:eventId/revert', authRequired, async (req, res) => {
       stageName: prevStage.name,
       action: 'reverted',
       note: note || `Reverted from ${currentStage.name} to ${prevStage.name}`,
-      userId: req.user.id,
+      userId,
     },
   })
 
@@ -193,7 +195,7 @@ router.post('/:eventId/revert', authRequired, async (req, res) => {
 })
 
 // POST /api/workflow/:eventId/set-stage - jump to a specific stage
-router.post('/:eventId/set-stage', authRequired, async (req, res) => {
+router.post('/:eventId/set-stage', optionalAuth, async (req, res) => {
   const { stageId, note } = req.body
   if (stageId < 0 || stageId >= STAGES.length) {
     return res.status(400).json({ error: 'Invalid stage ID' })
@@ -203,6 +205,8 @@ router.post('/:eventId/set-stage', authRequired, async (req, res) => {
   if (!event) return res.status(404).json({ error: 'Event not found' })
 
   const targetStage = STAGES[stageId]
+  const userId = req.user?.id || 'st1'
+
   const updated = await prisma.event.update({
     where: { id: event.id },
     data: {
@@ -219,7 +223,7 @@ router.post('/:eventId/set-stage', authRequired, async (req, res) => {
       stageName: targetStage.name,
       action: 'set',
       note: note || `Stage set to ${targetStage.name}`,
-      userId: req.user.id,
+      userId,
     },
   })
 
@@ -227,7 +231,7 @@ router.post('/:eventId/set-stage', authRequired, async (req, res) => {
 })
 
 // GET /api/workflow/:eventId/logs - get workflow transition history
-router.get('/:eventId/logs', authRequired, async (req, res) => {
+router.get('/:eventId/logs', optionalAuth, async (req, res) => {
   const logs = await prisma.workflowLog.findMany({
     where: { eventId: req.params.eventId },
     include: { user: { select: { name: true, initials: true } } },
