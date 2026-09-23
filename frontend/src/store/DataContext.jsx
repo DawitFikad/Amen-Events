@@ -159,7 +159,7 @@ export function DataProvider({ children }) {
       try {
         const sbData = await fetchAllSupabaseData()
         if (mounted && sbData && (sbData.events?.length || sbData.staff?.length || sbData.clients?.length)) {
-          setBackendOnline(true)
+          // Supabase direct connection succeeded
           try { sessionStorage.setItem('amen_erp_cache', JSON.stringify(sbData)) } catch (e) {}
           setState((s) => {
             const defaultUser = s.currentUser || (sbData.staff?.[0] ? {
@@ -219,14 +219,20 @@ export function DataProvider({ children }) {
         }
       }
       try {
-        const healthRes = await fetch(`${API_URL}/health`)
+        const controller = new AbortController()
+        const tId = setTimeout(() => controller.abort(), 2500)
+        const healthRes = await fetch(`${API_URL}/health`, { signal: controller.signal })
+        clearTimeout(tId)
         if (healthRes.ok) {
-          const data = await healthRes.json().catch(() => ({}))
-          if (data.database === 'connected' || data.status === 'ok') {
-            setBackendOnline(true)
+          const ct = healthRes.headers.get('content-type') || ''
+          if (ct.includes('application/json')) {
+            const data = await healthRes.json().catch(() => ({}))
+            if (data.database === 'connected' || data.status === 'ok') {
+              if (mounted) setBackendOnline(true)
+            }
           }
         }
-      } catch (e) { /* backend offline */ }
+      } catch (e) { /* backend offline or not deployed */ }
       if (mounted) setLoading(false)
     }
     init()
@@ -354,7 +360,6 @@ export function DataProvider({ children }) {
         lastLogin: new Date().toISOString(),
       }
     })
-    setBackendOnline(true)
     setLoading(false)
 
     try {
@@ -451,7 +456,6 @@ export function DataProvider({ children }) {
         lastLogin: new Date().toISOString(),
       }
     })
-    setBackendOnline(true)
     setLoading(false)
 
     try {

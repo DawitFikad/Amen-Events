@@ -63,8 +63,8 @@ async function apiFetch(path, options = {}) {
     headers.Authorization = `Bearer ${token}`
   }
 
-  // Fast timeout to prevent blocking the UI when backend is unreachable or on serverless cold starts
-  const timeoutMs = options.timeout || 2000
+  // Generous timeout to avoid false aborts on serverless cold starts or slow networks
+  const timeoutMs = options.timeout || 8000
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
