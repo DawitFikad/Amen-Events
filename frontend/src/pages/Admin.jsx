@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { Settings, ShieldCheck, Users, DatabaseBackup, Activity, Bell, Globe, Lock, KeyRound, Smartphone, Mail, Download, FileText, Plus, X, Ticket, Workflow, TrendingUp, ArrowUpRight } from 'lucide-react'
+import { Settings, ShieldCheck, Users, DatabaseBackup, Activity, Bell, Globe, Lock, KeyRound, Smartphone, Mail, Download, FileText, Plus, X, Wallet, Workflow, TrendingUp, ArrowUpRight, DollarSign, TrendingDown, ClipboardList, Receipt, UserCheck, ExternalLink } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { ROLE_DEFINITIONS, MODULES, PERMISSIONS } from '../store/permissions'
-import { PageHeader, Badge, Toast, Th, Td, Avatar, Modal, Field } from '../components/ui'
-import RegisterAttendeeModal from '../components/RegisterAttendeeModal'
+import { PageHeader, Badge, Toast, Th, Td, Avatar, Modal, Field, Progress } from '../components/ui'
 import { exportTableToPDF } from '../store/exportUtils'
 import { nameOnly, emailValid, validate } from '../store/validation'
+import { fmt } from '../store/data'
 
 const permLabels = {
   view: 'View', create: 'Create', edit: 'Edit', delete: 'Delete',
@@ -34,7 +34,6 @@ export default function Admin() {
   const [twoStep, setTwoStep] = useState(state.twoStepVerification || false)
   const [method, setMethod] = useState(state.verificationMethod || 'SMS code to phone')
   const [inviteOpen, setInviteOpen] = useState(false)
-  const [attendeeOpen, setAttendeeOpen] = useState(false)
   const [inviteForm, setInviteForm] = useState({ name: '', email: '', role: 'manager' })
   const [permRole, setPermRole] = useState(null)
   const [permDraft, setPermDraft] = useState(null)
@@ -70,6 +69,7 @@ export default function Admin() {
   const allTabs = [
     ['users', 'Users', Users],
     ['roles', 'Roles & Permissions', ShieldCheck],
+    ['finance', 'Finance Management', Wallet],
     ['settings', 'Company Settings', Globe],
     ['activity', 'Activity Logs', Activity],
     ['backup', 'Backup & Security', DatabaseBackup],
@@ -183,14 +183,9 @@ export default function Admin() {
         icon={Settings}
         actions={
           isAdmin ? (
-            <div className="flex items-center gap-2">
-              <button className="btn-outline" onClick={() => setAttendeeOpen(true)}>
-                <Ticket size={15} /> Register Attendee
-              </button>
-              <button className="btn-primary" onClick={() => setInviteOpen(true)}>
-                <Users size={15} /> Invite User
-              </button>
-            </div>
+            <button className="btn-primary" onClick={() => setInviteOpen(true)}>
+              <Users size={15} /> Invite User
+            </button>
           ) : undefined
         }
       />
@@ -450,6 +445,169 @@ export default function Admin() {
         </div>
       )}
 
+      {view === 'finance' && (() => {
+        const revenue = state.invoices.reduce((a, i) => a + (i.paid || 0), 0)
+        const expected = state.invoices.reduce((a, i) => a + (i.amount || 0), 0)
+        const outstanding = expected - revenue
+        const totalExp = state.expenses.reduce((a, e) => a + (e.amount || 0), 0)
+        const profit = revenue - totalExp
+        const purchaseRequests = state.purchaseRequests || []
+        const pendingPR = purchaseRequests.filter(p => p.status === 'pending').length
+        const unpaidInvoices = state.invoices.filter(i => i.status !== 'paid')
+
+        const topExpCats = (() => {
+          const map = {}
+          state.expenses.forEach(e => { map[e.category] = (map[e.category] || 0) + e.amount })
+          return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 5)
+        })()
+
+        return (
+          <div className="space-y-5">
+            {/* KPIs */}
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 xl:grid-cols-5">
+              {[
+                { l: 'Revenue Collected', v: fmt(revenue), tone: 'text-brand-800', bg: 'bg-brand-50', icon: TrendingUp },
+                { l: 'Outstanding', v: fmt(outstanding), tone: 'text-amber-700', bg: 'bg-amber-50', icon: Receipt },
+                { l: 'Total Expenses', v: fmt(totalExp), tone: 'text-red-700', bg: 'bg-red-50', icon: TrendingDown },
+                { l: 'Net Profit', v: fmt(profit), tone: profit >= 0 ? 'text-emerald-700' : 'text-red-700', bg: profit >= 0 ? 'bg-emerald-50' : 'bg-red-50', icon: DollarSign },
+                { l: 'Pending Purchases', v: pendingPR + ' requests', tone: 'text-purple-700', bg: 'bg-purple-50', icon: ClipboardList },
+              ].map(({ l, v, tone, bg, icon: Icon }) => (
+                <div key={l} className={`card ${bg} p-4`}>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-ink/45">{l}</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <Icon size={16} className={tone} />
+                    <p className={`text-base font-black ${tone}`}>{v}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+              {/* Unpaid Invoices */}
+              <div className="card overflow-hidden">
+                <div className="flex items-center justify-between border-b border-brand-100 p-4">
+                  <p className="font-bold text-brand-950">Outstanding Invoices</p>
+                  <Link to="/erp/finance" className="btn-outline !py-1 text-xs flex items-center gap-1">
+                    <ExternalLink size={12} /> Full Finance
+                  </Link>
+                </div>
+                {unpaidInvoices.length === 0 ? (
+                  <div className="py-8 text-center text-sm text-ink/40">All invoices are settled. ✓</div>
+                ) : (
+                  <table className="w-full">
+                    <thead className="bg-brand-50/50">
+                      <tr><Th>Ref</Th><Th>Client</Th><Th className="text-right">Outstanding</Th><Th>Due</Th><Th>Status</Th></tr>
+                    </thead>
+                    <tbody className="divide-y divide-brand-50">
+                      {unpaidInvoices.slice(0, 8).map(inv => {
+                        const c = state.clients.find(x => x.id === inv.clientId)
+                        return (
+                          <tr key={inv.id} className="hover:bg-brand-50/30">
+                            <Td className="font-mono text-xs font-bold text-brand-800">{inv.ref}</Td>
+                            <Td className="text-sm font-semibold text-brand-950">{c?.company || '—'}</Td>
+                            <Td className="text-right text-sm font-semibold text-red-600">{fmt(inv.amount - inv.paid)}</Td>
+                            <Td className="text-xs text-ink/50">{inv.dueDate}</Td>
+                            <Td><Badge status={inv.status} label={inv.status} /></Td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              {/* Expense Breakdown */}
+              <div className="card overflow-hidden">
+                <div className="flex items-center justify-between border-b border-brand-100 p-4">
+                  <p className="font-bold text-brand-950">Expense Breakdown by Category</p>
+                  <span className="text-xs text-ink/40">{state.expenses.length} transactions</span>
+                </div>
+                {topExpCats.length === 0 ? (
+                  <div className="py-8 text-center text-sm text-ink/40">No expenses recorded yet.</div>
+                ) : (
+                  <div className="divide-y divide-brand-50">
+                    {topExpCats.map(([cat, amt]) => {
+                      const pct = totalExp > 0 ? Math.round((amt / totalExp) * 100) : 0
+                      return (
+                        <div key={cat} className="flex items-center gap-3 px-4 py-3">
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-brand-950">{cat}</p>
+                            <div className="mt-1 flex items-center gap-2">
+                              <div className="h-1.5 w-32 overflow-hidden rounded-full bg-brand-100">
+                                <div className="h-full bg-brand-600" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-[11px] text-ink/40">{pct}%</span>
+                            </div>
+                          </div>
+                          <p className="font-black text-brand-900">{fmt(amt)}</p>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* P&L Summary */}
+            <div className="card overflow-hidden">
+              <div className="flex items-center justify-between border-b border-brand-100 p-4">
+                <p className="font-bold text-brand-950">Profit & Loss Summary</p>
+                <Link to="/erp/finance" className="btn-primary !py-1.5 text-xs flex items-center gap-1">
+                  <ExternalLink size={12} /> Open Full Finance Control Center
+                </Link>
+              </div>
+              <table className="w-full">
+                <tbody className="divide-y divide-brand-50">
+                  {[
+                    { label: 'Total Revenue Collected', value: revenue, tone: 'text-brand-800', sign: '+' },
+                    { label: 'Outstanding Receivables', value: outstanding, tone: 'text-amber-700', sign: '' },
+                    { label: 'Total Operating Expenses', value: totalExp, tone: 'text-red-600', sign: '–' },
+                    { label: 'Net Profit / Loss', value: profit, tone: profit >= 0 ? 'text-emerald-700 font-black text-lg' : 'text-red-700 font-black text-lg', sign: profit >= 0 ? '+' : '' },
+                  ].map(r => (
+                    <tr key={r.label} className="hover:bg-brand-50/30">
+                      <Td className="font-semibold text-ink/70">{r.label}</Td>
+                      <Td className={`text-right ${r.tone}`}>{r.sign}{fmt(r.value)}</Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Purchase Requests (pending) */}
+            {pendingPR > 0 && (
+              <div className="card overflow-hidden">
+                <div className="border-b border-brand-100 p-4">
+                  <p className="font-bold text-brand-950">⚠️ {pendingPR} Purchase Request{pendingPR > 1 ? 's' : ''} Awaiting Approval</p>
+                </div>
+                <table className="w-full">
+                  <thead className="bg-brand-50/50">
+                    <tr><Th>Item</Th><Th>Event</Th><Th className="text-right">Amount</Th><Th>Urgency</Th></tr>
+                  </thead>
+                  <tbody className="divide-y divide-brand-50">
+                    {purchaseRequests.filter(p => p.status === 'pending').slice(0, 5).map(p => {
+                      const ev = state.events.find(x => x.id === p.eventId)
+                      return (
+                        <tr key={p.id} className="hover:bg-brand-50/30">
+                          <Td className="font-semibold text-brand-950">{p.item}</Td>
+                          <Td className="text-ink/60">{ev?.name || '—'}</Td>
+                          <Td className="text-right font-semibold">{fmt(p.amount)}</Td>
+                          <Td><Badge status={p.urgency === 'Urgent' ? 'urgent' : 'pending'} label={p.urgency || 'Normal'} /></Td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+                <div className="p-4">
+                  <Link to="/erp/finance" className="btn-outline text-xs flex w-max items-center gap-1">
+                    <ExternalLink size={12} /> Manage in Finance Center
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })()}
+
       {view === 'backup' && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="card p-5">
@@ -543,13 +701,6 @@ export default function Admin() {
           <button className="btn-primary" onClick={changePassword}><KeyRound size={14} /> Update Password</button>
         </div>
       </Modal>
-
-      {/* Register Attendee Wizard Modal */}
-      <RegisterAttendeeModal
-        open={attendeeOpen}
-        onClose={() => setAttendeeOpen(false)}
-        onSuccess={() => show('Attendee registered successfully')}
-      />
 
       <Toast toast={toast} />
     </div>

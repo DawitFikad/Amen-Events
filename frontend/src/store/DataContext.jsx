@@ -58,6 +58,19 @@ import {
 
 const DataContext = createContext(null)
 
+const DEFAULT_DEMO = {
+  open: false, autoplay: false, done: [0],
+  lastClientId: null, lastEventId: null, lastRegId: null,
+  lastCheckinId: null, lastQrId: null,
+  financeAction: 0, qrViewed: false, budgetSet: false,
+  allocated: false, teamAssigned: false, visitedReports: false,
+  quoteCreated: false, contractCreated: false, venueAdded: false,
+  resourceAdded: false, vendorAdded: false, staffAdded: false,
+  taskCreated: false, speakerAdded: false, exhibitorAdded: false,
+  sponsorAdded: false, campaignCreated: false, couponCreated: false,
+  adminAction: false,
+}
+
 const emptyState = {
   staff: [], clients: [], venues: [], resources: [], vendors: [],
   events: [], tasks: [], speakers: [], exhibitors: [], sponsors: [],
@@ -70,18 +83,7 @@ const emptyState = {
   approvals: [], calendarEvents: [], messages: [], documents: [],
   currentUserId: null, currentUser: null,
   lastLogin: null, intent: null,
-  demo: {
-    open: false, autoplay: false, done: [0],
-    lastClientId: null, lastEventId: null, lastRegId: null,
-    lastCheckinId: null, lastQrId: null,
-    financeAction: 0, qrViewed: false, budgetSet: false,
-    allocated: false, teamAssigned: false, visitedReports: false,
-    quoteCreated: false, contractCreated: false, venueAdded: false,
-    resourceAdded: false, vendorAdded: false, staffAdded: false,
-    taskCreated: false, speakerAdded: false, exhibitorAdded: false,
-    sponsorAdded: false, campaignCreated: false, couponCreated: false,
-    adminAction: false,
-  },
+  demo: { ...DEFAULT_DEMO },
 }
 
 const getFallbackSeed = () => ({
@@ -99,6 +101,7 @@ const getFallbackSeed = () => ({
   exhibitionBooths: exhibitionBoothsSeed, visitors: visitorsSeed,
   brandingLocations: brandingLocationsSeed, sponsorDeliverables: sponsorDeliverablesSeed,
   approvals: approvalsSeed, calendarEvents: calendarEventsSeed(),
+  demo: { ...DEFAULT_DEMO },
 })
 
 const getCachedState = () => {
@@ -106,10 +109,12 @@ const getCachedState = () => {
     const raw = sessionStorage.getItem('amen_erp_cache')
     if (raw) {
       const parsed = JSON.parse(raw)
-      return { ...getFallbackSeed(), ...parsed }
+      // Always ensure demo object has all required keys to prevent runtime crashes
+      const demo = { ...DEFAULT_DEMO, ...(parsed.demo || {}) }
+      return { ...getFallbackSeed(), ...parsed, demo }
     }
   } catch (e) {}
-  return { ...getFallbackSeed() }
+  return { ...getFallbackSeed(), demo: { ...DEFAULT_DEMO } }
 }
 
 export function DataProvider({ children }) {
@@ -171,6 +176,7 @@ export function DataProvider({ children }) {
             return {
               ...s,
               ...sbData,
+              demo: { ...DEFAULT_DEMO, ...(s?.demo || {}) },
               calendarEvents: sbData.calendarEvents?.length ? sbData.calendarEvents : calendarEventsSeed(),
               currentUserId: s.currentUserId || defaultUser?.id || 'st1',
               currentUser: defaultUser,
@@ -185,7 +191,7 @@ export function DataProvider({ children }) {
               const fresh = await fetchAllSupabaseData()
               if (mounted && fresh) {
                 try { sessionStorage.setItem('amen_erp_cache', JSON.stringify(fresh)) } catch (e) {}
-                setState((s) => ({ ...s, ...fresh }))
+                setState((s) => ({ ...s, ...fresh, demo: { ...DEFAULT_DEMO, ...(s?.demo || {}) } }))
               }
             } catch (e) {}
           })
@@ -260,6 +266,7 @@ export function DataProvider({ children }) {
       currentUserId: member.id,
       currentUser: { id: member.id, name: member.name, email: member.email, userRoles: [{ role: { key: STAFF_ROLES[member.id] || 'manager' } }] },
       lastLogin: new Date().toISOString(),
+      demo: { ...DEFAULT_DEMO, ...(s.demo || {}) },
     }))
     setLoading(false)
     return member
@@ -605,18 +612,28 @@ export function DataProvider({ children }) {
   // ─── DEMO MODE ───────────────────────────────────────────────
 
   const markDone = useCallback((step) => {
-    setState((s) => (s.demo.done.includes(step) ? s : { ...s, demo: { ...s.demo, done: [...s.demo.done, step] } }))
+    setState((s) => {
+      const demo = s.demo || DEFAULT_DEMO
+      const done = demo.done || []
+      return done.includes(step) ? s : { ...s, demo: { ...DEFAULT_DEMO, ...demo, done: [...done, step] } }
+    })
   }, [])
 
   const setDemoFlag = useCallback((flag, value = true) => {
-    setState((s) => ({ ...s, demo: { ...s.demo, [flag]: typeof value === 'function' ? value(s.demo[flag]) : value } }))
+    setState((s) => {
+      const demo = s.demo || DEFAULT_DEMO
+      return { ...s, demo: { ...DEFAULT_DEMO, ...demo, [flag]: typeof value === 'function' ? value(demo[flag]) : value } }
+    })
   }, [])
 
   const setIntent = useCallback((intent) => setState((s) => ({ ...s, intent })), [])
   const clearIntent = useCallback(() => setState((s) => ({ ...s, intent: null })), [])
-  const setDemoOpen = useCallback((open) => setState((s) => ({ ...s, demo: { ...s.demo, open } })), [])
+  const setDemoOpen = useCallback((open) => setState((s) => ({ ...s, demo: { ...(s.demo || DEFAULT_DEMO), open } })), [])
   const markVisitedReports = useCallback(() => {
-    setState((s) => (s.demo.visitedReports ? s : { ...s, demo: { ...s.demo, visitedReports: true } }))
+    setState((s) => {
+      const demo = s.demo || DEFAULT_DEMO
+      return demo.visitedReports ? s : { ...s, demo: { ...DEFAULT_DEMO, ...demo, visitedReports: true } }
+    })
   }, [])
 
   // ─── DOMAIN ACTIONS ──────────────────────────────────────────

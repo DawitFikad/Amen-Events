@@ -11,17 +11,15 @@ import { useData } from '../store/DataContext'
 
 const steps = [
   { title: 'Dashboard Overview', desc: 'Start here - KPIs, charts and team performance.', route: '/erp/dashboard', intent: null, icon: LayoutDashboard },
-  { title: 'Create a New Client', desc: 'Add a company + contact to the CRM pipeline.', route: '/erp/crm', intent: 'new-client', icon: Users },
-  { title: 'Create an Event', desc: 'Build the event, linked to your client.', route: '/erp/admin/events', intent: 'new-event', icon: CalendarDays },
+  { title: 'Create a New Client', desc: 'Add a corporate client to the CRM pipeline.', route: '/erp/crm', intent: 'new-client', icon: Users },
+  { title: 'Create an Event', desc: 'Build the corporate event, linked to your client.', route: '/erp/admin/events', intent: 'new-event', icon: CalendarDays },
   { title: 'Assign Team Members', desc: 'Pick the project manager and crew for the event.', route: '/erp/admin/events', intent: 'event-team', icon: UserPlus },
-  { title: 'Allocate Venue & Resources', desc: 'Book the venue and allocate equipment.', route: '/erp/admin/events', intent: 'event-resources', icon: MapPin },
-  { title: 'Create Budget', desc: 'Define the event budget and track spend.', route: '/erp/admin/events', intent: 'event-budget', icon: Wallet },
-  { title: 'Register Attendees', desc: 'Add attendees and ticket types.', route: '/erp/ticketing', intent: 'new-registration', icon: Ticket },
-  { title: 'Generate QR Tickets', desc: 'Open the digital QR ticket for an attendee.', route: '/erp/ticketing', intent: 'view-qr', icon: QrCode },
-  { title: 'Perform QR Check-in', desc: 'Scan the ticket at the entrance.', route: '/erp/checkin', intent: 'checkin', icon: ScanLine },
-  { title: 'Track Expenses & Payments', desc: 'Record costs and client payments.', route: '/erp/finance', intent: 'finance', icon: TrendingUp },
-  { title: 'Generate Reports', desc: 'Export the event and financial reports.', route: '/erp/reports', intent: 'reports', icon: BarChart3 },
-  { title: 'Complete Event', desc: 'Mark the event as completed.', route: '/erp/admin/events', intent: 'event-complete', icon: CheckCircle2 },
+  { title: 'Allocate Venue & Resources', desc: 'Book the venue and allocate corporate equipment.', route: '/erp/admin/events', intent: 'event-resources', icon: MapPin },
+  { title: 'Create Budget', desc: 'Define the corporate event budget and track spend.', route: '/erp/admin/events', intent: 'event-budget', icon: Wallet },
+  { title: 'Vendor Management', desc: 'Partner with verified catering, AV, and stage vendors.', route: '/erp/vendors', intent: null, icon: Handshake },
+  { title: 'Financial Management', desc: 'Invoices, expenses, procurement, and HR payroll.', route: '/erp/finance', intent: 'finance', icon: TrendingUp },
+  { title: 'Generate Reports', desc: 'Export executive summary and financial PDF reports.', route: '/erp/reports', intent: 'reports', icon: BarChart3 },
+  { title: 'Complete Event', desc: 'Mark the corporate event as completed.', route: '/erp/admin/events', intent: 'event-complete', icon: CheckCircle2 },
 ]
 
 export default function DemoWizard() {
@@ -29,7 +27,10 @@ export default function DemoWizard() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const { demo, events, clients, registrations } = state
+  const demo = state.demo || {}
+  const events = state.events || []
+  const clients = state.clients || []
+  const registrations = state.registrations || []
   const lastEvent = events.find((e) => e.id === demo.lastEventId)
   const lastClient = clients.find((c) => c.id === demo.lastClientId)
   const lastReg = registrations.find((r) => r.id === demo.lastRegId)
@@ -37,7 +38,7 @@ export default function DemoWizard() {
   // Only surface workflow steps within the signed-in role's permissions.
   const stepModuleMap = {
     '/erp/dashboard': 'dashboard', '/erp/crm': 'crm', '/erp/admin/events': 'events',
-    '/erp/ticketing': 'ticketing', '/erp/checkin': 'checkin', '/erp/finance': 'finance',
+    '/erp/vendors': 'vendors', '/erp/finance': 'finance',
     '/erp/reports': 'reports',
   }
   const visibleSteps = steps.filter((s) => {
@@ -46,7 +47,7 @@ export default function DemoWizard() {
     return !mod || rbac.canAccess(mod)
   })
 
-  const done = [...demo.done]
+  const done = Array.isArray(demo.done) ? [...demo.done] : [0]
 
   // Auto-detect completion per step (idempotent)
   if (!done.includes(0) && location.pathname === '/erp/dashboard') done.push(0)
@@ -55,12 +56,10 @@ export default function DemoWizard() {
   if (demo.teamAssigned) done.push(3)
   if (demo.allocated) done.push(4)
   if (demo.budgetSet || (lastEvent && lastEvent.budget > 0)) done.push(5)
-  if (demo.lastRegId) done.push(6)
-  if (demo.qrViewed) done.push(7)
-  if (demo.lastCheckinId) done.push(8)
-  if (demo.financeAction > 0) done.push(9)
-  if (demo.visitedReports || location.pathname === '/erp/reports') done.push(10)
-  if (lastEvent && lastEvent.status === 'completed') done.push(11)
+  if (state.vendors && state.vendors.length > 0) done.push(6)
+  if (demo.financeAction > 0 || (state.expenses && state.expenses.length > 0)) done.push(7)
+  if (demo.visitedReports || location.pathname === '/erp/reports') done.push(8)
+  if (lastEvent && lastEvent.status === 'completed') done.push(9)
 
   const uniqueDone = [...new Set(done)].sort((a, b) => a - b)
   const visibleIdx = steps.map((s, i) => (visibleSteps.includes(s) ? i : -1)).filter((i) => i >= 0)
@@ -77,8 +76,8 @@ export default function DemoWizard() {
 
   // Track report visits
   useEffect(() => {
-    if (location.pathname === '/erp/reports' && !state.demo.visitedReports) {
-      markDone(10)
+    if (location.pathname === '/erp/reports' && !state.demo?.visitedReports) {
+      markDone(8)
       clearIntent()
     }
   }, [location.pathname])

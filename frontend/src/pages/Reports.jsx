@@ -22,42 +22,53 @@ export default function Reports() {
     }
   }, [intent])
 
-  const revenue = state.invoices.reduce((a, i) => a + i.paid, 0)
-  const expenses = state.expenses.reduce((a, e) => a + e.amount, 0)
-  const ticketRevenue = state.registrations.filter((r) => r.paid).reduce((a, r) => a + r.amount, 0)
-  const attended = state.registrations.filter((r) => r.checkedIn).length
+  const invoices = state.invoices || []
+  const expensesList = state.expenses || []
+  const registrations = state.registrations || []
+  const events = state.events || []
+  const staff = state.staff || []
+  const clients = state.clients || []
+  const tasks = state.tasks || []
+  const vendors = state.vendors || []
+  const resources = state.resources || []
+  const venues = state.venues || []
+
+  const revenue = invoices.reduce((a, i) => a + (i.paid || 0), 0)
+  const expenses = expensesList.reduce((a, e) => a + (e.amount || 0), 0)
+  const ticketRevenue = registrations.filter((r) => r.paid).reduce((a, r) => a + (r.amount || 0), 0)
+  const attended = registrations.filter((r) => r.checkedIn).length
 
   const vendorSpend = {}
-  state.expenses.forEach((e) => { vendorSpend[e.category] = (vendorSpend[e.category] || 0) + e.amount })
+  expensesList.forEach((e) => { vendorSpend[e.category] = (vendorSpend[e.category] || 0) + e.amount })
   const vendorData = Object.entries(vendorSpend).map(([name, v]) => ({ name, v }))
 
   // Build attendance vs registration chart from real event data
-  const attendanceData = state.events.map((e) => {
-    const regs = state.registrations.filter((r) => r.eventId === e.id)
+  const attendanceData = events.map((e) => {
+    const regs = registrations.filter((r) => r.eventId === e.id)
     return { m: e.name?.slice(0, 12) || 'Event', reg: regs.length, att: regs.filter((r) => r.checkedIn).length }
   }).filter((d) => d.reg > 0).slice(0, 6)
 
   // Staff performance from real data
-  const staffPerformance = state.staff.map((m) => {
-    const mine = state.tasks.filter((t) => t.assigneeId === m.id)
+  const staffPerformance = staff.map((m) => {
+    const mine = tasks.filter((t) => t.assigneeId === m.id)
     const done = mine.filter((t) => t.status === 'done').length
-    const myEvents = state.events.filter((e) => e.pmId === m.id || e.team?.includes(m.id)).length
+    const myEvents = events.filter((e) => e.pmId === m.id || e.team?.includes(m.id)).length
     return { id: m.id, name: m.name, role: m.role || m.jobTitle || '-', events: myEvents, tasks: mine.length, done, rating: m.rating || 4.0 }
   }).filter((s) => s.tasks > 0 || s.events > 0)
 
-  const clientName = (id) => state.clients.find((c) => c.id === id)?.company || '-'
-  const eventName = (id) => state.events.find((e) => e.id === id)?.name || '-'
+  const clientName = (id) => clients.find((c) => c.id === id)?.company || '-'
+  const eventName = (id) => events.find((e) => e.id === id)?.name || '-'
 
   const reportRows = {
-    'Events Report': state.events.map((e) => [e.name, e.category, clientName(e.clientId), e.date, e.status, e.budget, e.spent, e.attendees || '']),
-    'Revenue Report': state.invoices.map((i) => [i.ref, clientName(i.clientId), eventName(i.eventId), i.amount, i.paid, i.amount - i.paid, i.status]),
-    'Expense Report': state.expenses.map((e) => [eventName(e.eventId), e.category, e.date, e.amount]),
-    'Client Report': state.clients.map((c) => [c.company, c.industry, c.city, c.contactPerson, c.stage, c.status, c.totalValue]),
-    'Attendance Report': state.registrations.map((r) => [eventName(r.eventId), r.name, r.type, r.paid ? 'Paid' : 'Unpaid', r.checkedIn ? 'Checked in' : 'Pending']),
-    'Ticket Sales Report': state.registrations.map((r) => [eventName(r.eventId), r.name, r.type, r.amount, r.paid ? 'Paid' : 'Unpaid']),
-    'Vendor Report': state.vendors.map((v) => [v.name, v.type, v.contact, v.rating, v.contracts, v.status]),
-    'Resource Report': state.resources.map((r) => [r.name, r.type, r.qty, r.allocated, (r.qty || 0) - (r.allocated || 0), r.status, r.location]),
-    'Venue Report': state.venues.map((v) => [v.name, v.city, v.capacity, v.price, v.status, v.equipment?.join(', ') || '']),
+    'Events Report': events.map((e) => [e.name, e.category, clientName(e.clientId), e.date, e.status, e.budget, e.spent, e.attendees || '']),
+    'Revenue Report': invoices.map((i) => [i.ref, clientName(i.clientId), eventName(i.eventId), i.amount, i.paid, (i.amount || 0) - (i.paid || 0), i.status]),
+    'Expense Report': expensesList.map((e) => [eventName(e.eventId), e.category, e.date, e.amount]),
+    'Client Report': clients.map((c) => [c.company, c.industry, c.city, c.contactPerson, c.stage, c.status, c.totalValue]),
+    'Attendance Report': registrations.map((r) => [eventName(r.eventId), r.name, r.type, r.paid ? 'Paid' : 'Unpaid', r.checkedIn ? 'Checked in' : 'Pending']),
+    'Ticket Sales Report': registrations.map((r) => [eventName(r.eventId), r.name, r.type, r.amount, r.paid ? 'Paid' : 'Unpaid']),
+    'Vendor Report': vendors.map((v) => [v.name, v.type, v.contact, v.rating, v.contracts, v.status]),
+    'Resource Report': resources.map((r) => [r.name, r.type, r.qty, r.allocated, (r.qty || 0) - (r.allocated || 0), r.status, r.location]),
+    'Venue Report': venues.map((v) => [v.name, v.city, v.capacity, v.price, v.status, v.equipment?.join(', ') || '']),
     'Staff Performance': state.staff.map((m) => {
       const mine = state.tasks.filter((t) => t.assigneeId === m.id)
       const done = mine.filter((t) => t.status === 'done').length
