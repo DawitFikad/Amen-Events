@@ -37,8 +37,6 @@ const groups = [
   {
     label: 'Event Operations',
     items: [
-      { to: '/erp/ticketing', label: 'Registration & Ticketing', icon: Ticket, module: 'ticketing' },
-      { to: '/erp/checkin', label: 'QR Check-in', icon: QrCode, module: 'checkin' },
       { to: '/erp/speakers', label: 'Speakers & Conference', icon: Mic2, module: 'speakers' },
       { to: '/erp/exhibition', label: 'Exhibition Management', icon: Building2, module: 'exhibition' },
       { to: '/erp/sponsorship', label: 'Sponsorship', icon: BadgeDollarSign, module: 'sponsorship' },

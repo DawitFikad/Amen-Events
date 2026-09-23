@@ -1192,7 +1192,7 @@ export default function WorkflowPage() {
                           className="flex items-start gap-3 rounded-xl border border-brand-100/80 bg-white p-3 shadow-sm"
                         >
                           <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-700">
-                            <Activity size={13} />
+                            <History size={13} />
                           </span>
 
                           <div className="flex-1 space-y-0.5">
