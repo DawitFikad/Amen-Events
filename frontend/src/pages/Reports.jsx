@@ -9,14 +9,13 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGri
 const PIE = ['#228b22', '#c9a227', '#9cc69c', '#175917', '#d1aa4d']
 
 export default function Reports() {
-  const { state, markVisitedReports, intent, clearIntent } = useData()
+  const { state, intent, clearIntent } = useData()
   const [range, setRange] = useState('Q3')
   const [toast, setToast] = useState(null)
 
   const show = (m, t = 'success') => { setToast({ message: m, type: t }); setTimeout(() => setToast(null), 2600) }
 
   useEffect(() => {
-    markVisitedReports()
     if (intent === 'reports') {
       clearIntent()
     }

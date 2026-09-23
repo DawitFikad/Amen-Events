@@ -27,16 +27,18 @@ class ErrorBoundary extends React.Component {
   componentDidCatch(error, info) {
     console.error('App Error:', error, info)
     const msg = String(error?.message || '')
-    // Detect stale deployment dynamic import failure
+    // Detect stale deployment dynamic import failure or stale cache error
     if (
       msg.includes('dynamically imported module') ||
       msg.includes('error loading dynamically imported module') ||
       msg.includes('Loading chunk') ||
-      msg.includes('failed to fetch') && msg.includes('.js')
+      msg.includes('visitedReports') ||
+      (msg.includes('failed to fetch') && msg.includes('.js'))
     ) {
       const key = 'amen_chunk_reload_' + window.location.pathname
       if (!sessionStorage.getItem(key)) {
         sessionStorage.setItem(key, '1')
+        try { sessionStorage.removeItem('amen_erp_cache') } catch (e) {}
         window.location.reload()
       }
     }
@@ -47,7 +49,8 @@ class ErrorBoundary extends React.Component {
       const isChunkError =
         msg.includes('dynamically imported module') ||
         msg.includes('error loading dynamically imported module') ||
-        msg.includes('Loading chunk')
+        msg.includes('Loading chunk') ||
+        msg.includes('visitedReports')
 
       if (isChunkError) {
         return (
@@ -94,7 +97,7 @@ class ErrorBoundary extends React.Component {
               </p>
               <button
                 onClick={() => {
-                  sessionStorage.clear()
+                  try { sessionStorage.clear(); localStorage.clear() } catch (e) {}
                   window.location.reload()
                 }}
                 style={{
@@ -124,6 +127,24 @@ class ErrorBoundary extends React.Component {
             {'\n\n'}
             {this.state.error?.stack}
           </pre>
+          <button
+            onClick={() => {
+              try { sessionStorage.clear(); localStorage.clear() } catch (e) {}
+              window.location.reload()
+            }}
+            style={{
+              marginTop: '20px',
+              padding: '10px 20px',
+              background: '#188A2E',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '14px',
+              cursor: 'pointer',
+            }}
+          >
+            Clear Cache & Reload
+          </button>
         </div>
       )
     }
