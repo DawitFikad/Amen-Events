@@ -106,7 +106,7 @@ export default function PortalLogin() {
             />
           </div>
           <button type="submit" disabled={loading} className="btn-primary w-full">
-            {loading ? 'Logging in…' : 'Login'} <ArrowRight size={16} />
+            {loading ? <span className="inline-flex items-center gap-2"><span className="w-20 h-4 rounded skeleton-shimmer opacity-75 inline-block" /></span> : <>Login <ArrowRight size={16} /></>}
           </button>
         </form>
 

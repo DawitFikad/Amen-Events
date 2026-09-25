@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import { publicApi } from '../store/api'
 import { useData } from '../store/DataContext'
-import { Spinner, EmptyState } from '../components/ui'
+import { EmptyState, Skeleton, SkeletonText } from '../components/ui'
 import { nameOnly, emailValid, phoneValid, validate } from '../store/validation'
 
 const TICKET_TYPES = [
@@ -107,8 +107,48 @@ export default function PublicEventDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-brand-50/30">
-        <Spinner size={28} className="text-brand-600" />
+      <div className="min-h-screen bg-brand-50/30">
+        <PublicHeader />
+        <div className="mx-auto max-w-5xl px-5 py-8 space-y-6">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-8 w-8 rounded-lg" />
+            <Skeleton className="h-4 w-28" />
+          </div>
+          <div className="rounded-3xl border border-brand-100 bg-white p-6 sm:p-8 space-y-4 shadow-sm">
+            <Skeleton className="h-6 w-24 rounded-full" />
+            <Skeleton className="h-9 w-3/4" />
+            <div className="flex flex-wrap items-center gap-4 pt-2">
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-28" />
+            </div>
+          </div>
+          <div className="grid gap-8 lg:grid-cols-3">
+            <div className="space-y-6 lg:col-span-2">
+              <div className="rounded-2xl border border-brand-100 bg-white p-6 space-y-3 shadow-sm">
+                <Skeleton className="h-5 w-32" />
+                <SkeletonText lines={4} />
+              </div>
+              <div className="rounded-2xl border border-brand-100 bg-white p-6 space-y-4 shadow-sm">
+                <Skeleton className="h-5 w-40" />
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} className="h-28 rounded-xl" />
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-brand-100 bg-white p-6 space-y-4 shadow-sm">
+              <Skeleton className="h-6 w-36" />
+              <div className="space-y-3">
+                <Skeleton className="h-10 w-full rounded-xl" />
+                <Skeleton className="h-10 w-full rounded-xl" />
+                <Skeleton className="h-10 w-full rounded-xl" />
+                <Skeleton className="h-11 w-full rounded-xl mt-4" />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
@@ -355,7 +395,7 @@ export default function PublicEventDetail() {
                   disabled={submitting}
                   className="btn-primary"
                 >
-                  {submitting ? <Spinner size={16} /> : <Ticket size={16} />}
+                  {submitting ? <span className="inline-block h-4 w-4 rounded-full skeleton-shimmer" /> : <Ticket size={16} />}
                   {submitting ? 'Submitting…' : 'Register & Send for Approval'}
                 </button>
               </div>

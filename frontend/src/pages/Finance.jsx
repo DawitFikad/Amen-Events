@@ -10,7 +10,7 @@ import {
 import { useData } from '../store/DataContext'
 import {
   PageHeader, Badge, Toast, Modal, Field, EmptyState,
-  Th, Td, Progress,
+  Th, Td, Progress, SkeletonPage,
 } from '../components/ui'
 import { fmt, todayISO } from '../store/data'
 import { exportTableToPDF } from '../store/exportUtils'
@@ -64,8 +64,9 @@ export default function Finance() {
   const {
     state, recordExpense, recordPayment, addInvoice,
     intent, clearIntent, addPurchaseRequest, setPurchaseRequestStatus,
-    logActivity,
+    logActivity, loading,
   } = useData()
+  if (loading) return <SkeletonPage />
 
   const [tab, setTab] = useState('overview')
   const [open, setOpen] = useState(null)

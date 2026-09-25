@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react'
 import { UserCircle, Lock, History, Shield, Save, CheckCircle2, XCircle, MapPin, Mail, Phone, Building2, Briefcase, Camera } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import api from '../store/api'
-import { PageHeader, Avatar, Badge, Toast, Th, Td } from '../components/ui'
+import { PageHeader, Avatar, Badge, Toast, Th, Td, SkeletonDetail } from '../components/ui'
 import { nameOnly, phoneValid, validate } from '../store/validation'
 
 export default function Profile() {
-  const { state, rbac, backendOnline, patch } = useData()
+  const { state, rbac, backendOnline, patch, loading } = useData()
+  if (loading) return <SkeletonDetail />
   const user = state.currentUser
   const me = state.staff?.find((m) => m.id === state.currentUserId)
   const [view, setView] = useState('info')

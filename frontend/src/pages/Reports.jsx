@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { BarChart3, FileSpreadsheet, FileText, Download, TrendingUp, TrendingDown, Users, Ticket, Wallet, Building2, Package, MapPin } from 'lucide-react'
 import { useData } from '../store/DataContext'
-import { PageHeader, Badge, Progress, Toast, Th, Td, Segmented } from '../components/ui'
+import { PageHeader, Badge, Progress, Toast, Th, Td, Segmented, SkeletonPage } from '../components/ui'
 import { fmt, fmtCompact } from '../store/data'
 import { exportXLSX, exportXLSXBook, exportPDF } from '../store/exportUtils'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
@@ -9,7 +9,8 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGri
 const PIE = ['#228b22', '#c9a227', '#9cc69c', '#175917', '#d1aa4d']
 
 export default function Reports() {
-  const { state, intent, clearIntent } = useData()
+  const { state, intent, clearIntent, loading } = useData()
+  if (loading) return <SkeletonPage />
   const [range, setRange] = useState('Q3')
   const [toast, setToast] = useState(null)
 

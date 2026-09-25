@@ -6,14 +6,18 @@ import {
   ChevronRight, Building2, MapPin, Plus, Sparkles,
 } from 'lucide-react'
 import { useData } from '../../store/DataContext'
-import { StatCard, Badge, Progress } from '../../components/ui'
+import { StatCard, Badge, Progress, SkeletonClientDashboard } from '../../components/ui'
 import { fmtCompact } from '../../store/data'
 
 export default function ClientDashboard() {
-  const { state } = useData()
+  const { state, loading } = useData()
   const navigate = useNavigate()
   const clientId = state.currentUserId
   const client = state.clients.find((c) => c.id === clientId)
+
+  if (loading || (!client && state.clients.length === 0)) {
+    return <SkeletonClientDashboard />
+  }
 
   const myEvents = useMemo(() => {
     return state.events.filter((e) => {

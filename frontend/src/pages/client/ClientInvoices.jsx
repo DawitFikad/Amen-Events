@@ -2,13 +2,17 @@ import React, { useMemo, useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Wallet, Download, FileText, CheckCircle2, AlertCircle, CreditCard, Shield, X } from 'lucide-react'
 import { useData } from '../../store/DataContext'
-import { Badge, Th, Td, Toast } from '../../components/ui'
+import { Badge, Th, Td, Toast, SkeletonPage } from '../../components/ui'
 import { fmt, fmtCompact } from '../../store/data'
 import { exportPDF } from '../../store/exportUtils'
 
 export default function ClientInvoices() {
-  const { state, patchBy, recordPayment } = useData()
+  const { state, patchBy, recordPayment, loading } = useData()
   const clientId = state.currentUserId
+
+  if (loading) {
+    return <SkeletonPage cards={4} tableCols={6} />
+  }
   const [filter, setFilter] = useState('all')
   const [payInvoice, setPayInvoice] = useState(null)
   const [payAmount, setPayAmount] = useState(0)
@@ -218,7 +222,7 @@ export default function ClientInvoices() {
             <div className="mb-4 flex items-center gap-2 rounded-lg bg-brand-50 p-3 text-xs text-ink/60"><Shield size={14} className="text-brand-600" /> Secured with 256-bit SSL encryption</div>
 
             <button onClick={handlePay} disabled={busy || payAmount <= 0} className="btn-primary w-full">
-              {busy ? (<span className="flex items-center gap-2"><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> Processing…</span>) : (<><CreditCard size={16} /> Pay ETB {fmtCompact(payAmount)}</>)}
+              {busy ? (<span className="flex items-center gap-2"><span className="h-4 w-4 rounded-full skeleton-shimmer" /> Processing…</span>) : (<><CreditCard size={16} /> Pay ETB {fmtCompact(payAmount)}</>)}
             </button>
           </div>
         </div>,

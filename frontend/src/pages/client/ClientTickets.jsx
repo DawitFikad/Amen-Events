@@ -4,10 +4,28 @@ import { Ticket, TrendingUp, Download, QrCode, Users, X, CalendarDays, MapPin, C
 import { useData } from '../../store/DataContext'
 import { fmtCompact, fmt } from '../../store/data'
 import { exportPDF } from '../../store/exportUtils'
+import { SkeletonCard, SkeletonTicketCard } from '../../components/ui'
 
 export default function ClientTickets() {
-  const { state } = useData()
+  const { state, loading } = useData()
   const clientId = state.currentUserId
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonTicketCard key={i} />
+          ))}
+        </div>
+      </div>
+    )
+  }
   const [selectedEvent, setSelectedEvent] = useState('all')
   const [qrTicket, setQrTicket] = useState(null)
 

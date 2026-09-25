@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import api from '../store/api'
 import { useData } from '../store/DataContext'
-import { PageHeader, Badge, Avatar, Toast, StatCard } from '../components/ui'
+import { PageHeader, Badge, Avatar, Toast, StatCard, SkeletonPage } from '../components/ui'
 import { fmtCompact } from '../store/data'
 
 const TYPE_ICONS = {
@@ -27,7 +27,8 @@ const STATUS_TONES = {
 }
 
 export default function Approvals() {
-  const { backendOnline, state, patchBy, setApprovalStatus, addApprovalRequest, logActivity } = useData()
+  const { backendOnline, state, patchBy, setApprovalStatus, addApprovalRequest, logActivity, loading } = useData()
+  if (loading) return <SkeletonPage />
   const [approvals, setApprovals] = useState([])
   const [filter, setFilter] = useState('all')
   const [toast, setToast] = useState(null)

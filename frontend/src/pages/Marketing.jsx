@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Megaphone, Plus, Mail, MessageSquare, Send, Link2, Tag, TrendingUp, Globe, Pencil, CalendarDays, FileText } from 'lucide-react'
 import { useData } from '../store/DataContext'
-import { PageHeader, Badge, Progress, Toast, EmptyState, Th, Td, Modal, Field } from '../components/ui'
+import { PageHeader, Badge, Progress, Toast, EmptyState, Th, Td, Modal, Field, SkeletonPage } from '../components/ui'
 import { exportPDF } from '../store/exportUtils'
 import { textRequired, numberPositive, optional, validate } from '../store/validation'
 
@@ -19,7 +19,8 @@ const channelDefaults = {
 }
 
 export default function Marketing() {
-  const { state, patch, addCampaign, updateCampaign, addCoupon, logActivity, intent, clearIntent } = useData()
+  const { state, patch, addCampaign, updateCampaign, addCoupon, logActivity, intent, clearIntent, loading } = useData()
+  if (loading) return <SkeletonPage />
   const [view, setView] = useState('campaigns')
   const [toast, setToast] = useState(null)
   const [open, setOpen] = useState(null) // 'campaign' | 'coupon'

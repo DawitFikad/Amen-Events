@@ -4,6 +4,7 @@ import { Calendar, MapPin, Users, Mic, ArrowLeft, Ticket, CheckCircle2, Star, He
 import { useAttendee } from '../../store/AttendeeContext'
 import { portalEventFallback } from '../../store/portalFallback'
 import { supabaseFetchEventById, supabaseSubmitReview } from '../../store/supabase'
+import { Skeleton, SkeletonText } from '../../components/ui'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
@@ -127,8 +128,59 @@ export default function PortalEventDetail() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-4xl px-5 py-20 sm:px-8">
-        <div className="portal-skeleton rounded-[20px] p-8 h-96" />
+      <div className="mx-auto max-w-5xl px-5 py-8 sm:px-8 space-y-6">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-8 w-8 rounded-lg" />
+          <Skeleton className="h-4 w-28" />
+        </div>
+        <div className="overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm">
+          <Skeleton className="h-64 sm:h-80 w-full rounded-none" />
+          <div className="p-6 sm:p-8 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-20 rounded-full" />
+                <Skeleton className="h-8 w-72 sm:w-96" />
+              </div>
+              <div className="flex gap-2">
+                <Skeleton className="h-10 w-10 rounded-xl" />
+                <Skeleton className="h-10 w-10 rounded-xl" />
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-6 pt-2">
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-24" />
+            </div>
+          </div>
+        </div>
+        <div className="grid gap-8 lg:grid-cols-3">
+          <div className="space-y-6 lg:col-span-2">
+            <div className="rounded-2xl border border-gray-100 bg-white p-6 space-y-3">
+              <Skeleton className="h-6 w-32" />
+              <SkeletonText lines={4} />
+            </div>
+            <div className="rounded-2xl border border-gray-100 bg-white p-6 space-y-4">
+              <Skeleton className="h-6 w-32" />
+              <div className="space-y-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <Skeleton className="h-5 w-16" />
+                    <Skeleton className="h-4 flex-1" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-gray-100 bg-white p-6 space-y-4">
+            <Skeleton className="h-6 w-32" />
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-20 w-full rounded-xl" />
+              ))}
+              <Skeleton className="h-12 w-full rounded-xl mt-4" />
+            </div>
+          </div>
+        </div>
       </div>
     )
   }

@@ -2,7 +2,7 @@
 // Mirrors the API response shapes so portal pages render real content
 // even when the backend is not running (demo mode).
 
-import { eventsSeed, venuesSeed, clientsSeed, registrationsSeed, speakersSeed } from './data'
+import { eventsSeed, venuesSeed, clientsSeed, registrationsSeed, speakersSeed } from './data.js'
 
 const CATEGORIES = [
   'Conference', 'Exhibition', 'Product Launch', 'Retreat', 'Gala', 'Ceremony', 'Workshop',

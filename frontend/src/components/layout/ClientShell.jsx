@@ -1,8 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, Suspense } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Menu, X, Bell, Search } from 'lucide-react'
 import ClientSidebar from './ClientSidebar'
-import { BackButton } from '../ui'
+import { BackButton, SkeletonClientDashboard } from '../ui'
 import LiveKpiBar from '../LiveKpiBar'
 import { useData } from '../../store/DataContext'
 import { useNavigate } from 'react-router-dom'
@@ -83,7 +83,9 @@ export default function ClientShell() {
         {/* Content */}
         <main className="p-4 lg:p-6">
           <LiveKpiBar scope="client" />
-          <Outlet />
+          <Suspense fallback={<SkeletonClientDashboard />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>

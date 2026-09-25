@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { UserCog, Plus, CalendarDays, Award, Clock3, ShieldCheck, Upload, Trash2, Info, MapPin, Wallet, Users, CheckCircle2 } from 'lucide-react'
 import { useData } from '../store/DataContext'
-import { PageHeader, Badge, Progress, SearchBox, Toast, Th, Td, Avatar, Segmented, Modal, Field, StatCard } from '../components/ui'
+import { PageHeader, Badge, Progress, SearchBox, Toast, Th, Td, Avatar, Segmented, Modal, Field, StatCard, SkeletonPage } from '../components/ui'
 import { nameOnly, phoneValid, emailValid, numberPositive, optional, dateRequired, textRequired, validate } from '../store/validation'
 
 const attendance = [
@@ -15,7 +15,8 @@ const attendance = [
 const departments = ['Management', 'Operations', 'Finance', 'Procurement', 'Marketing', 'Technical', 'Sales', 'HR', 'Logistics', 'Security', 'Creative', 'Hospitality', 'IT & AV', 'Guest Relations']
 
 export default function Staff() {
-  const { state, addStaffMember, updateStaffMember, intent, clearIntent } = useData()
+  const { state, addStaffMember, updateStaffMember, intent, clearIntent, loading } = useData()
+  if (loading) return <SkeletonPage />
   const [q, setQ] = useState('')
   const [view, setView] = useState('directory')
   const [toast, setToast] = useState(null)

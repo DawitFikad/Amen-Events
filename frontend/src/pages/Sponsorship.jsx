@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { BadgeDollarSign, Plus, FileText, CheckCircle2, Megaphone, Pencil, Mail, Phone, CalendarDays } from 'lucide-react'
 import { useData } from '../store/DataContext'
-import { PageHeader, Badge, Progress, Toast, Th, Td, Modal, Field } from '../components/ui'
+import { PageHeader, Badge, Progress, Toast, Th, Td, Modal, Field, SkeletonPage } from '../components/ui'
 import { fmt, todayISO } from '../store/data'
 import { textRequired, nameOnly, numberPositive, emailValid, phoneValid, optional, validate } from '../store/validation'
 
@@ -15,7 +15,8 @@ const packages = [
 ]
 
 export default function Sponsorship() {
-  const { state, patch, addSponsor, updateSponsor, logActivity, intent, clearIntent } = useData()
+  const { state, patch, addSponsor, updateSponsor, logActivity, intent, clearIntent, loading } = useData()
+  if (loading) return <SkeletonPage />
   const [view, setView] = useState('overview')
   const [toast, setToast] = useState(null)
   const [open, setOpen] = useState(false)

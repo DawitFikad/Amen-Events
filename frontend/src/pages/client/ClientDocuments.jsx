@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { FileText, Download, File, Image, FileCheck, FileSpreadsheet, Search, Upload, Plus, X, CheckCircle2 } from 'lucide-react'
 import { useData } from '../../store/DataContext'
 import { exportTableToPDF } from '../../store/exportUtils'
-import { Toast } from '../../components/ui'
+import { Toast, SkeletonPage } from '../../components/ui'
 
 const DOC_CATEGORIES = [
   { key: 'all', label: 'All' },
@@ -37,8 +37,12 @@ const CATEGORY_ICONS = {
 }
 
 export default function ClientDocuments() {
-  const { state, uploadDocument } = useData()
+  const { state, uploadDocument, loading } = useData()
   const clientId = state.currentUserId
+
+  if (loading) {
+    return <SkeletonPage cards={3} tableCols={4} />
+  }
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [showUpload, setShowUpload] = useState(false)
@@ -336,7 +340,7 @@ export default function ClientDocuments() {
               >
                 {uploading ? (
                   <span className="flex items-center gap-2">
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    <span className="h-4 w-4 rounded-full skeleton-shimmer" />
                     Uploading to Supabase…
                   </span>
                 ) : (

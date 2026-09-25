@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Ticket, CheckCircle2, XCircle, Loader2, ArrowLeft, Shield } from 'lucide-react'
+import { Ticket, CheckCircle2, XCircle, ArrowLeft, Shield } from 'lucide-react'
 import { useAttendee } from '../../store/AttendeeContext'
 import { supabaseCreateOrderAndPayment } from '../../store/supabase'
 import { nameOnly, emailValid, phoneValid, validate } from '../../store/validation'
@@ -177,7 +177,7 @@ export default function Checkout() {
           {error && <div className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>}
 
           <button onClick={handlePay} disabled={processing} className="mt-5 w-full rounded-xl bg-portal-500 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-portal-600 hover:shadow-md disabled:opacity-50">
-            {processing ? <span className="inline-flex items-center gap-2"><Loader2 size={16} className="animate-spin" /> Processing…</span> : <span className="inline-flex items-center gap-2"><Ticket size={16} /> Pay ETB {total.toLocaleString()}</span>}
+            {processing ? <span className="inline-flex items-center gap-2"><span className="h-4 w-4 rounded-full skeleton-shimmer" /> Processing…</span> : <span className="inline-flex items-center gap-2"><Ticket size={16} /> Pay ETB {total.toLocaleString()}</span>}
           </button>
         </div>
       </div>

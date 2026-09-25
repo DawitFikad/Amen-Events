@@ -2,14 +2,15 @@ import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Handshake, Plus, Star, Phone, FileText, CheckCircle2 } from 'lucide-react'
 import { useData } from '../store/DataContext'
-import { PageHeader, Badge, Progress, SearchBox, Toast, EmptyState, Th, Td, Avatar, Modal, Field, StatCard } from '../components/ui'
+import { PageHeader, Badge, Progress, SearchBox, Toast, EmptyState, Th, Td, Avatar, Modal, Field, StatCard, SkeletonPage } from '../components/ui'
 import { nameOnly, phoneValid, textRequired, numberPositive, validate } from '../store/validation'
 import { exportTableToPDF } from '../store/exportUtils'
 
 const typeIcon = { Caterer: '🍽️', Decorator: '🌸', Security: '🛡️', Photographer: '📷', Videographer: '🎥', Entertainment: '🎤', Printing: '🖨️', Transportation: '🚚', Cleaner: '🧹', Technician: '🔧', AV: '🎛️', Floral: '💐', Furniture: '🪑', Lighting: '💡', Other: '✨' }
 
 export default function Vendors() {
-  const { state, addVendor, intent, clearIntent } = useData()
+  const { state, addVendor, intent, clearIntent, loading } = useData()
+  if (loading) return <SkeletonPage />
   const [q, setQ] = useState('')
   const [detail, setDetail] = useState(null)
   const [toast, setToast] = useState(null)

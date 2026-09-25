@@ -5,7 +5,7 @@ import {
   Paperclip, Clock3, ChevronRight, ArrowRight, LayoutGrid, Trash2,
 } from 'lucide-react'
 import { useData } from '../store/DataContext'
-import { PageHeader, Badge, Progress, Avatar, Modal, ConfirmModal, Field, PriorityDot, SearchBox, Toast, EmptyState, Segmented, Th, Td } from '../components/ui'
+import { PageHeader, Badge, Progress, Avatar, Modal, ConfirmModal, Field, PriorityDot, SearchBox, Toast, EmptyState, Segmented, Th, Td, SkeletonPage } from '../components/ui'
 import { fmt, todayISO } from '../store/data'
 import { required, textRequired, optional, dateRequired, validate } from '../store/validation'
 
@@ -24,7 +24,8 @@ const milestones = [
 ]
 
 export default function Projects() {
-  const { state, updateTask, addTask, intent, clearIntent } = useData()
+  const { state, updateTask, addTask, intent, clearIntent, loading } = useData()
+  if (loading) return <SkeletonPage />
   const [view, setView] = useState('board')
   const [open, setOpen] = useState(false)
   const [toast, setToast] = useState(null)

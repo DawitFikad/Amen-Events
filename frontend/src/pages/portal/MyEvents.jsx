@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Calendar, MapPin, Ticket, CheckCircle2, Clock, XCircle } from 'lucide-react'
 import { useAttendee } from '../../store/AttendeeContext'
 import { supabaseFetchAttendeeEvents } from '../../store/supabase'
+import { Skeleton } from '../../components/ui'
 
 export default function MyEvents() {
   const { authFetch, isAuthenticated, attendee } = useAttendee()
@@ -76,7 +77,21 @@ export default function MyEvents() {
       </div>
 
       {loading ? (
-        <div className="mt-6 space-y-3">{[1, 2, 3].map((i) => <div key={i} className="card animate-pulse p-5 h-24" />)}</div>
+        <div className="mt-6 space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="card flex items-center gap-4 p-4">
+              <Skeleton className="h-12 w-12 rounded-xl shrink-0" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-4 w-1/3" />
+                <div className="flex gap-4">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-3 w-28" />
+                </div>
+              </div>
+              <Skeleton className="h-6 w-20 rounded-full shrink-0" />
+            </div>
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
         <div className="card mt-6 py-16 text-center">
           <Calendar size={40} className="mx-auto text-ink/30" />

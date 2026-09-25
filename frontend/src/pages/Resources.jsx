@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Package, Plus, Wrench, Truck, Boxes, AlertTriangle, CheckCircle2, Upload, Trash2, Image, Info, CircleDollarSign, Store, CalendarClock, FileText } from 'lucide-react'
 import { useData } from '../store/DataContext'
-import { PageHeader, Badge, Progress, SearchBox, Toast, EmptyState, Th, Td, Avatar, Modal, Field } from '../components/ui'
+import { PageHeader, Badge, Progress, SearchBox, Toast, EmptyState, Th, Td, Avatar, Modal, Field, SkeletonPage } from '../components/ui'
 import { textRequired, required, numberPositive, optional, dateRequired, nameOnly, validate } from '../store/validation'
 import { exportTableToPDF } from '../store/exportUtils'
 
@@ -16,7 +16,8 @@ const allocations = [
 const statuses = ['available', 'reserved', 'in-use', 'maintenance', 'retired']
 
 export default function Resources() {
-  const { state, addResource, updateResource, scheduleMaintenance, completeMaintenance, intent, clearIntent } = useData()
+  const { state, addResource, updateResource, scheduleMaintenance, completeMaintenance, intent, clearIntent, loading } = useData()
+  if (loading) return <SkeletonPage />
   const [q, setQ] = useState('')
   const [toast, setToast] = useState(null)
   const [cat, setCat] = useState('All')

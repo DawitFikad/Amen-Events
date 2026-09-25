@@ -134,7 +134,7 @@ export default function PortalRegister() {
           </div>
 
           <button type="submit" disabled={loading} className="btn-primary w-full">
-            {loading ? 'Creating…' : 'Create Account'} <ArrowRight size={16} />
+            {loading ? <span className="inline-flex items-center gap-2"><span className="w-24 h-4 rounded skeleton-shimmer opacity-75 inline-block" /></span> : <>Create Account <ArrowRight size={16} /></>}
           </button>
         </form>
 

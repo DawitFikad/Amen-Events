@@ -86,8 +86,128 @@ KPI cards, revenue charts, event pipeline, quick actions.
 ### CRM
 Client management with stages: Lead → Quotation → Contract → Active.
 
-### Events
-Create events, assign teams, set budgets, track 10-step workflow.
+### Events & Workflow
+Create events, assign cross-functional teams, allocate budgets, and manage the full 14-step lifecycle workflow.
+
+<details>
+<summary><strong>Event Workflow & Governance Center (/erp/workflow)</strong> <em>(Click to expand/collapse dropdown)</em></summary>
+<br/>
+
+The Workflow Center provides an intuitive, step-by-step breakdown of every operational milestone across 4 phases and 14 canonical steps. Every single step clearly displays:
+- **By Who (Initiator / Lead)**: The accountable internal director, PM, finance officer, or technician with name, role, department, and contact.
+- **To Whom (Recipient / Counterpart)**: The client representative, venue management, delegate body, or supplier counterpart with organization and contact details.
+- **What Was Done & Verified**: Concrete, operational action checklist for each step.
+- **Key Deliverables & Proof**: Verified artifacts (contracts, CAD floor plans, LED gear counts, QR passes issued, settlement invoices).
+- **Executive Governance Matrix**: High-level table mapping accountability across all 14 steps at a glance.
+- **Interactive Action & Note Logging**: Modal to record custom real-time audit entries tied to any event and step.
+
+<br/>
+
+<details>
+<summary><strong>Phase 1: Initiation & Sales (Steps 1–4)</strong> <em>(Click to drop down)</em></summary>
+
+1. **Client Onboarding**: CRM lead intake & single point-of-contact assignment
+   - **By Who**: Director (`Hana Tadesse`, Management)
+   - **To Whom**: Client Leadership (`Corporate Client`)
+   - **What Was Done**: Registered client profile, assigned dedicated PM, conducted requirements intake call.
+   - **Deliverables**: Client CRM Profile, Primary Contact, Tax ID (TIN).
+
+2. **Opportunity Qualification**: Headcount & feasibility audit
+   - **By Who**: Lead PM (`Dawit Mengistu`, Operations)
+   - **To Whom**: Client Planning Committee
+   - **What Was Done**: Qualified commercial opportunity, verified headcount capacity, locked budget ceiling.
+   - **Deliverables**: Format Specification, Target Audience Pax, CRM Qualified Stage.
+
+3. **Quotation & Proposal**: Itemized commercial quotation with 50/50 payment terms
+   - **By Who**: Finance Officer (`Yonas Girma`, Finance)
+   - **To Whom**: Head of Procurement
+   - **What Was Done**: Drafted itemized quotation, calculated 15% statutory VAT, structured 50% advance / 50% settlement terms.
+   - **Deliverables**: Quotation Amount (ETB), Payment Terms, Quotation Ref #.
+
+4. **Contract & Legal SLA**: Master service agreement & indemnities
+   - **By Who**: Director (`Hana Tadesse`, Management)
+   - **To Whom**: Legal Counsel & Authorized Signatory
+   - **What Was Done**: Prepared binding master event agreement, audited indemnity and insurance clauses, obtained dual execution.
+   - **Deliverables**: Executed Contract Ref, Contract Value, Legal Stamped Status.
+
+</details>
+
+<details>
+<summary><strong>Phase 2: Planning & Setup (Steps 5–8)</strong> <em>(Click to drop down)</em></summary>
+
+5. **Event Scheduling & Brief**: Date lock & run-of-show synchronization
+   - **By Who**: Lead PM (`Dawit Mengistu`, Operations)
+   - **To Whom**: Joint Steering Committee
+   - **What Was Done**: Locked master calendar dates, drafted multi-track agenda, published master event brief.
+   - **Deliverables**: Master Date & Time, Assigned Lead PM, Synchronized Run of Show.
+
+6. **Tasks & Team Breakdown**: Work Breakdown Structure with task dispatching
+   - **By Who**: Lead PM (`Dawit Mengistu`, Operations)
+   - **To Whom**: Operations Division Leads
+   - **What Was Done**: Built Work Breakdown Structure, assigned task deliverables to functional leads, enabled progress tracking.
+   - **Deliverables**: Total Tasks Assigned, Completed Tasks Verified, Active Functional Units.
+
+7. **Venue Allocation & Layout**: Hall reservation & CAD floor plan stamping
+   - **By Who**: Logistics Lead (`Sara Ahmed`, Operations)
+   - **To Whom**: Venue Facility Administration
+   - **What Was Done**: Secured hall reservation agreement, inspected acoustics and load bays, stamped CAD floor plans.
+   - **Deliverables**: Venue Hall Allocated, Location Address, Hall Capacity Pax, Stamped Floor Plan.
+
+8. **Production & Gear Allocation**: HD LED wall, line-array audio & redundant power ATS
+   - **By Who**: Technician Lead (`Bereket Tesfaye`, Technical)
+   - **To Whom**: Sound Engineering Crew & Staging Depot
+   - **What Was Done**: Reserved 48m² P2.6 HD LED wall, allocated line-array audio rig, deployed dual 250kVA ATS generators.
+   - **Deliverables**: Gear Assets Deployed, LED Display Specs, Redundant Power ATS.
+
+</details>
+
+<details>
+<summary><strong>Phase 3: Operations & Gates (Steps 9–12)</strong> <em>(Click to drop down)</em></summary>
+
+9. **Budget Approval & Spend Control**: Master expenditure cap & mobilization disbursement
+   - **By Who**: Finance Officer (`Yonas Girma`, Finance)
+   - **To Whom**: Chief Financial Officer
+   - **What Was Done**: Ratified operating expenditure cap, disbursed 50% mobilization payments, activated expense tracking.
+   - **Deliverables**: Approved Budget (ETB), Current Spend, Burn Rate Percentage.
+
+10. **Attendee Registration & Sales**: Branded registration portal & Telebirr/CBE payment gateways
+    - **By Who**: Marketing Lead (`Liya Kebede`, Marketing)
+    - **To Whom**: Conference Delegates & Public Guests
+    - **What Was Done**: Launched registration portal, configured ticket tiers, enabled Telebirr and card gateways.
+    - **Deliverables**: Registered Attendees Count, Payment Gateways Active, Live Public Portal.
+
+11. **Digital QR Passes Issued**: Tamper-proof HMAC SHA-256 digital entry badges
+    - **By Who**: IT Security & Automated Ticketing Engine
+    - **To Whom**: Confirmed Ticket Holders & VIPs
+    - **What Was Done**: Generated cryptographically signed HMAC SHA-256 QR passes, dispatched SMS/PDF tickets, cached offline gate keys.
+    - **Deliverables**: QR Passes Issued, HMAC SHA-256 Encryption, Multi-format Delivery (SMS/PDF).
+
+12. **On-Site Gate Check-In**: Laser scanners & thermal badge printing
+    - **By Who**: Event Coordinator (`Selam Bekele`, Operations)
+    - **To Whom**: Arriving Guests at Gates A, B & VIP Lanes
+    - **What Was Done**: Deployed 6 optical barcode scanners & 4 handheld terminals, trained ushers, monitored live gate clearance.
+    - **Deliverables**: Verified Arrivals, Turnout Percentage, Active Gate Lanes.
+
+</details>
+
+<details>
+<summary><strong>Phase 4: Closeout & Archival (Steps 13–14)</strong> <em>(Click to drop down)</em></summary>
+
+13. **Settlement & Final Invoicing**: Expense reconciliation & final VAT tax invoice
+    - **By Who**: Finance Officer (`Yonas Girma`, Finance)
+    - **To Whom**: Director of Accounts Payable
+    - **What Was Done**: Reconciled vendor receipts, generated final 15% VAT settlement invoice, compiled financial report.
+    - **Deliverables**: Final Tax Invoice Ref, Remaining Balance Due, Dispatched Payment Status.
+
+14. **Event Evaluation & Archival**: Debrief meeting, satisfaction survey, and master asset vaulting
+    - **By Who**: Executive Director (`Hana Tadesse`) & Lead PM (`Dawit Mengistu`)
+    - **To Whom**: Client Chief Executive Officer
+    - **What Was Done**: Conducted post-event review, calculated 96.4% satisfaction score, vaulted recordings and media assets.
+    - **Deliverables**: Completed Lifecycle Status, Satisfaction Rating, Archived Master Cloud Vault.
+
+</details>
+
+</details>
 
 ### Finance
 Invoices, expenses, payments, purchase requests, P&L reports.

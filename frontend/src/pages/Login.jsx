@@ -538,7 +538,7 @@ export default function Login() {
             ))}
           </div>
           {!role && (
-            <p className="mt-2.5 rounded-xl bg-gold-50 px-3 py-2 text-[11px] font-medium text-gold-800 ring-1 ring-gold-200">
+            <p className="mt-2.5 rounded-lg bg-amber-50/70 px-3 py-2 text-[11px] font-medium text-amber-900 border border-amber-200">
               Pick your role to auto-fill its demo account - or type any staff email below.
             </p>
           )}
@@ -601,7 +601,7 @@ export default function Login() {
               }}
             >
               {busy ? (
-                <><Sparkles size={18} className="animate-spin" /> Signing you in…</>
+                <><span className="h-4 w-4 rounded-full skeleton-shimmer" /> Signing you in…</>
               ) : (
                 <>Sign in to workspace <ArrowRight size={18} /></>
               )}
@@ -671,7 +671,7 @@ export default function Login() {
             <div className="flex justify-end gap-2">
               <button className="btn-outline" onClick={() => setForgotOpen(false)}>Cancel</button>
               <button className="btn-primary" onClick={submitForgot} disabled={forgotBusy}>
-                {forgotBusy ? <Sparkles size={15} className="animate-spin" /> : <Mail size={15} />}
+                {forgotBusy ? <span className="h-3.5 w-3.5 rounded-full skeleton-shimmer" /> : <Mail size={15} />}
                 {forgotBusy ? 'Sending…' : 'Send Reset Link'}
               </button>
             </div>
@@ -705,7 +705,7 @@ export default function Login() {
             <div className="flex justify-end gap-2">
               <button className="btn-outline" onClick={() => { setResetToken(''); setForgotOpen(false) }}>Cancel</button>
               <button className="btn-primary" onClick={submitReset} disabled={forgotBusy}>
-                {forgotBusy ? <Sparkles size={15} className="animate-spin" /> : <KeyRound size={15} />}
+                {forgotBusy ? <span className="h-3.5 w-3.5 rounded-full skeleton-shimmer" /> : <KeyRound size={15} />}
                 {forgotBusy ? 'Resetting…' : 'Reset Password'}
               </button>
             </div>

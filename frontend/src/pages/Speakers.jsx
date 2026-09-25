@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { Mic2, Plus, CalendarDays, Award, Upload, Clock3, Video, UserCheck, Pencil, Phone, Mail } from 'lucide-react'
 import { useData } from '../store/DataContext'
-import { PageHeader, Badge, Progress, Toast, EmptyState, Th, Td, Avatar, Segmented, Modal, Field } from '../components/ui'
+import { PageHeader, Badge, Progress, Toast, EmptyState, Th, Td, Avatar, Segmented, Modal, Field, SkeletonPage } from '../components/ui'
 import { exportTableToPDF } from '../store/exportUtils'
 import { nameOnly, textRequired, emailValid, phoneValid, optional, validate } from '../store/validation'
 
 export default function Speakers() {
-  const { state, patch, addSpeaker, updateSpeaker, logActivity, intent, clearIntent } = useData()
+  const { state, patch, addSpeaker, updateSpeaker, logActivity, intent, clearIntent, loading } = useData()
+  if (loading) return <SkeletonPage />
   const [view, setView] = useState('speakers')
   const [toast, setToast] = useState(null)
   const [open, setOpen] = useState(false)

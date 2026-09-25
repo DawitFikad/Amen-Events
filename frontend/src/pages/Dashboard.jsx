@@ -6,8 +6,11 @@ import FinanceDashboard from './dashboards/FinanceDashboard'
 import MarketingDashboard from './dashboards/MarketingDashboard'
 import OperationsDashboard from './dashboards/OperationsDashboard'
 
+import { SkeletonDashboard } from '../components/ui'
+
 export default function Dashboard() {
-  const { rbac } = useData()
+  const { rbac, loading } = useData()
+  if (loading) return <SkeletonDashboard />
   const roleKey = rbac?.roleKey
 
   switch (roleKey) {

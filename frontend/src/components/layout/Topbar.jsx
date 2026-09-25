@@ -17,9 +17,9 @@ export default function Topbar({ onMenuClick }) {
 
   useEffect(() => {
     if (backendOnline && api?.notifications?.list) {
-      api.notifications.list().then((res) => setApiNotifs(res?.notifications || [])).catch(() => {})
+      api.notifications.list().then((res) => setApiNotifs(res?.notifications || [])).catch(() => { })
       const interval = setInterval(() => {
-        api.notifications.list().then((res) => setApiNotifs(res?.notifications || [])).catch(() => {})
+        api.notifications.list().then((res) => setApiNotifs(res?.notifications || [])).catch(() => { })
       }, 15000)
       return () => clearInterval(interval)
     }
@@ -31,7 +31,7 @@ export default function Topbar({ onMenuClick }) {
 
   const markAllRead = async () => {
     if (backendOnline && api?.notifications?.markAllRead) {
-      await api.notifications.markAllRead().catch(() => {})
+      await api.notifications.markAllRead().catch(() => { })
       setApiNotifs((prev) => prev.map((n) => ({ ...n, read: true })))
     }
   }
@@ -66,11 +66,10 @@ export default function Topbar({ onMenuClick }) {
       <div className="flex items-center gap-1.5 sm:gap-2">
         <span
           title={backendOnline ? 'Connected to Supabase PostgreSQL Database' : 'Offline mode: Backend unreachable. Check backend URL.'}
-          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 transition ${
-            backendOnline
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 transition ${backendOnline
               ? 'bg-emerald-50 text-emerald-800 ring-emerald-200'
               : 'bg-amber-50 text-amber-800 ring-amber-200'
-          }`}
+            }`}
         >
           <span className={`h-1.5 w-1.5 rounded-full ${backendOnline ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
           {backendOnline ? 'Live DB' : 'Offline'}

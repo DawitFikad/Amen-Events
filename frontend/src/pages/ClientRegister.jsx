@@ -428,7 +428,7 @@ export default function ClientRegister() {
                   boxShadow: '0 12px 30px rgba(34,139,34,0.28)',
                 }}
               >
-                {busy ? <Sparkles size={18} className="animate-spin" /> : <>Continue to Email Verification <ArrowRight size={18} /></>}
+                {busy ? <span className="h-4 w-4 rounded-full skeleton-shimmer" /> : <>Continue to Email Verification <ArrowRight size={18} /></>}
               </button>
             </form>
           )}
@@ -486,7 +486,7 @@ export default function ClientRegister() {
                   onClick={handleResendOtp}
                   className="flex items-center gap-1 font-semibold text-brand-700 hover:text-brand-900 disabled:opacity-40"
                 >
-                  <RefreshCw size={13} className={otpSending ? 'animate-spin' : ''} />
+                  {otpSending ? <span className="inline-block h-3.5 w-3.5 rounded-full skeleton-shimmer" /> : <RefreshCw size={13} />}
                   {resendTimer > 0 ? `Resend code (${resendTimer}s)` : 'Resend code'}
                 </button>
               </div>
@@ -500,7 +500,7 @@ export default function ClientRegister() {
                   boxShadow: '0 12px 30px rgba(34,139,34,0.28)',
                 }}
               >
-                {busy ? <Sparkles size={18} className="animate-spin" /> : <>Verify Code & Continue <ArrowRight size={18} /></>}
+                {busy ? <span className="h-4 w-4 rounded-full skeleton-shimmer" /> : <>Verify Code & Continue <ArrowRight size={18} /></>}
               </button>
             </form>
           )}
@@ -631,7 +631,7 @@ export default function ClientRegister() {
                       boxShadow: '0 12px 30px rgba(34,139,34,0.28)',
                     }}
                   >
-                    {busy ? <Sparkles size={18} className="animate-spin" /> : <>Complete Registration <ArrowRight size={18} /></>}
+                    {busy ? <span className="h-4 w-4 rounded-full skeleton-shimmer" /> : <>Complete Registration <ArrowRight size={18} /></>}
                   </button>
                 </div>
               )}
@@ -649,7 +649,7 @@ export default function ClientRegister() {
                 Welcome to Amen Events, <strong>{form.company}</strong>! Your client workspace is ready.
               </p>
               <p className="mt-4 flex items-center justify-center gap-2 text-xs font-semibold text-brand-700">
-                <Sparkles size={15} className="animate-spin" /> Taking you to your client portal…
+                <span className="h-3.5 w-3.5 rounded-full skeleton-shimmer" /> Taking you to your client portal…
               </p>
             </div>
           )}

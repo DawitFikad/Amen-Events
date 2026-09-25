@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import api from '../store/api'
 import { useData } from '../store/DataContext'
-import { PageHeader, Badge, Toast, Modal } from '../components/ui'
+import { PageHeader, Badge, Toast, Modal, SkeletonPage } from '../components/ui'
 import { textRequired, dateRequired, validate } from '../store/validation'
 import { supabaseAddNotification, supabaseLogActivity } from '../store/supabase'
 
@@ -22,7 +22,8 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 export default function CalendarPage() {
-  const { backendOnline, state, addCalendarEvent, logActivity } = useData()
+  const { backendOnline, state, addCalendarEvent, logActivity, loading } = useData()
+  if (loading) return <SkeletonPage />
   const [events, setEvents] = useState([])
   const [cursor, setCursor] = useState(() => { const d = new Date(); return { month: d.getMonth(), year: d.getFullYear() } })
   const [selectedDate, setSelectedDate] = useState(null)

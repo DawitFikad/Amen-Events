@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { Ticket, Plus, QrCode, Users, Download, FileText, Search, Clock3, XCircle, CheckCircle2 } from 'lucide-react'
 import { QRCodeCanvas } from 'qrcode.react'
 import { useData } from '../store/DataContext'
-import { PageHeader, Badge, Progress, SearchBox, Toast, EmptyState, Th, Td, Segmented, Modal, Field } from '../components/ui'
+import { PageHeader, Badge, Progress, SearchBox, Toast, EmptyState, Th, Td, Segmented, Modal, Field, SkeletonPage } from '../components/ui'
 import RegisterAttendeeModal from '../components/RegisterAttendeeModal'
 import { fmt } from '../store/data'
 import { exportTableToPDF } from '../store/exportUtils'
@@ -23,7 +23,8 @@ const refundRequests = [
 ]
 
 export default function Ticketing() {
-  const { state, registerAttendee, intent, clearIntent, viewQr } = useData()
+  const { state, registerAttendee, intent, clearIntent, viewQr, loading } = useData()
+  if (loading) return <SkeletonPage />
   const [view, setView] = useState('registrations')
   const [open, setOpen] = useState(false)
   const [toast, setToast] = useState(null)

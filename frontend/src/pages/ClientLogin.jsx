@@ -138,7 +138,7 @@ export default function ClientLogin() {
                 boxShadow: '0 12px 30px rgba(34,139,34,0.28), inset 0 1px 0 rgba(255,255,255,0.15)',
               }}
             >
-              {busy ? <><Sparkles size={18} className="animate-spin" /> Signing you in…</> : <>Sign in to client portal <ArrowRight size={18} /></>}
+              {busy ? <><span className="h-4 w-4 rounded-full skeleton-shimmer" /> Signing you in…</> : <>Sign in to client portal <ArrowRight size={18} /></>}
             </button>
           </form>
 

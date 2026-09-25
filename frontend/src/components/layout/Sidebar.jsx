@@ -70,10 +70,9 @@ function Section({ group, collapsed, setMobileNav, counts = {} }) {
               title={item.label}
               onClick={() => setMobileNav && setMobileNav(false)}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition ${
-                  isActive
-                    ? 'bg-gold-400/15 text-gold-200 ring-1 ring-gold-400/25'
-                    : 'text-brand-100/70 hover:bg-white/5 hover:text-white'
+                `flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition ${isActive
+                  ? 'bg-white/10 text-white font-medium shadow-xs'
+                  : 'text-brand-100/70 hover:bg-white/5 hover:text-white'
                 }`
               }
             >
@@ -82,7 +81,7 @@ function Section({ group, collapsed, setMobileNav, counts = {} }) {
                 <>
                   <span className="flex-1 truncate">{item.label}</span>
                   {badgeCount !== undefined && badgeCount > 0 && (
-                    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-gold-400/20 px-1.5 text-[10px] font-bold text-gold-300 ring-1 ring-gold-400/30">
+                    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-white/15 px-1.5 text-[10px] font-medium text-white">
                       {badgeCount}
                     </span>
                   )}
@@ -106,14 +105,16 @@ export default function Sidebar({ collapsed, setCollapsed, mobileNav, setMobileN
     let base = groups
     if (rbac?.canAccess) {
       if (rbac.roleKey === 'client') {
-        base = [{ label: 'Portal', items: [
-          { to: '/erp/portal', label: 'My Dashboard', icon: Building2, end: true, module: null },
-          { to: '/erp/portal/events', label: 'My Events', icon: CalendarDays, module: null },
-          { to: '/erp/portal/invoices', label: 'Invoices', icon: Wallet, module: null },
-          { to: '/erp/portal/documents', label: 'Documents', icon: FileText, module: null },
-          { to: '/erp/portal/messages', label: 'Messages', icon: MessageSquare, module: null },
-          { to: '/erp/portal/profile', label: 'My Profile', icon: UserCircle, module: null },
-        ]}]
+        base = [{
+          label: 'Portal', items: [
+            { to: '/erp/portal', label: 'My Dashboard', icon: Building2, end: true, module: null },
+            { to: '/erp/portal/events', label: 'My Events', icon: CalendarDays, module: null },
+            { to: '/erp/portal/invoices', label: 'Invoices', icon: Wallet, module: null },
+            { to: '/erp/portal/documents', label: 'Documents', icon: FileText, module: null },
+            { to: '/erp/portal/messages', label: 'Messages', icon: MessageSquare, module: null },
+            { to: '/erp/portal/profile', label: 'My Profile', icon: UserCircle, module: null },
+          ]
+        }]
       } else {
         base = groups
           .map((g) => ({ ...g, items: g.items.filter((item) => item.module === null || rbac.canAccess(item.module)) }))
@@ -146,9 +147,8 @@ export default function Sidebar({ collapsed, setCollapsed, mobileNav, setMobileN
 
   return (
     <aside
-      className={`${collapsed ? 'w-[72px]' : 'w-64'} fixed inset-y-0 left-0 z-50 flex flex-col bg-brand-700 transition-all duration-300 ${
-        mobileNav ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-      }`}
+      className={`${collapsed ? 'w-[72px]' : 'w-64'} fixed inset-y-0 left-0 z-50 flex flex-col bg-brand-700 transition-all duration-300 ${mobileNav ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}
     >
       {/* Logo */}
       <div className="flex items-center justify-between px-4 h-16 border-b border-white/10 shrink-0">

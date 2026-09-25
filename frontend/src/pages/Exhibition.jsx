@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Building2, Plus, LayoutGrid, CheckCircle2, Pencil, Image as ImageIcon } from 'lucide-react'
 import { useData } from '../store/DataContext'
-import { PageHeader, Badge, Toast, Th, Td, Modal, Field, Avatar } from '../components/ui'
+import { PageHeader, Badge, Toast, Th, Td, Modal, Field, Avatar, SkeletonPage } from '../components/ui'
 import { textRequired, nameOnly, numberPositive, phoneValid, emailValid, optional, validate } from '../store/validation'
 
 const tierStyle = {
@@ -11,7 +11,8 @@ const tierStyle = {
 }
 
 export default function Exhibition() {
-  const { state, patch, addExhibitor, updateExhibitor, logActivity, intent, clearIntent } = useData()
+  const { state, patch, addExhibitor, updateExhibitor, logActivity, intent, clearIntent, loading } = useData()
+  if (loading) return <SkeletonPage />
   const [view, setView] = useState('floor')
   const [toast, setToast] = useState(null)
   const [open, setOpen] = useState(false)

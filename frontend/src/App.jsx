@@ -64,15 +64,17 @@ const WorkflowPage = lazy(() => import('./pages/WorkflowPage'))
 const Approvals = lazy(() => import('./pages/Approvals'))
 const CalendarPage = lazy(() => import('./pages/CalendarPage'))
 
+import { SkeletonShell, SkeletonClientShell, SkeletonPortalShell, SkeletonPage } from './components/ui'
+
 function RouteFallback() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-[#f3f7f3]">
-      <div className="flex flex-col items-center gap-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-200 border-t-brand-700" />
-        <p className="text-sm font-medium text-brand-700">Loading…</p>
-      </div>
-    </div>
-  )
+  const path = typeof window !== 'undefined' ? window.location.pathname : ''
+  if (path.startsWith('/erp/portal')) {
+    return <SkeletonClientShell />
+  }
+  if (path.startsWith('/erp')) {
+    return <SkeletonShell />
+  }
+  return <SkeletonPortalShell />
 }
 
 function PoweredFooter() {
@@ -131,7 +133,9 @@ function Shell() {
         <Topbar onMenuClick={() => setMobileNav(true)} />
         <main key={location.pathname} className="mx-auto max-w-[1400px] overflow-x-hidden px-5 py-6 animate-page-enter">
           <LiveKpiBar scope="staff" />
-          <Outlet />
+          <Suspense fallback={<SkeletonPage />}>
+            <Outlet />
+          </Suspense>
           <PoweredFooter />
         </main>
       </div>
@@ -143,14 +147,10 @@ function RequireAuth({ children, loginTo = '/login' }) {
   const { state, loading } = useData()
   const location = useLocation()
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f3f7f3]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-200 border-t-brand-700" />
-          <p className="text-sm font-medium text-brand-700">Loading workspace…</p>
-        </div>
-      </div>
-    )
+    if (location.pathname.startsWith('/erp/portal')) {
+      return <SkeletonClientShell />
+    }
+    return <SkeletonShell />
   }
   if (!state.currentUserId) return <Navigate to={loginTo} replace state={{ from: location }} />
   return children

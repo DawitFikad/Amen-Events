@@ -2,13 +2,17 @@ import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, Users, CheckCircle2, Clock, Crown, Download, FileText, ArrowRight } from 'lucide-react'
 import { useData } from '../../store/DataContext'
-import { Badge, Th, Td } from '../../components/ui'
+import { Badge, Th, Td, SkeletonPage } from '../../components/ui'
 import { fmt } from '../../store/data'
 import { exportTableToPDF } from '../../store/exportUtils'
 
 export default function ClientAttendees() {
-  const { state } = useData()
+  const { state, loading } = useData()
   const navigate = useNavigate()
+
+  if (loading) {
+    return <SkeletonPage cards={4} tableCols={6} />
+  }
   const clientId = state.currentUserId
   const [search, setSearch] = useState('')
   const [selectedEvent, setSelectedEvent] = useState('all')

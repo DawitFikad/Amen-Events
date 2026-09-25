@@ -1,7 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, Suspense } from 'react'
 import { Link, useNavigate, Outlet, useLocation } from 'react-router-dom'
 import { Calendar, User, Ticket, Bell, LogOut, Menu, X, Heart, Home, Mail, Search } from 'lucide-react'
 import { useAttendee } from '../../store/AttendeeContext'
+import { Skeleton, SkeletonEventCard } from '../ui'
 import logo from '../../logo.jpg'
 
 export default function PortalLayout() {
@@ -154,7 +155,23 @@ export default function PortalLayout() {
 
       {/* Content */}
       <main className="animate-page-enter pb-20 md:pb-0" key={location.pathname}>
-        <Outlet />
+        <Suspense
+          fallback={
+            <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 space-y-6">
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-7 w-48" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <SkeletonEventCard key={i} />
+                ))}
+              </div>
+            </div>
+          }
+        >
+          <Outlet />
+        </Suspense>
       </main>
 
       {/* Footer - premium */}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Bell, CheckCheck, Wallet, FileText, CalendarDays, GitBranch, Users, AlertCircle } from 'lucide-react'
 import { useData } from '../../store/DataContext'
-import { Badge } from '../../components/ui'
+import { Badge, SkeletonNotificationItem } from '../../components/ui'
 
 const ICON_MAP = {
   alert: AlertCircle,
@@ -16,9 +16,25 @@ const ICON_MAP = {
 }
 
 export default function ClientNotifications() {
-  const { state } = useData()
+  const { state, loading } = useData()
   const [filter, setFilter] = useState('all')
   const [read, setRead] = useState({})
+
+  if (loading) {
+    return (
+      <div className="space-y-5">
+        <div>
+          <div className="h-6 w-36 rounded skeleton-shimmer mb-2" />
+          <div className="h-4 w-24 rounded skeleton-shimmer" />
+        </div>
+        <div className="space-y-2.5">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <SkeletonNotificationItem key={i} />
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   const notifications = state.notifications
   const filtered = filter === 'all' ? notifications : notifications.filter((n) => n.type === filter)

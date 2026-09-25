@@ -8,7 +8,7 @@ import {
   Mic, Store, Truck, Search, Workflow,
 } from 'lucide-react'
 import { useData } from '../store/DataContext'
-import { PageHeader, Badge, Progress, Avatar, Modal, ConfirmModal, Field, SearchBox, Toast, EmptyState, Th, Td, Segmented, StatCard } from '../components/ui'
+import { PageHeader, Badge, Progress, Avatar, Modal, ConfirmModal, Field, SearchBox, Toast, EmptyState, Th, Td, Segmented, StatCard, SkeletonPage } from '../components/ui'
 import RegisterAttendeeModal from '../components/RegisterAttendeeModal'
 import { fmt, todayISO } from '../store/data'
 import { required, textRequired, numberPositive, dateRequired, optional, validate } from '../store/validation'
@@ -78,7 +78,9 @@ export default function Events() {
     intent, clearIntent, markDone, setEventTeam, setEventBudget, allocateResource, allocateResources,
     acceptClientEvent, declineClientEvent,
     updateSpeaker, updateExhibitor, setEventSuppliers, addSpeaker, addExhibitor, addVendor,
+    loading,
   } = useData()
+  if (loading) return <SkeletonPage />
   const [viewId, setViewId] = useState(null)
   const [tab, setTab] = useState('all')
   const [open, setOpen] = useState(false)
@@ -543,21 +545,21 @@ export default function Events() {
               const isDeclined = e.status === 'declined'
 
               return (
-                <button key={e.id} onClick={() => setViewId(e.id)} className={`card group overflow-hidden p-5 text-left transition hover:-translate-y-0.5 hover:shadow-pop ${isPending ? 'ring-2 ring-amber-300 bg-amber-50/20' : ''}`}>
+                <button key={e.id} onClick={() => setViewId(e.id)} className={`card group overflow-hidden p-5 text-left transition hover:-translate-y-0.5 hover:shadow-pop ${isPending ? 'border-amber-300 bg-amber-50/20' : ''}`}>
                   {e.image && <div className="mb-3 -mx-5 -mt-5 h-28 overflow-hidden"><img src={e.image} alt={e.name} className="h-full w-full object-cover" /></div>}
                   <div className="flex items-start justify-between">
                     <span className={`chip ${
                       isPending
-                        ? 'bg-amber-100 text-amber-900 ring-1 ring-amber-300 font-bold'
+                        ? 'bg-amber-50 text-amber-850 border border-amber-200 font-medium'
                         : isDeclined
-                        ? 'bg-red-100 text-red-800 font-bold'
+                        ? 'bg-red-50 text-red-800 border border-red-200 font-medium'
                         : e.status === 'upcoming'
-                        ? 'bg-gold-100 text-gold-700'
+                        ? 'bg-gold-50 text-gold-800 border border-gold-200'
                         : e.status === 'ongoing'
-                        ? 'bg-brand-100 text-brand-800'
-                        : 'bg-slate-100 text-slate-500'
+                        ? 'bg-brand-50 text-brand-800 border border-brand-200'
+                        : 'bg-slate-50 text-slate-600 border border-slate-200'
                     }`}>
-                      {isPending ? '● Pending Review' : isDeclined ? 'Declined' : e.status}
+                      {isPending ? 'Pending Review' : isDeclined ? 'Declined' : e.status}
                     </span>
                     <Badge status="done" label={e.category} />
                   </div>
@@ -1992,9 +1994,9 @@ function EventDetail({ event, client, venue, state, onBack, onStatus, onTask, de
                   </div>
                 </div>
 
-                <div className="rounded-xl bg-gold-50 p-4 ring-1 ring-gold-200">
-                  <p className="text-sm font-bold text-gold-800">Demo tip</p>
-                  <p className="mt-1 text-xs text-gold-900/80">Use "Start Event" to simulate moving the event live, then run check-ins from the QR Check-in module.</p>
+                <div className="rounded-lg bg-amber-50/60 p-4 border border-amber-200/80">
+                  <p className="text-sm font-semibold text-amber-900">Demo tip</p>
+                  <p className="mt-1 text-xs text-amber-900/80">Use "Start Event" to simulate moving the event live, then run check-ins from the QR Check-in module.</p>
                 </div>
               </div>
             </div>

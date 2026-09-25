@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Settings, ShieldCheck, Users, DatabaseBackup, Activity, Bell, Globe, Lock, KeyRound, Smartphone, Mail, Download, FileText, Plus, X, Wallet, Workflow, TrendingUp, ArrowUpRight, DollarSign, TrendingDown, ClipboardList, Receipt, UserCheck, ExternalLink } from 'lucide-react'
 import { useData } from '../store/DataContext'
 import { ROLE_DEFINITIONS, MODULES, PERMISSIONS } from '../store/permissions'
-import { PageHeader, Badge, Toast, Th, Td, Avatar, Modal, Field, Progress } from '../components/ui'
+import { PageHeader, Badge, Toast, Th, Td, Avatar, Modal, Field, Progress, SkeletonPage } from '../components/ui'
 import { exportTableToPDF } from '../store/exportUtils'
 import { nameOnly, emailValid, validate } from '../store/validation'
 import { fmt } from '../store/data'
@@ -28,7 +28,8 @@ const securityDefaults = {
 }
 
 export default function Admin() {
-  const { state, patch, patchBy, logActivity, addNotification, addStaffMember, rbac, intent, clearIntent, setDemoFlag } = useData()
+  const { state, patch, patchBy, logActivity, addNotification, addStaffMember, rbac, intent, clearIntent, setDemoFlag, loading } = useData()
+  if (loading) return <SkeletonPage />
   const [view, setView] = useState(rbac?.roleKey === 'admin' ? 'users' : 'settings')
   const [toast, setToast] = useState(null)
   const [twoStep, setTwoStep] = useState(state.twoStepVerification || false)

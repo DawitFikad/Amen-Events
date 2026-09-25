@@ -5,13 +5,17 @@ import {
   Search, ArrowRight, Ticket, Plus, AlertCircle, Sparkles,
 } from 'lucide-react'
 import { useData } from '../../store/DataContext'
-import { Badge, Progress, StatCard } from '../../components/ui'
+import { Badge, Progress, StatCard, SkeletonPage } from '../../components/ui'
 import { fmtCompact } from '../../store/data'
 import ClientAddEventModal from '../../components/ClientAddEventModal'
 
 export default function ClientEvents() {
-  const { state } = useData()
+  const { state, loading } = useData()
   const navigate = useNavigate()
+
+  if (loading) {
+    return <SkeletonPage cards={4} tableCols={5} />
+  }
   const [searchParams, setSearchParams] = useSearchParams()
   const clientId = state.currentUserId
   const client = state.clients.find((c) => c.id === clientId)

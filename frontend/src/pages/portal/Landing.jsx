@@ -4,6 +4,7 @@ import { Calendar, MapPin, Users, ArrowRight, Sparkles, Ticket, Shield, Zap, Hea
 import { useData } from '../../store/DataContext'
 import { portalEventsFallback } from '../../store/portalFallback'
 import { supabaseFetchPublicEvents } from '../../store/supabase'
+import { Skeleton, SkeletonEventCard } from '../../components/ui'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
@@ -153,7 +154,36 @@ export default function Landing() {
       </section>
 
       {/* Featured Event - large hero card */}
-      {featured && !loading && (
+      {loading ? (
+        <section className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
+          <div className="mb-5 flex items-end justify-between">
+            <div className="space-y-1.5">
+              <Skeleton className="h-7 w-44" />
+              <Skeleton className="h-4 w-56" />
+            </div>
+          </div>
+          <div className="overflow-hidden rounded-[20px] border border-gray-100 bg-white grid lg:grid-cols-2 shadow-sm">
+            <Skeleton className="h-64 lg:h-96 w-full rounded-none" />
+            <div className="p-8 lg:p-10 flex flex-col justify-between space-y-6">
+              <div className="space-y-3">
+                <Skeleton className="h-5 w-24 rounded-full" />
+                <Skeleton className="h-8 w-4/5" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-36" />
+                  <Skeleton className="h-4 w-48" />
+                </div>
+                <div className="pt-4 border-t border-gray-100 flex items-center gap-3">
+                  <Skeleton className="h-11 w-32 rounded-xl" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : featured ? (
         <section className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
           <div className="mb-5 flex items-end justify-between">
             <div>
@@ -205,7 +235,7 @@ export default function Landing() {
             </div>
           </Link>
         </section>
-      )}
+      ) : null}
 
       {/* Upcoming Events - grid of large cards */}
       <section className="mx-auto max-w-7xl px-5 py-10 sm:px-8">
@@ -221,14 +251,8 @@ export default function Landing() {
 
         {loading ? (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="overflow-hidden rounded-[20px] border border-gray-100">
-                <div className="portal-skeleton h-40" />
-                <div className="p-5">
-                  <div className="portal-skeleton h-4 w-3/4 rounded" />
-                  <div className="portal-skeleton mt-3 h-3 w-1/2 rounded" />
-                </div>
-              </div>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <SkeletonEventCard key={i} />
             ))}
           </div>
         ) : (

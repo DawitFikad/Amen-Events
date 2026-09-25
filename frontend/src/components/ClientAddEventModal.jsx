@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import {
   CalendarDays, Clock, MapPin, Users, Wallet, Tag, Info,
-  Sparkles, CheckCircle2, AlertCircle, Loader2,
+  Sparkles, CheckCircle2, AlertCircle,
 } from 'lucide-react'
 import { Modal, Field } from './ui'
 import { useData } from '../store/DataContext'
@@ -362,7 +362,7 @@ export default function ClientAddEventModal({ open, onClose, onSuccess }) {
           >
             {submitting ? (
               <>
-                <Loader2 size={16} className="animate-spin" /> Submitting for Review…
+                <span className="h-4 w-4 rounded-full skeleton-shimmer" /> Submitting for Review…
               </>
             ) : (
               <>

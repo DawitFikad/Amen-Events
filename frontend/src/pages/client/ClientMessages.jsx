@@ -4,6 +4,7 @@ import {
   Building2, Users, Wallet, ShieldAlert, Sparkles, X, CheckCheck
 } from 'lucide-react'
 import { useData } from '../../store/DataContext'
+import { Skeleton } from '../../components/ui'
 
 const CHANNELS = [
   { key: 'all', label: 'Team General', icon: Users, desc: 'Announcements & general team chat' },
@@ -13,7 +14,52 @@ const CHANNELS = [
 ]
 
 export default function ClientMessages() {
-  const { state, sendMessage, rbac } = useData()
+  const { state, sendMessage, rbac, loading } = useData()
+
+  if (loading) {
+    return (
+      <div className="grid h-[78vh] grid-cols-1 overflow-hidden rounded-2xl border border-brand-100 bg-white shadow-sm md:grid-cols-3 lg:grid-cols-4">
+        <div className="border-r border-brand-100 p-4 space-y-4">
+          <Skeleton className="h-6 w-32" />
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-brand-50">
+                <Skeleton className="h-9 w-9 rounded-xl shrink-0" />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-2.5 w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="flex flex-col justify-between p-6 md:col-span-2 lg:col-span-3 space-y-6">
+          <div className="flex items-center gap-3 border-b border-brand-50 pb-4">
+            <Skeleton className="h-10 w-10 rounded-xl" />
+            <div className="space-y-1.5">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-3 w-56" />
+            </div>
+          </div>
+          <div className="space-y-4 flex-1">
+            <div className="flex gap-3">
+              <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+              <Skeleton className="h-14 w-2/3 rounded-2xl" />
+            </div>
+            <div className="flex justify-end gap-3">
+              <Skeleton className="h-12 w-1/2 rounded-2xl" />
+            </div>
+            <div className="flex gap-3">
+              <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+              <Skeleton className="h-16 w-3/5 rounded-2xl" />
+            </div>
+          </div>
+          <Skeleton className="h-12 w-full rounded-xl" />
+        </div>
+      </div>
+    )
+  }
+
   const [activeChannel, setActiveChannel] = useState('all')
   const [input, setInput] = useState('')
   const [attachment, setAttachment] = useState(null)

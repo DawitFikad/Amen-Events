@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
 import { Building2, User, Phone, Mail, MapPin, Globe, Lock, Bell, Shield, CheckCircle2 } from 'lucide-react'
 import { useData } from '../../store/DataContext'
-import { Toast } from '../../components/ui'
+import { Toast, SkeletonDetail } from '../../components/ui'
 import { textRequired, nameOnly, phoneValid, emailValid, optional, validate, clearError } from '../../store/validation'
 
 export default function ClientProfile() {
-  const { state, patch, patchBy, logActivity, updateClient } = useData()
+  const { state, patch, patchBy, logActivity, updateClient, loading } = useData()
+  if (loading) return <SkeletonDetail />
   const clientId = state.currentUserId
   const client = state.clients.find((c) => c.id === clientId)
   const [tab, setTab] = useState('company')
@@ -176,7 +177,7 @@ export default function ClientProfile() {
           </div>
           <div className="mt-5 flex justify-end">
             <button onClick={saveCompany} disabled={saving} className="btn-primary">
-              {saving ? 'Saving…' : <><CheckCircle2 size={16} /> Save Changes</>}
+              {saving ? <span className="inline-flex items-center gap-2"><span className="w-20 h-4 rounded skeleton-shimmer opacity-75 inline-block" /></span> : <><CheckCircle2 size={16} /> Save Changes</>}
             </button>
           </div>
         </div>

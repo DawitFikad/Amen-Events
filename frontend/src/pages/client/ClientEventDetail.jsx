@@ -3,11 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom'
 import {
   CalendarDays, MapPin, Building2, Wallet, Users, Ticket, FileText,
   CheckCircle2, Clock, ArrowLeft, GitBranch, User, Phone, Mail,
-  TrendingUp, AlertCircle, Download,
+  TrendingUp, AlertCircle, Download, Check,
 } from 'lucide-react'
 import { useData } from '../../store/DataContext'
-import { Badge, Progress, Th, Td } from '../../components/ui'
+import { Badge, Progress, Th, Td, SkeletonDetail } from '../../components/ui'
 import { fmtCompact, fmt } from '../../store/data'
+import { buildStepDetails } from '../WorkflowPage'
 
 const TABS = [
   ['overview', 'Overview', Building2],
@@ -34,7 +35,7 @@ const TIMELINE_STAGES = [
 export default function ClientEventDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { state } = useData()
+  const { state, loading } = useData()
   const [tab, setTab] = useState('overview')
 
   const event = state.events.find((e) => e.id === id)
@@ -46,6 +47,14 @@ export default function ClientEventDetail() {
   const eventRegistrations = useMemo(() => state.registrations.filter((r) => r.eventId === id), [state.registrations, id])
   const eventSpeakers = useMemo(() => state.speakers.filter((s) => s.eventId === id), [state.speakers, id])
   const eventTasks = useMemo(() => state.tasks.filter((t) => t.eventId === id), [state.tasks, id])
+  const eventSteps = useMemo(() => {
+    if (!event) return []
+    return buildStepDetails(event, state)
+  }, [event, state])
+
+  if (loading || (!event && state.events.length === 0)) {
+    return <SkeletonDetail />
+  }
 
   if (!event) {
     return (
@@ -182,32 +191,80 @@ export default function ClientEventDetail() {
 
       {/* Timeline */}
       {tab === 'timeline' && (
-        <div className="card p-6">
-          <p className="mb-6 font-bold text-brand-950">Event Timeline</p>
-          <div className="space-y-0">
-            {TIMELINE_STAGES.map((stage, i) => {
-              const isComplete = (event.progress || 0) >= stage.threshold
-              const isCurrent = !isComplete && (i === 0 || (event.progress || 0) >= TIMELINE_STAGES[i - 1].threshold)
+        <div className="card p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-4">
+            <div>
+              <p className="font-semibold text-slate-900 text-base">Event 14-Step Governance Timeline</p>
+              <p className="text-xs text-slate-500">Tracking operational actions, responsible leads (By Who), and recipients (To Whom).</p>
+            </div>
+            <button
+              onClick={() => navigate(`/erp/portal/timeline/${event.id}`)}
+              className="btn-primary text-xs !py-1.5 px-3 flex items-center gap-1.5 self-start sm:self-auto"
+            >
+              <span>Open Full Workflow View</span>
+              <ArrowLeft size={13} className="rotate-180" />
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {eventSteps.map((step) => {
               return (
-                <div key={stage.key} className="flex gap-4">
-                  {/* Line */}
-                  <div className="flex flex-col items-center">
-                    <div className={`flex h-9 w-9 items-center justify-center rounded-full border-2 ${
-                      isComplete ? 'border-brand-600 bg-brand-600 text-white' : isCurrent ? 'border-gold-400 bg-gold-50 text-gold-600' : 'border-brand-100 bg-white text-ink/30'
-                    }`}>
-                      {isComplete ? <CheckCircle2 size={16} /> : <span className="text-xs font-bold">{i + 1}</span>}
+                <div
+                  key={step.id}
+                  className={`rounded-lg border p-4 transition-all ${
+                    step.isCurrent
+                      ? 'border-slate-300 bg-white border-l-4 border-l-brand-600 shadow-xs'
+                      : step.isCompleted
+                      ? 'border-slate-200 bg-white'
+                      : 'border-slate-100 bg-white/70 opacity-75'
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-2 mb-2.5">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-medium ${
+                          step.isCompleted ? 'bg-slate-900 text-white' : step.isCurrent ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-500'
+                        }`}
+                      >
+                        {step.isCompleted ? <Check size={11} strokeWidth={2.5} /> : step.stepNumber}
+                      </span>
+                      <h4 className="text-xs font-semibold text-slate-900">
+                        Step {step.stepNumber}: {step.title}
+                      </h4>
                     </div>
-                    {i < TIMELINE_STAGES.length - 1 && (
-                      <div className={`w-0.5 h-12 ${isComplete ? 'bg-brand-500' : 'bg-brand-100'}`} />
-                    )}
+
+                    <span
+                      className={`rounded px-1.5 py-0.5 text-[10px] font-medium border ${
+                        step.isCompleted
+                          ? 'bg-slate-50 text-slate-700 border-slate-200'
+                          : step.isCurrent
+                          ? 'bg-brand-50 text-brand-800 border-brand-200'
+                          : 'bg-slate-50 text-slate-400 border-slate-100'
+                      }`}
+                    >
+                      {step.isCompleted ? 'Completed' : step.isCurrent ? 'Active' : 'Scheduled'}
+                    </span>
                   </div>
-                  {/* Content */}
-                  <div className="pb-6">
-                    <p className={`text-sm font-bold ${isComplete ? 'text-brand-950' : isCurrent ? 'text-gold-700' : 'text-ink/40'}`}>{stage.label}</p>
-                    <p className="text-xs text-ink/45">
-                      {isComplete ? 'Completed' : isCurrent ? 'In progress' : 'Pending'}
-                    </p>
-                    {isComplete && <p className="text-[11px] text-brand-600">{pm?.name || 'Team'} · {event.date || 'TBD'}</p>}
+
+                  {/* By Who / To Whom mini grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-2">
+                    <div className="rounded border border-slate-200 bg-slate-50/60 p-2.5 space-y-0.5">
+                      <span className="text-[10px] font-semibold uppercase text-slate-500 block">Responsible Lead:</span>
+                      <span className="font-semibold text-slate-900 block">{step.byWho.name}</span>
+                      <span className="text-slate-500 text-[11px] block">{step.byWho.role}</span>
+                    </div>
+
+                    <div className="rounded border border-slate-200 bg-slate-50/60 p-2.5 space-y-0.5">
+                      <span className="text-[10px] font-semibold uppercase text-slate-500 block">Counterpart:</span>
+                      <span className="font-semibold text-slate-900 block">{step.toWhom.name}</span>
+                      <span className="text-slate-500 text-[11px] block">{step.toWhom.org}</span>
+                    </div>
+                  </div>
+
+                  {/* Key Action Done */}
+                  <div className="text-xs text-slate-600 bg-slate-50/50 border border-slate-200/60 rounded p-2.5">
+                    <p className="font-semibold text-slate-700 text-[11px] mb-0.5">What Was Done:</p>
+                    <p>{step.whatDone[0]}</p>
                   </div>
                 </div>
               )

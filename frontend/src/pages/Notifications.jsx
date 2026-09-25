@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Bell, CheckCheck, Filter, CalendarClock, UserPlus, Wallet, AlertTriangle, Boxes, Star, Users } from 'lucide-react'
 import { useData } from '../store/DataContext'
-import { PageHeader, Badge, Th, Td } from '../components/ui'
+import { PageHeader, Badge, Th, Td, SkeletonPage } from '../components/ui'
 
 const TYPES = [
   ['all', 'All', Filter],
@@ -14,7 +14,8 @@ const TYPES = [
 ]
 
 export default function Notifications() {
-  const { state, rbac } = useData()
+  const { state, rbac, loading } = useData()
+  if (loading) return <SkeletonPage />
   const [filter, setFilter] = useState('all')
   const [read, setRead] = useState({})
 

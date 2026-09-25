@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { LifeBuoy, Phone, Mail, Send, ChevronDown, ChevronUp, MessageSquare, Building2 } from 'lucide-react'
-import { Toast } from '../../components/ui'
+import { Toast, SkeletonPage } from '../../components/ui'
 import { textRequired, validate, clearError } from '../../store/validation'
 
 import { useData } from '../../store/DataContext'
@@ -15,7 +15,8 @@ const FAQS = [
 ]
 
 export default function ClientSupport() {
-  const { state, sendMessage, logActivity } = useData()
+  const { state, sendMessage, logActivity, loading } = useData()
+  if (loading) return <SkeletonPage />
   const clientId = state.currentUserId
   const client = state.clients.find((c) => c.id === clientId)
   const [openFaq, setOpenFaq] = useState(0)
@@ -128,7 +129,7 @@ export default function ClientSupport() {
               {errors.message && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.message}</p>}
             </div>
             <button onClick={submitTicket} disabled={sending} className="btn-primary w-full">
-              {sending ? 'Submitting…' : <><Send size={16} /> Submit Ticket</>}
+              {sending ? <span className="inline-flex items-center gap-2"><span className="w-20 h-4 rounded skeleton-shimmer opacity-75 inline-block" /></span> : <><Send size={16} /> Submit Ticket</>}
             </button>
           </div>
         </div>

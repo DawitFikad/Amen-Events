@@ -35,8 +35,10 @@ function StatPill({ icon: Icon, label, value, tone = 'brand' }) {
   )
 }
 
+import { Skeleton } from './ui'
+
 export default function LiveKpiBar({ scope = 'staff' }) {
-  const { state, rbac } = useData()
+  const { state, rbac, loading } = useData()
   const [now, setNow] = useState(() => new Date())
 
   // Live clock tick - re-renders the strip every second for a "live" feel
@@ -44,6 +46,28 @@ export default function LiveKpiBar({ scope = 'staff' }) {
     const t = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(t)
   }, [])
+
+  if (loading) {
+    return (
+      <div className="mb-5 flex items-center justify-between gap-3 overflow-hidden rounded-2xl border border-brand-100 bg-white/80 px-4 py-2.5 shadow-sm backdrop-blur">
+        <div className="flex flex-1 items-center gap-4 overflow-x-auto">
+          {Array.from({ length: scope === 'client' ? 5 : 6 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-2.5 border-r border-brand-100 pr-4 last:border-0 shrink-0">
+              <Skeleton className="h-7 w-7 rounded-lg" />
+              <div className="space-y-1">
+                <Skeleton className="h-2.5 w-14" />
+                <Skeleton className="h-3.5 w-16" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="hidden sm:flex items-center gap-2 border-l border-brand-100 pl-4 shrink-0">
+          <Skeleton className="h-2 w-2 rounded-full" />
+          <Skeleton className="h-3 w-16" />
+        </div>
+      </div>
+    )
+  }
 
   const roleKey = rbac?.roleKey
 

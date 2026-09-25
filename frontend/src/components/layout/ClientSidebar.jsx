@@ -70,9 +70,8 @@ export default function ClientSidebar({ collapsed, mobileNav, setMobileNav }) {
 
   return (
     <aside
-      className={`${collapsed ? 'w-[72px]' : 'w-64'} fixed inset-y-0 left-0 z-50 flex flex-col bg-brand-700 transition-all duration-300 ${
-        mobileNav ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-      }`}
+      className={`${collapsed ? 'w-[72px]' : 'w-64'} fixed inset-y-0 left-0 z-50 flex flex-col bg-brand-700 transition-all duration-300 ${mobileNav ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}
     >
       {/* Logo */}
       <div className="flex h-16 items-center gap-2.5 px-4 border-b border-white/10">
@@ -126,10 +125,9 @@ export default function ClientSidebar({ collapsed, mobileNav, setMobileNav }) {
                     title={item.label}
                     onClick={() => setMobileNav && setMobileNav(false)}
                     className={({ isActive }) =>
-                      `flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-semibold transition ${
-                        isActive
-                          ? 'bg-white text-brand-700 shadow-sm'
-                          : 'text-brand-100 hover:bg-white/10 hover:text-white'
+                      `flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-semibold transition ${isActive
+                        ? 'bg-white text-brand-700 shadow-sm'
+                        : 'text-brand-100 hover:bg-white/10 hover:text-white'
                       }`
                     }
                   >
@@ -138,7 +136,7 @@ export default function ClientSidebar({ collapsed, mobileNav, setMobileNav }) {
                       <>
                         <span className="flex-1 truncate">{item.label}</span>
                         {badgeCount !== undefined && badgeCount > 0 && (
-                          <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-gold-400/25 px-1.5 text-[10px] font-bold text-gold-200 ring-1 ring-gold-400/30">
+                          <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-white/20 px-1.5 text-[10px] font-medium text-white">
                             {badgeCount}
                           </span>
                         )}

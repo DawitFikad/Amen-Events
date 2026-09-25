@@ -4,7 +4,7 @@ import {
   Clock, Star, QrCode, X, CreditCard, Shield, TrendingUp,
 } from 'lucide-react'
 import { useData } from '../../store/DataContext'
-import { Badge, Toast, Progress } from '../../components/ui'
+import { Badge, Toast, Progress, Skeleton, SkeletonEventCard } from '../../components/ui'
 import { fmt, fmtCompact } from '../../store/data'
 
 const TICKET_TYPES = [
@@ -15,9 +15,25 @@ const TICKET_TYPES = [
 ]
 
 export default function ClientBrowseEvents() {
-  const { state, registerAttendee } = useData()
+  const { state, registerAttendee, loading } = useData()
   const clientId = state.currentUserId
   const client = state.clients.find((c) => c.id === clientId)
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-wrap justify-between items-center gap-4">
+          <Skeleton className="h-7 w-48" />
+          <Skeleton className="h-9 w-64 rounded-xl" />
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <SkeletonEventCard key={i} />
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('all')
@@ -219,7 +235,7 @@ export default function ClientBrowseEvents() {
               <button onClick={handlePurchase} disabled={busy} className="btn-primary w-full">
                 {busy ? (
                   <span className="flex items-center gap-2">
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    <span className="h-4 w-4 rounded-full skeleton-shimmer" />
                     Processing payment…
                   </span>
                 ) : (

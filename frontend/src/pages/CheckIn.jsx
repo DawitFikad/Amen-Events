@@ -4,12 +4,13 @@ import { QrCode, ScanLine, Users, CheckCircle2, XCircle, AlertTriangle, RefreshC
 import jsQR from 'jsqr'
 import { QRCodeCanvas } from 'qrcode.react'
 import { useData } from '../store/DataContext'
-import { PageHeader, Badge, Toast } from '../components/ui'
+import { PageHeader, Badge, Toast, SkeletonPage } from '../components/ui'
 import { decodeTicket, ticketPayload, encodeTicket } from '../store/ticket'
 import { fmt } from '../store/data'
 
 export default function CheckIn() {
-  const { state, checkIn, intent, clearIntent, logActivity, addNotification } = useData()
+  const { state, checkIn, intent, clearIntent, logActivity, addNotification, loading } = useData()
+  if (loading) return <SkeletonPage />
   const [result, setResult] = useState(null)
   const [toast, setToast] = useState(null)
   const [entered, setEntered] = useState('')

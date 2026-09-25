@@ -31,11 +31,11 @@ export function requirePermission(module, permission = 'view') {
 // Helper to check permission without middleware (for use in routes)
 export function userCan(user, module, permission = 'view') {
   if (!user) return false
-  const isAdmin = user.userRoles?.some((ur) => ur.role.key === 'admin')
+  const isAdmin = !!user.userRoles?.some((ur) => ur.role?.key === 'admin')
   if (isAdmin) return true
-  return user.userRoles?.some((ur) =>
-    ur.role.rolePerms?.some(
-      (rp) => rp.module === module && rp.permission.key === permission
+  return !!user.userRoles?.some((ur) =>
+    ur.role?.rolePerms?.some(
+      (rp) => rp.module === module && rp.permission?.key === permission
     )
   )
 }

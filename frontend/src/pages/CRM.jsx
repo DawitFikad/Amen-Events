@@ -5,7 +5,7 @@ import {
   MessageSquare, ShieldCheck, Eye, ArrowRight, Upload, Globe, Link, Trash2, Info,
 } from 'lucide-react'
 import { useData } from '../store/DataContext'
-import { PageHeader, Badge, SearchBox, Avatar, Modal, ConfirmModal, Field, EmptyState, Toast, Th, Td, StatCard } from '../components/ui'
+import { PageHeader, Badge, SearchBox, Avatar, Modal, ConfirmModal, Field, EmptyState, Toast, Th, Td, StatCard, SkeletonPage } from '../components/ui'
 import { fmt, todayISO } from '../store/data'
 import { exportTableToPDF } from '../store/exportUtils'
 import { required, nameOnly, emailValid, phoneValid, textRequired, numberPositive, dateRequired, dateRange, optional, validate } from '../store/validation'
@@ -35,7 +35,8 @@ const pipelineStages = ['lead', 'opportunity', 'quotation', 'negotiation', 'cont
 const pipelineLabels = { lead: 'Lead', opportunity: 'Opportunity', quotation: 'Quotation', negotiation: 'Negotiation', contract: 'Contract', Other: 'Other' }
 
 export default function CRM() {
-  const { state, addClient, updateClient, deleteClient, patchBy, patch, logActivity, intent, clearIntent, addContract, updateContractStatus, addClientDoc, setDemoFlag } = useData()
+  const { state, addClient, updateClient, deleteClient, patchBy, patch, logActivity, intent, clearIntent, addContract, updateContractStatus, addClientDoc, setDemoFlag, loading } = useData()
+  if (loading) return <SkeletonPage />
   const [tab, setTab] = useState('clients')
   const [q, setQ] = useState('')
   const [open, setOpen] = useState(false)

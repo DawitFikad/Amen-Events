@@ -6,6 +6,7 @@ import { QRCodeCanvas } from 'qrcode.react'
 import { useAttendee } from '../../store/AttendeeContext'
 import { ticketPayload, encodeTicket } from '../../store/ticket'
 import { supabaseFetchAttendeeTickets } from '../../store/supabase'
+import { SkeletonTicketCard } from '../../components/ui'
 
 export default function MyTickets() {
   const { authFetch, isAuthenticated, attendee } = useAttendee()
@@ -78,7 +79,9 @@ export default function MyTickets() {
 
       {loading ? (
         <div className="mt-6 grid gap-5 sm:grid-cols-2">
-          {[1, 2, 3, 4].map((i) => <div key={i} className="portal-skeleton rounded-[20px] h-36" />)}
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonTicketCard key={i} />
+          ))}
         </div>
       ) : tickets.length === 0 ? (
         <div className="mt-6 rounded-[20px] border border-gray-100 bg-white py-20 text-center" style={{ boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>

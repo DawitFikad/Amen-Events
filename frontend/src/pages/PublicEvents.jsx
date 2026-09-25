@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Calendar, MapPin, Users, ArrowRight, Ticket, CheckCircle2, Info } from 'lucide-react'
 import { publicApi } from '../store/api'
-import { Spinner, EmptyState } from '../components/ui'
+import { EmptyState, SkeletonEventCard } from '../components/ui'
 
 export default function PublicEvents() {
   const [events, setEvents] = useState([])
@@ -51,8 +51,10 @@ export default function PublicEvents() {
       {/* Content */}
       <main className="mx-auto max-w-5xl px-5 pb-16">
         {loading ? (
-          <div className="flex justify-center py-20">
-            <Spinner size={28} className="text-brand-600" />
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <SkeletonEventCard key={i} />
+            ))}
           </div>
         ) : error ? (
           <EmptyState icon={Info} title="Could not load events" subtitle={error} />

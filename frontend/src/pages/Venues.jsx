@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { MapPin, Plus, CalendarDays, Users, LayoutTemplate, Phone, Mail, Image, Upload, Trash2, Info, Globe, Building2, CheckCircle2 } from 'lucide-react'
 import { useData } from '../store/DataContext'
-import { PageHeader, Badge, SearchBox, Toast, Modal, Field, StatCard } from '../components/ui'
+import { PageHeader, Badge, SearchBox, Toast, Modal, Field, StatCard, SkeletonPage } from '../components/ui'
 import { fmt } from '../store/data'
 import { textRequired, nameOnly, numberPositive, optional, phoneValid, emailValid, validate } from '../store/validation'
 
@@ -20,7 +20,8 @@ const seatLayouts = {
 }
 
 export default function Venues() {
-  const { state, addVenue, updateVenue, patchBy, logActivity, intent, clearIntent } = useData()
+  const { state, addVenue, updateVenue, patchBy, logActivity, intent, clearIntent, loading } = useData()
+  if (loading) return <SkeletonPage />
   const [q, setQ] = useState('')
   const [detail, setDetail] = useState(null)
   const [toast, setToast] = useState(null)
@@ -214,12 +215,12 @@ export default function Venues() {
                 {!v.image && <div className={`absolute inset-0 flex items-end bg-gradient-to-br to-black/40 p-4 ${v.color}`}><span className="text-3xl font-black text-white/90">{v.abbr}</span></div>}
                 <span className="absolute right-3 top-3">
                   {isBooked ? (
-                    <span className="chip bg-gold-100 text-gold-800 font-bold text-xs ring-1 ring-gold-300">
-                      ● Booked
+                    <span className="rounded px-2 py-0.5 text-xs font-medium bg-amber-50 text-amber-850 border border-amber-200 shadow-xs">
+                      Booked
                     </span>
                   ) : (
-                    <span className="chip bg-emerald-100 text-emerald-800 font-bold text-xs ring-1 ring-emerald-300">
-                      ✓ Available
+                    <span className="rounded px-2 py-0.5 text-xs font-medium bg-emerald-50 text-emerald-850 border border-emerald-200 shadow-xs">
+                      Available
                     </span>
                   )}
                 </span>

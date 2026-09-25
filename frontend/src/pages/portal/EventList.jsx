@@ -4,6 +4,7 @@ import { Calendar, MapPin, Users, ArrowRight, Search, SlidersHorizontal, X, Star
 import { useData } from '../../store/DataContext'
 import { portalCategoriesFallback, portalEventsFallback } from '../../store/portalFallback'
 import { supabaseFetchPublicEvents } from '../../store/supabase'
+import { Skeleton, SkeletonEventCard } from '../../components/ui'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
@@ -221,18 +222,18 @@ export default function PortalEventList() {
         {/* Events grid */}
         <div className="flex-1">
           {/* Results count */}
-          <p className="mb-5 text-sm text-gray-500">{loading ? 'Loading...' : `${filtered.length} event${filtered.length !== 1 ? 's' : ''} found`}</p>
+          {loading ? (
+            <div className="mb-5 flex items-center gap-2">
+              <Skeleton className="h-4 w-32" />
+            </div>
+          ) : (
+            <p className="mb-5 text-sm text-gray-500">{`${filtered.length} event${filtered.length !== 1 ? 's' : ''} found`}</p>
+          )}
 
           {loading ? (
             <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="overflow-hidden rounded-[20px] border border-gray-100">
-                  <div className="portal-skeleton h-44" />
-                  <div className="p-5">
-                    <div className="portal-skeleton h-4 w-3/4 rounded" />
-                    <div className="portal-skeleton mt-3 h-3 w-1/2 rounded" />
-                  </div>
-                </div>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <SkeletonEventCard key={i} />
               ))}
             </div>
           ) : filtered.length === 0 ? (

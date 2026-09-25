@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Bell, Ticket, Calendar, CheckCircle2, Clock } from 'lucide-react'
 import { useAttendee } from '../../store/AttendeeContext'
+import { SkeletonNotificationItem } from '../../components/ui'
 
 export default function Notifications() {
   const { authFetch, isAuthenticated } = useAttendee()
@@ -31,7 +32,11 @@ export default function Notifications() {
       <p className="mt-1 text-sm text-ink/55">{notifications.length} notification{notifications.length !== 1 ? 's' : ''}</p>
 
       {loading ? (
-        <div className="mt-6 space-y-2">{[1, 2, 3].map((i) => <div key={i} className="card animate-pulse p-4 h-16" />)}</div>
+        <div className="mt-6 space-y-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonNotificationItem key={i} />
+          ))}
+        </div>
       ) : notifications.length === 0 ? (
         <div className="card mt-6 py-16 text-center">
           <Bell size={40} className="mx-auto text-ink/30" />

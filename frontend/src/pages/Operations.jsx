@@ -7,7 +7,7 @@ import {
 import { useData } from '../store/DataContext'
 import {
   PageHeader, Badge, Progress, Segmented, Toast, EmptyState, Avatar,
-  Modal, Field, StatCard,
+  Modal, Field, StatCard, SkeletonPage,
 } from '../components/ui'
 import { textRequired, dateRequired, optional, validate } from '../store/validation'
 
@@ -46,8 +46,9 @@ export default function Operations() {
   const {
     state, setEventTeam, allocateResource, setEventSuppliers,
     toggleChecklist, addChecklistItem, addTask, updateTask,
-    addApprovalRequest, addNotification,
+    addApprovalRequest, addNotification, loading,
   } = useData()
+  if (loading) return <SkeletonPage />
   const [view, setView] = useState('rundown')
   const [toast, setToast] = useState(null)
   const [selectedId, setSelectedId] = useState('')
