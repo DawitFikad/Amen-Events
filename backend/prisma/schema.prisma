@@ -138,6 +138,7 @@ model Client {
   events        Event[]
   invoices      Invoice[]
   portalUsers   User[]
+  rentals       Rental[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -160,18 +161,54 @@ model Venue {
 }
 
 model Resource {
-  id          String   @id @default(cuid())
-  name        String
-  category    String   @default("")
-  qty         Int      @default(1)
-  allocated   Int      @default(0)
-  maintenance Int      @default(0)
-  status      String   @default("available")
-  location    String   @default("Main Warehouse")
-  code        String   @default("")
-  allocations Allocation[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String       @id @default(cuid())
+  name            String
+  category        String       @default("")
+  qty             Int          @default(1)
+  allocated       Int          @default(0)
+  maintenance     Int          @default(0)
+  status          String       @default("available")
+  location        String       @default("Main Warehouse")
+  code            String       @default("")
+  rentalAvailable Boolean      @default(true)
+  rentalRate      Int          @default(0)
+  rentalDeposit   Int          @default(0)
+  rentalTerms     String       @default("")
+  allocations     Allocation[]
+  rentals         Rental[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model Rental {
+  id                String    @id @default(cuid())
+  rentalCode        String    @default("")
+  resourceId        String?
+  qty               Int       @default(1)
+  renterType        String    @default("external")
+  clientId          String?
+  renterName        String
+  renterPhone       String    @default("")
+  renterEmail       String    @default("")
+  renterCompany     String    @default("")
+  startDate         String
+  endDate           String
+  durationDays      Int       @default(1)
+  dailyRate         Int       @default(0)
+  totalAmount       Int       @default(0)
+  deposit           Int       @default(0)
+  depositStatus     String    @default("held")
+  paymentStatus     String    @default("pending")
+  paymentMethod     String    @default("Cash")
+  status            String    @default("active")
+  actualReturnDate  String    @default("")
+  conditionOnOut    String    @default("")
+  conditionOnReturn String    @default("")
+  notes             String    @default("")
+  resource          Resource? @relation(fields: [resourceId], references: [id])
+  client            Client?   @relation(fields: [clientId], references: [id])
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 }
 
 model Vendor {
