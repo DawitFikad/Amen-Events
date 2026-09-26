@@ -9,6 +9,7 @@ import {
   tasksSeed, speakersSeed, exhibitorsSeed, sponsorsSeed, invoicesSeed, expensesSeed,
   registrationsSeed, activitiesSeed, notificationsSeed, campaignsSeed, couponsSeed,
   contractsSeed, clientDocsSeed, maintenanceSeed, purchaseRequestsSeed,
+  rentalsSeed,
   eventSuppliersSeed, eventChecklistsSeed, eventDocsSeed,
   sessionsSeed, sessionAttendanceSeed, certificateHoldersSeed,
   exhibitionBoothsSeed, visitorsSeed, brandingLocationsSeed, sponsorDeliverablesSeed,
@@ -77,6 +78,7 @@ const emptyState = {
   invoices: [], expenses: [], registrations: [], activities: [],
   notifications: [], campaigns: [], coupons: [],
   contracts: [], clientDocs: [], eventDocs: [], maintenance: [], purchaseRequests: [],
+  rentals: [],
   eventSuppliers: [], eventChecklists: [],
   sessions: [], sessionAttendance: [], certificateHolders: [],
   exhibitionBooths: [], visitors: [], brandingLocations: [], sponsorDeliverables: [],
@@ -95,6 +97,7 @@ const getFallbackSeed = () => ({
   notifications: notificationsSeed, campaigns: campaignsSeed, coupons: couponsSeed,
   contracts: contractsSeed, clientDocs: clientDocsSeed, eventDocs: eventDocsSeed, maintenance: maintenanceSeed,
   purchaseRequests: purchaseRequestsSeed,
+  rentals: rentalsSeed,
   eventSuppliers: eventSuppliersSeed, eventChecklists: eventChecklistsSeed,
   sessions: sessionsSeed, sessionAttendance: sessionAttendanceSeed,
   certificateHolders: certificateHoldersSeed,
@@ -1310,12 +1313,168 @@ export function DataProvider({ children }) {
   }, [backendOnline, patch, logActivity, setDemoFlag])
 
   const updateResource = useCallback(async (id, data) => {
-    const payload = { ...data, qty: Number(data.qty) || 1, unitCost: Number(data.unitCost) || 0, allocated: Number(data.allocated) || 0, maintenance: Number(data.maintenance) || 0 }
+    const payload = {
+      ...data,
+      qty: Number(data.qty) || 1,
+      unitCost: Number(data.unitCost) || 0,
+      allocated: Number(data.allocated) || 0,
+      rented: Number(data.rented) || 0,
+      maintenance: Number(data.maintenance) || 0,
+      rentalRate: Number(data.rentalRate) || 0,
+      rentalDeposit: Number(data.rentalDeposit) || 0,
+      rentalAvailable: data.rentalAvailable !== undefined ? Boolean(data.rentalAvailable) : true,
+      rentalTerms: data.rentalTerms || '',
+    }
     if (backendOnline && id && !String(id).startsWith('rc-')) { try { await api.resources.update(id, payload) } catch (e) { /* keep local */ } }
     patchBy('resources', id, (r) => ({ ...r, ...payload }))
     logActivity(`Asset updated: ${data.name}`, 'inventory')
     return payload
   }, [backendOnline, patchBy, logActivity])
+
+  const addRental = useCallback(async (data) => {
+    const id = 'rnt-' + Math.random().toString(36).slice(2, 8)
+    const code = data.rentalCode || `RNT-2026-${String(Math.floor(100 + Math.random() * 900))}`
+    const qty = Number(data.qty) || 1
+    const dailyRate = Number(data.dailyRate) || 0
+    const durationDays = Number(data.durationDays) || 1
+    const totalAmount = Number(data.totalAmount) != null && !isNaN(Number(data.totalAmount)) ? Number(data.totalAmount) : (qty * dailyRate * durationDays)
+    const deposit = Number(data.deposit) || 0
+
+    const record = {
+      id,
+      rentalCode: code,
+      resourceId: data.resourceId,
+      resourceName: data.resourceName || '',
+      qty,
+      renterType: data.renterType || 'external',
+      clientId: data.clientId || null,
+      renterName: data.renterName || 'Renter',
+      renterPhone: data.renterPhone || '',
+      renterEmail: data.renterEmail || '',
+      renterCompany: data.renterCompany || '',
+      startDate: data.startDate || new Date().toISOString().slice(0, 10),
+      endDate: data.endDate || new Date().toISOString().slice(0, 10),
+      durationDays,
+      dailyRate,
+      totalAmount,
+      deposit,
+      depositStatus: data.depositStatus || 'held',
+      paymentStatus: data.paymentStatus || 'paid',
+      paymentMethod: data.paymentMethod || 'Telebirr',
+      status: data.status || 'active',
+      conditionOnOut: data.conditionOnOut || 'Good condition upon dispatch',
+      actualReturnDate: '',
+      conditionOnReturn: '',
+      notes: data.notes || '',
+      createdAt: new Date().toISOString().slice(0, 10),
+    }
+
+    if (backendOnline) {
+      try {
+        await api.resources.createRental(record)
+      } catch (err) {}
+    }
+
+    if (data.resourceId) {
+      patchBy('resources', data.resourceId, (r) => {
+        const currentRented = Number(r.rented) || 0
+        const totalQty = Number(r.qty) || 1
+        const newRented = currentRented + qty
+        const isFullyUsed = (Number(r.allocated) || 0) + newRented >= totalQty
+        return {
+          ...r,
+          rented: newRented,
+          status: isFullyUsed && r.status === 'available' ? 'in-use' : r.status,
+        }
+      })
+    }
+
+    patch('rentals', (list) => [record, ...(list || [])])
+    logActivity(`Equipment rented: ${record.resourceName} ×${qty} to ${record.renterName} (ETB ${totalAmount.toLocaleString()} revenue)`, 'inventory')
+    return record
+  }, [backendOnline, patch, patchBy, logActivity])
+
+  const updateRental = useCallback(async (id, updates) => {
+    if (backendOnline) {
+      try {
+        await api.resources.updateRental(id, updates)
+      } catch (err) {}
+    }
+    patchBy('rentals', id, (r) => ({ ...r, ...updates }))
+    logActivity(`Rental record updated: ${updates.rentalCode || id}`, 'inventory')
+  }, [backendOnline, patchBy, logActivity])
+
+  const returnRental = useCallback(async (id, returnData = {}) => {
+    const today = new Date().toISOString().slice(0, 10)
+    const returnRecord = {
+      status: 'returned',
+      actualReturnDate: returnData.actualReturnDate || today,
+      conditionOnReturn: returnData.conditionOnReturn || 'Good condition, checked in',
+      depositStatus: returnData.depositStatus || 'refunded',
+      notes: returnData.notes ? `${returnData.notes}` : undefined,
+    }
+
+    if (backendOnline) {
+      try {
+        await api.resources.returnRental(id, returnRecord)
+      } catch (err) {}
+    }
+
+    let rentedItem = null
+    setState((s) => {
+      const targetRental = (s.rentals || []).find((x) => x.id === id)
+      rentedItem = targetRental
+      const updatedRentals = (s.rentals || []).map((x) => x.id === id ? { ...x, ...returnRecord, notes: returnData.notes ? `${x.notes ? x.notes + ' | ' : ''}${returnData.notes}` : x.notes } : x)
+      
+      let updatedResources = s.resources
+      if (targetRental?.resourceId) {
+        updatedResources = (s.resources || []).map((res) => {
+          if (res.id === targetRental.resourceId) {
+            const currentRented = Number(res.rented) || 0
+            const newRented = Math.max(0, currentRented - (Number(targetRental.qty) || 1))
+            const totalUsed = (Number(res.allocated) || 0) + newRented
+            return {
+              ...res,
+              rented: newRented,
+              status: totalUsed < (Number(res.qty) || 1) && res.status === 'in-use' ? 'available' : res.status,
+            }
+          }
+          return res
+        })
+      }
+      return { ...s, rentals: updatedRentals, resources: updatedResources }
+    })
+
+    logActivity(`Rental returned: ${rentedItem?.resourceName || 'Equipment'} returned by ${rentedItem?.renterName || 'Customer'} (${returnRecord.conditionOnReturn})`, 'inventory')
+    return returnRecord
+  }, [backendOnline, logActivity])
+
+  const deleteRental = useCallback(async (id) => {
+    if (backendOnline) {
+      try {
+        await api.resources.deleteRental(id)
+      } catch (err) {}
+    }
+    setState((s) => {
+      const target = (s.rentals || []).find((x) => x.id === id)
+      let updatedResources = s.resources
+      if (target?.resourceId && target.status === 'active') {
+        updatedResources = (s.resources || []).map((res) => {
+          if (res.id === target.resourceId) {
+            const currentRented = Number(res.rented) || 0
+            const newRented = Math.max(0, currentRented - (Number(target.qty) || 1))
+            return { ...res, rented: newRented }
+          }
+          return res
+        })
+      }
+      return {
+        ...s,
+        rentals: (s.rentals || []).filter((x) => x.id !== id),
+        resources: updatedResources,
+      }
+    })
+  }, [backendOnline])
 
   const addVendor = useCallback(async (data) => {
     try {
@@ -1738,6 +1897,7 @@ export function DataProvider({ children }) {
     registerAttendee, checkIn,
     recordExpense, recordPayment, addInvoice,
     addVenue, addResource, addVendor, addStaffMember, addSpeaker, addExhibitor, addSponsor, addCampaign, addCoupon,
+    addRental, updateRental, returnRental, deleteRental,
     updateVenue, updateResource, updateStaffMember, updateExhibitor, updateSpeaker, updateSponsor, updateCampaign,
     setEventTeam, setEventBudget, allocateResource, allocateResources, viewQr,
     setEventSuppliers, toggleChecklist, addChecklistItem,
