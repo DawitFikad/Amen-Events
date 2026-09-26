@@ -268,6 +268,11 @@ export const resources = {
   update: (id, data) => apiFetch(`/resources/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   remove: (id) => apiFetch(`/resources/${id}`, { method: 'DELETE' }),
   allocate: (id, eventId, qty) => apiFetch(`/resources/${id}/allocate`, { method: 'POST', body: JSON.stringify({ eventId, qty }) }),
+  rentals: () => apiFetch('/resources/rentals'),
+  createRental: (data) => apiFetch('/resources/rentals', { method: 'POST', body: JSON.stringify(data) }),
+  updateRental: (id, data) => apiFetch(`/resources/rentals/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  returnRental: (id, data) => apiFetch(`/resources/rentals/${id}/return`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteRental: (id) => apiFetch(`/resources/rentals/${id}`, { method: 'DELETE' }),
 }
 
 // ─── VENDORS ───────────────────────────────────────────────────
